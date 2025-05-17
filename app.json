@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "RUSHAGO",
+    "slug": "your-app-slug",
+    "version": "1.0.0",
+    "plugins": [
+      "expo-asset"
+    ],
+    "experiments": {
+      "newArchEnabled": true
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "Y"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "favicon": "./assets/logo.png"
+    }
+  }
+}
