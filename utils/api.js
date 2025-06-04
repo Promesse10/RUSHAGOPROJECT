@@ -29,12 +29,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Handle token expiration
       await AsyncStorage.removeItem('authToken');
-      // Redirect to login screen
-      // You'll need to implement this based on your navigation setup
+      await AsyncStorage.removeItem('userData');
+      // Handle unauthorized access
+      return Promise.reject({ message: 'Session expired. Please login again.' });
     }
-    return Promise.reject(error);
+    return Promise.reject(error.response?.data || error);
   }
 );
 
@@ -43,39 +43,13 @@ export const auth = {
   signup: (data) => api.post('/auth/signup', data),
   login: (data) => api.post('/auth/login', data),
   logout: () => api.post('/auth/logout'),
-  googleAuth: (data) => api.post('/auth/google-auth', data),
-  verifyEmail: () => api.get('/auth/verify-email'),
   verifyPhone: (data) => api.post('/auth/verify-phone', data),
-};
-
-// Cars endpoints
-export const cars = {
-  create: (data) => api.post('/cars', data),
-  update: (id, data) => api.put(`/cars/${id}`, data),
-  delete: (id) => api.delete(`/cars/${id}/permanent`),
-  getStats: () => api.get('/cars/stats'),
-};
-
-// Messages endpoints
-export const messages = {
-  startChat: (data) => api.post('/messages/start', data),
-  getHistory: (threadId) => api.get(`/messages/history/${threadId}`),
-  markAsRead: (messageId) => api.put(`/messages/read/${messageId}`),
-  delete: (messageId) => api.delete(`/messages/${messageId}`),
-  getStats: () => api.get('/messages/stats'),
-};
-
-// Reviews endpoints
-export const reviews = {
-  create: (data) => api.post('/reviews', data),
-  moderate: (id, data) => api.put(`/reviews/moderate/${id}`, data),
-  respond: (id, data) => api.put(`/reviews/respond/${id}`, data),
-  delete: (id) => api.delete(`/reviews/${id}`),
-  getStats: () => api.get('/reviews/stats'),
+  verifyEmail: (data) => api.post('/auth/verify-email', data),
 };
 
 // User endpoints
 export const users = {
+  updateProfile: (data) => api.put('/users/profile', data),
   updateProfilePicture: (data) => {
     const formData = new FormData();
     formData.append('profile_picture', data);
@@ -85,15 +59,44 @@ export const users = {
       },
     });
   },
-  subscribe: (data) => api.post('/users/subscribe', data),
-  getStats: () => api.get('/users/stats'),
+  getProfile: () => api.get('/users/profile'),
 };
 
-// Payments endpoints
-export const payments = {
-  initiateSubscription: (data) => api.post('/payments/subscription', data),
-  checkStatus: (data) => api.post('/payments/status', data),
-  verifyPayment: (id) => api.get(`/payments/verify/${id}`),
+// Car endpoints
+export const cars = {
+  getAll: (params) => api.get('/cars', { params }),
+  getById: (id) => api.get(`/cars/${id}`),
+  create: (data) => api.post('/cars', data),
+  update: (id, data) => api.put(`/cars/${id}`, data),
+  delete: (id) => api.delete(`/cars/${id}`),
+  search: (params) => api.get('/cars/search', { params }),
+  getTopRated: () => api.get('/cars/top-rated'),
+  getNearby: (params) => api.get('/cars/nearby', { params }),
+};
+
+// Booking endpoints
+export const bookings = {
+  create: (data) => api.post('/bookings', data),
+  getAll: () => api.get('/bookings'),
+  getById: (id) => api.get(`/bookings/${id}`),
+  update: (id, data) => api.put(`/bookings/${id}`, data),
+  cancel: (id) => api.post(`/bookings/${id}/cancel`),
+  getRenterBookings: () => api.get('/bookings/renter'),
+  getOwnerBookings: () => api.get('/bookings/owner'),
+};
+
+// Rating endpoints
+export const ratings = {
+  create: (data) => api.post('/ratings', data),
+  update: (id, data) => api.put(`/ratings/${id}`, data),
+  getByBooking: (bookingId) => api.get(`/ratings/booking/${bookingId}`),
+  getUserRatings: () => api.get('/ratings/user'),
+};
+
+// Location tracking endpoints
+export const tracking = {
+  updateLocation: (data) => api.post('/tracking/location', data),
+  getLocation: (userId) => api.get(`/tracking/location/${userId}`),
 };
 
 export default api;

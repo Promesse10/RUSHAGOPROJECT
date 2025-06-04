@@ -1,12 +1,14 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from './api';
+import { Alert } from 'react-native';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -16,8 +18,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = await AsyncStorage.getItem('authToken');
       const userData = await AsyncStorage.getItem('userData');
+      
       if (token && userData) {
-        setUser(JSON.parse(userData));
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        setIsAuthenticated(true);
       }
     } catch (error) {
       console.error('Error checking user:', error);
@@ -35,26 +40,45 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
       
       setUser(userData);
+      setIsAuthenticated(true);
+      
       return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Login failed'
-      };
+      Alert.alert(
+        'Login Failed',
+        error.message || 'Invalid credentials. Please try again.'
+      );
+      return { success: false, error: error.message };
     }
   };
 
   const signup = async (userData) => {
     try {
       const response = await auth.signup(userData);
+      
+      if (response.data.requiresVerification) {
+        return { 
+          success: true, 
+          requiresVerification: true,
+          data: response.data 
+        };
+      }
+      
+      const { token, user: newUser } = response.data;
+      
+      await AsyncStorage.setItem('authToken', token);
+      await AsyncStorage.setItem('userData', JSON.stringify(newUser));
+      
+      setUser(newUser);
+      setIsAuthenticated(true);
+      
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('Signup error:', error);
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Signup failed'
-      };
+      Alert.alert(
+        'Signup Failed',
+        error.message || 'Unable to create account. Please try again.'
+      );
+      return { success: false, error: error.message };
     }
   };
 
@@ -64,27 +88,45 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('userData');
       setUser(null);
+      setIsAuthenticated(false);
     } catch (error) {
       console.error('Logout error:', error);
+      // Still clear local storage even if API call fails
+      await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem('userData');
+      setUser(null);
+      setIsAuthenticated(false);
     }
   };
 
-  const googleAuth = async (googleData) => {
+  const verifyPhone = async (phoneNumber, code) => {
     try {
-      const response = await auth.googleAuth(googleData);
-      const { token, user: userData } = response.data;
-      
-      await AsyncStorage.setItem('authToken', token);
-      await AsyncStorage.setItem('userData', JSON.stringify(userData));
-      
-      setUser(userData);
-      return { success: true };
+      const response = await auth.verifyPhone({ phoneNumber, code });
+      return { success: true, data: response.data };
     } catch (error) {
-      console.error('Google auth error:', error);
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Google authentication failed'
-      };
+      Alert.alert(
+        'Verification Failed',
+        error.message || 'Unable to verify phone number. Please try again.'
+      );
+      return { success: false, error: error.message };
+    }
+  };
+
+  const updateProfile = async (profileData) => {
+    try {
+      const response = await users.updateProfile(profileData);
+      const updatedUser = response.data;
+      
+      await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      return { success: true, data: updatedUser };
+    } catch (error) {
+      Alert.alert(
+        'Update Failed',
+        error.message || 'Unable to update profile. Please try again.'
+      );
+      return { success: false, error: error.message };
     }
   };
 
@@ -93,10 +135,13 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         loading,
+        isAuthenticated,
         login,
         signup,
         logout,
-        googleAuth
+        verifyPhone,
+        updateProfile,
+        checkUser
       }}
     >
       {children}
