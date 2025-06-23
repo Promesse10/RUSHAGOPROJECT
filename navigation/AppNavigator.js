@@ -169,7 +169,11 @@ const AppNavigator = () => {
           component={CarOwnerDashboardNavigator}
           options={{ headerShown: false }}
         />
-        <Stack.Screen name="CarDetail" component={CarDetailScreen} options={{ headerShown: false }} />
+        <Stack.Screen
+  name="CarDetail"
+  component={CarDetailScreen}
+  options={{ headerShown: false }}
+/>
 
         {/* Car Rental Auth Screens */}
         <Stack.Screen name="CarRentalSignup" component={CarRentalSignupScreen} options={{ headerShown: false }} />

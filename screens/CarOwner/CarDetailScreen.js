@@ -1,43 +1,44 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, SafeAreaView } from "react-native"
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, SafeAreaView, ActivityIndicator } from "react-native"
 import { MaterialIcons, Ionicons } from "@expo/vector-icons"
 import { useNavigation, useRoute } from "@react-navigation/native"
-import LoadingSkeleton from "../../components/Map/LoadingSkeleton"
+import { fetchData } from "../../utils/api" // Import the API utility
 
 const CarDetailScreen = () => {
   const navigation = useNavigation()
   const route = useRoute()
-  const { car } = route.params
+  const { carId } = route.params // Expect `carId` to be passed from the previous screen
   const [loading, setLoading] = useState(true)
   const [carDetails, setCarDetails] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Simulate API call to get detailed car info
     const fetchCarDetails = async () => {
-      // In a real app, this would be an API call
-      setTimeout(() => {
-        setCarDetails({
-          ...car,
-          fuelType: car.fuelType || "Gasoline",
-          description: "This premium vehicle offers exceptional comfort and performance for all your needs.",
-          features: ["Leather Seats", "Navigation System", "Bluetooth", "Backup Camera", "Sunroof"],
-          owner: {
-            name: "John Smith",
-            type: "Business Owner",
-            location: "New York, NY",
-            phone: "+1 (555) 123-4567",
-          },
-        })
+      try {
+        const data = await fetchData(`/cars/${carId}`) // Replace `/cars/:id` with the actual endpoint
+        setCarDetails(data)
+      } catch (err) {
+        setError("Failed to load car details. Please try again.")
+        console.error(err)
+      } finally {
         setLoading(false)
-      }, 1000)
+      }
     }
 
     fetchCarDetails()
-  }, [car])
+  }, [carId])
 
   if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color="#007EFD" style={{ marginTop: 20 }} />
+      </SafeAreaView>
+    )
+  }
+
+  if (error) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -47,16 +48,7 @@ const CarDetailScreen = () => {
           <Text style={styles.headerTitle}>Car Details</Text>
           <View style={{ width: 24 }} />
         </View>
-
-        <LoadingSkeleton style={styles.imageSkeleton} />
-
-        <View style={styles.contentContainer}>
-          <LoadingSkeleton style={styles.nameSkeleton} />
-          <LoadingSkeleton style={styles.infoRowSkeleton} />
-          <LoadingSkeleton style={styles.priceSkeleton} />
-          <LoadingSkeleton style={styles.detailsSkeleton} />
-          <LoadingSkeleton style={styles.ownerSkeleton} />
-        </View>
+        <Text style={styles.errorText}>{error}</Text>
       </SafeAreaView>
     )
   }
@@ -142,35 +134,6 @@ const CarDetailScreen = () => {
               </View>
             </View>
           </View>
-
-          {carDetails.features && carDetails.features.length > 0 && (
-            <View style={styles.featuresSection}>
-              <Text style={styles.sectionTitle}>Features</Text>
-              <View style={styles.featuresList}>
-                {carDetails.features.map((feature, index) => (
-                  <View key={index} style={styles.featureItem}>
-                    <MaterialIcons name="check-circle" size={16} color="#007EFD" />
-                    <Text style={styles.featureText}>{feature}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          <View style={styles.ownerSection}>
-            <Text style={styles.sectionTitle}>Owner Details</Text>
-            <View style={styles.ownerCard}>
-              <View style={styles.ownerInfo}>
-                <Text style={styles.ownerName}>{carDetails.owner.name}</Text>
-                <Text style={styles.ownerType}>{carDetails.owner.type}</Text>
-                <Text style={styles.ownerLocation}>{carDetails.owner.location}</Text>
-              </View>
-              <TouchableOpacity style={styles.callButton}>
-                <Ionicons name="call" size={20} color="white" />
-                <Text style={styles.callButtonText}>Call</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -200,9 +163,11 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 250,
   },
-  imageSkeleton: {
-    width: "100%",
-    height: 250,
+  errorText: {
+    color: "red",
+    textAlign: "center",
+    marginTop: 20,
+    fontSize: 16,
   },
   contentContainer: {
     padding: 16,
@@ -218,11 +183,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333333",
     flex: 1,
-  },
-  nameSkeleton: {
-    height: 30,
-    marginBottom: 12,
-    width: "100%",
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -243,11 +203,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginBottom: 20,
   },
-  infoRowSkeleton: {
-    height: 24,
-    marginBottom: 20,
-    width: "100%",
-  },
   infoItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -264,12 +219,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 20,
   },
-  priceSkeleton: {
-    height: 80,
-    marginBottom: 20,
-    width: "100%",
-    borderRadius: 8,
-  },
   priceLabel: {
     fontSize: 14,
     color: "#666666",
@@ -279,121 +228,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#007EFD",
   },
-  descriptionSection: {
-    marginBottom: 20,
-  },
-  descriptionText: {
-    fontSize: 16,
-    color: "#666666",
-    lineHeight: 24,
-  },
-  detailsSection: {
-    marginBottom: 20,
-  },
-  detailsSkeleton: {
-    height: 150,
-    marginBottom: 20,
-    width: "100%",
-    borderRadius: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333333",
-    marginBottom: 12,
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEEEEE",
-  },
-  detailLabel: {
-    fontSize: 16,
-    color: "#666666",
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#333333",
-  },
-  availabilityIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  featuresSection: {
-    marginBottom: 20,
-  },
-  featuresList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  featureItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "50%",
-    marginBottom: 8,
-  },
-  featureText: {
-    marginLeft: 6,
-    fontSize: 14,
-    color: "#666666",
-  },
-  ownerSection: {
-    marginBottom: 20,
-  },
-  ownerSkeleton: {
-    height: 100,
-    width: "100%",
-    borderRadius: 8,
-  },
-  ownerCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#F8F9FA",
-    padding: 16,
-    borderRadius: 8,
-  },
-  ownerInfo: {
-    flex: 1,
-  },
-  ownerName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333333",
-  },
-  ownerType: {
-    fontSize: 14,
-    color: "#666666",
-    marginTop: 2,
-  },
-  ownerLocation: {
-    fontSize: 14,
-    color: "#666666",
-    marginTop: 2,
-  },
-  callButton: {
-    backgroundColor: "#007EFD",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  callButtonText: {
-    color: "white",
-    fontWeight: "600",
-    marginLeft: 4,
-  },
 })
 
 export default CarDetailScreen
-

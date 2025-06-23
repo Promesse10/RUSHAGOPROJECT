@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useDispatch, useSelector } from "react-redux"
 import {
   View,
   Text,
@@ -20,53 +21,125 @@ import {
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import { signupAction } from "../../redux/actions/SignupActions"
 
 const { width, height } = Dimensions.get("window")
 
 const SignupScreen = ({ navigation }) => {
   const [userType, setUserType] = useState("renter") // 'renter' or 'owner'
   const [step, setStep] = useState(1) // For car owner multi-step process
-  const [fullName, setFullName] = useState("")
-  const [email, setEmail] = useState("")
-  const [phone, setPhone] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [verificationCode, setVerificationCode] = useState("")
+  const [inputs, setInputs] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+    verificationCode: "",
+  })
 
   // Form validation errors
-  const [fullNameError, setFullNameError] = useState("")
-  const [emailError, setEmailError] = useState("")
-  const [phoneError, setPhoneError] = useState("")
-  const [passwordError, setPasswordError] = useState("")
-  const [confirmPasswordError, setConfirmPasswordError] = useState("")
-  const [verificationError, setVerificationError] = useState("")
+  const [errors, setErrors] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+    verification: "",
+  })
 
   // UI states
   const [secureTextEntry, setSecureTextEntry] = useState(true)
   const [secureConfirmTextEntry, setSecureConfirmTextEntry] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+
+  // Redux state
+  const { isLoading, isSignupSuccess, isSignupFailed, error, message } = useSelector((state) => state.signupReducer)
+  const dispatch = useDispatch()
+
+  // Handle input changes
+  const handleChange = (field_name, value) => {
+    setInputs({
+      ...inputs,
+      [field_name]: value,
+    })
+    // Clear error when user starts typing
+    if (errors[field_name]) {
+      setErrors({
+        ...errors,
+        [field_name]: "",
+      })
+    }
+  }
 
   // Update placeholders when user type changes
   useEffect(() => {
     // Clear form and errors when switching user types
     clearForm()
     setStep(1)
+    // dispatch(clearSignupState());
   }, [userType])
 
+  // Handle signup success
+  useEffect(() => {
+    const handleSignupSuccess = async () => {
+      if (isSignupSuccess) {
+        try {
+          // Store user data in AsyncStorage
+          const userData = {
+            userType,
+            name: inputs.name,
+            email: inputs.email,
+            phone: inputs.phone,
+            password: inputs.password,
+          }
+
+          await AsyncStorage.setItem(`${userType}_${inputs.email}`, JSON.stringify(userData))
+          await AsyncStorage.setItem("process", "signupComplete")
+          await AsyncStorage.setItem("userEmail", inputs.email)
+
+          // Show success modal
+          setShowSuccessModal(true)
+
+          // Redirect to login after a delay
+          setTimeout(() => {
+            setShowSuccessModal(false)
+            // dispatch(clearSignupState());
+            navigation.navigate("LoginScreen")
+          }, 2000)
+        } catch (storageError) {
+          console.log("Error storing user data:", storageError)
+          Alert.alert("Error", "Account created but failed to save locally. Please try logging in.")
+        }
+      }
+    }
+
+    handleSignupSuccess()
+  }, [isSignupSuccess])
+
+  // Handle signup failure
+  useEffect(() => {
+    if (isSignupFailed && error) {
+      Alert.alert("Signup Failed", error)
+    }
+  }, [isSignupFailed, error])
+
   const clearForm = () => {
-    setFullName("")
-    setEmail("")
-    setPhone("")
-    setPassword("")
-    setConfirmPassword("")
-    setVerificationCode("")
-    setFullNameError("")
-    setEmailError("")
-    setPhoneError("")
-    setPasswordError("")
-    setConfirmPasswordError("")
-    setVerificationError("")
+    setInputs({
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+      verificationCode: "",
+    })
+    setErrors({
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+      verification: "",
+    })
   }
 
   const validateEmail = (email) => {
@@ -79,103 +152,70 @@ const SignupScreen = ({ navigation }) => {
     return phoneRegex.test(phone)
   }
 
-  const validateRenterForm = () => {
+  const validateForm = () => {
     let isValid = true
+    const newErrors = { ...errors }
 
-    // Validate full name
-    if (!fullName.trim()) {
-      setFullNameError("Full name is required")
+    // Validate name
+    if (!inputs.name.trim()) {
+      newErrors.name = "Name is required"
       isValid = false
-    } else {
-      setFullNameError("")
     }
 
     // Validate email
-    if (!email.trim()) {
-      setEmailError("Email is required")
+    if (!inputs.email.trim()) {
+      newErrors.email = "Email is required"
       isValid = false
-    } else if (!validateEmail(email)) {
-      setEmailError("Enter a valid email address")
+    } else if (!validateEmail(inputs.email)) {
+      newErrors.email = "Enter a valid email address"
       isValid = false
-    } else {
-      setEmailError("")
+    }
+
+    // Validate phone
+    if (!inputs.phone.trim()) {
+      newErrors.phone = "Phone number is required"
+      isValid = false
+    } else if (!validatePhone(inputs.phone)) {
+      newErrors.phone = "Enter a valid 10-digit phone number"
+      isValid = false
     }
 
     // Validate password
-    if (!password.trim()) {
-      setPasswordError("Password is required")
+    if (!inputs.password.trim()) {
+      newErrors.password = "Password is required"
       isValid = false
-    } else if (password.length < 6) {
-      setPasswordError("Password must be at least 6 characters")
+    } else if (inputs.password.length < 6) {
+      newErrors.password = "Password must be at least 6 characters"
       isValid = false
-    } else {
-      setPasswordError("")
     }
 
     // Validate confirm password
-    if (!confirmPassword.trim()) {
-      setConfirmPasswordError("Confirm password is required")
+    if (!inputs.confirmPassword.trim()) {
+      newErrors.confirmPassword = "Confirm password is required"
       isValid = false
-    } else if (confirmPassword !== password) {
-      setConfirmPasswordError("Passwords do not match")
+    } else if (inputs.confirmPassword !== inputs.password) {
+      newErrors.confirmPassword = "Passwords do not match"
       isValid = false
-    } else {
-      setConfirmPasswordError("")
     }
 
+    setErrors(newErrors)
     return isValid
   }
 
   const validateOwnerEmailStep = () => {
     let isValid = true
+    const newErrors = { ...errors }
 
     // Validate email
-    if (!email.trim()) {
-      setEmailError("Email is required")
+    if (!inputs.email.trim()) {
+      newErrors.email = "Email is required"
       isValid = false
-    } else if (!validateEmail(email)) {
-      setEmailError("Enter a valid email address")
+    } else if (!validateEmail(inputs.email)) {
+      newErrors.email = "Enter a valid email address"
       isValid = false
-    } else {
-      setEmailError("")
     }
 
-    return isValid
-  }
-
-  const validateOwnerDetailsStep = () => {
-    let isValid = true
-
-    // Validate full name
-    if (!fullName.trim()) {
-      setFullNameError("Full name is required")
-      isValid = false
-    } else {
-      setFullNameError("")
-    }
-
-    // Validate password
-    if (!password.trim()) {
-      setPasswordError("Password is required")
-      isValid = false
-    } else if (password.length < 6) {
-      setPasswordError("Password must be at least 6 characters")
-      isValid = false
-    } else {
-      setPasswordError("")
-    }
-
-    // Validate confirm password
-    if (!confirmPassword.trim()) {
-      setConfirmPasswordError("Confirm password is required")
-      isValid = false
-    } else if (confirmPassword !== password) {
-      setConfirmPasswordError("Passwords do not match")
-      isValid = false
-    } else {
-      setConfirmPasswordError("")
-    }
-
+    setErrors(newErrors)
     return isValid
   }
 
@@ -184,11 +224,8 @@ const SignupScreen = ({ navigation }) => {
       return
     }
 
-    setIsLoading(true)
-
     // Simulate email verification process
     setTimeout(() => {
-      setIsLoading(false)
       setStep(2)
       // In a real app, you would send a verification code to the email
       // and then verify it in the next step
@@ -199,44 +236,27 @@ const SignupScreen = ({ navigation }) => {
     let isValid = false
 
     if (userType === "renter") {
-      isValid = validateRenterForm()
+      isValid = validateForm()
     } else {
-      isValid = validateOwnerDetailsStep()
+      isValid = validateForm()
     }
 
     if (!isValid) {
       return
     }
 
-    setIsLoading(true)
-
-    try {
-      // Create user object based on user type
-      const userData = {
-        userType,
-        fullName,
-        email,
-        password,
-        phone: userType === "renter" ? "" : phone,
-      }
-
-      // Store user data in AsyncStorage
-      await AsyncStorage.setItem(`${userType}_${email}`, JSON.stringify(userData))
-
-      // Show success modal
-      setShowSuccessModal(true)
-
-      // Redirect to login after a delay
-      setTimeout(() => {
-        setShowSuccessModal(false)
-        setIsLoading(false)
-        navigation.navigate("LoginScreen")
-      }, 2000)
-    } catch (error) {
-      console.log("Error signing up:", error)
-      Alert.alert("Error", "An error occurred while signing up. Please try again.")
-      setIsLoading(false)
+    // Prepare user data for Redux action
+    const userData = {
+      userType,
+      name: inputs.name,
+      email: inputs.email,
+      phone: inputs.phone,
+      password: inputs.password,
+      isVerified: false,
     }
+
+    // Dispatch signup action
+    dispatch(signupAction(userData))
   }
 
   const handleGoogleSignUp = () => {
@@ -258,68 +278,81 @@ const SignupScreen = ({ navigation }) => {
   const renderRenterForm = () => {
     return (
       <View style={styles.form}>
-        {/* Full Name Field */}
+        {/* Name Field */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={[styles.input, fullNameError && styles.inputError]}
+            style={[styles.input, errors.name && styles.inputError]}
             placeholder="Enter your full name"
             placeholderTextColor="#999"
-            value={fullName}
-            onChangeText={setFullName}
+            value={inputs.name}
+            onChangeText={(value) => handleChange("name", value)}
             autoCapitalize="words"
           />
-          {fullNameError ? <Text style={styles.errorText}>{fullNameError}</Text> : null}
+          {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
         </View>
 
         {/* Email Field */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={[styles.input, emailError && styles.inputError]}
+            style={[styles.input, errors.email && styles.inputError]}
             placeholder="Enter your email"
             placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
+            value={inputs.email}
+            onChangeText={(value) => handleChange("email", value)}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
           />
-          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+          {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+        </View>
+
+        {/* Phone Field */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[styles.input, errors.phone && styles.inputError]}
+            placeholder="Enter your phone number"
+            placeholderTextColor="#999"
+            value={inputs.phone}
+            onChangeText={(value) => handleChange("phone", value)}
+            keyboardType="phone-pad"
+          />
+          {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
         </View>
 
         {/* Password Field */}
         <View style={styles.inputContainer}>
-          <View style={[styles.passwordInputContainer, passwordError && styles.inputError]}>
+          <View style={[styles.passwordInputContainer, errors.password && styles.inputError]}>
             <TextInput
               style={styles.passwordInput}
               placeholder="Create password"
               placeholderTextColor="#999"
               secureTextEntry={secureTextEntry}
-              value={password}
-              onChangeText={setPassword}
+              value={inputs.password}
+              onChangeText={(value) => handleChange("password", value)}
             />
             <TouchableOpacity onPress={toggleSecureTextEntry} style={styles.eyeIcon}>
               <Ionicons name={secureTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
             </TouchableOpacity>
           </View>
-          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+          {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
         </View>
 
         {/* Confirm Password Field */}
         <View style={styles.inputContainer}>
-          <View style={[styles.passwordInputContainer, confirmPasswordError && styles.inputError]}>
+          <View style={[styles.passwordInputContainer, errors.confirmPassword && styles.inputError]}>
             <TextInput
               style={styles.passwordInput}
               placeholder="Confirm password"
               placeholderTextColor="#999"
               secureTextEntry={secureConfirmTextEntry}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              value={inputs.confirmPassword}
+              onChangeText={(value) => handleChange("confirmPassword", value)}
             />
             <TouchableOpacity onPress={toggleSecureConfirmTextEntry} style={styles.eyeIcon}>
               <Ionicons name={secureConfirmTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
             </TouchableOpacity>
           </View>
-          {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
+          {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
         </View>
 
         {/* Sign Up Button */}
@@ -353,16 +386,16 @@ const SignupScreen = ({ navigation }) => {
         {/* Email Field */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={[styles.input, emailError && styles.inputError]}
+            style={[styles.input, errors.email && styles.inputError]}
             placeholder="Enter your email"
             placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
+            value={inputs.email}
+            onChangeText={(value) => handleChange("email", value)}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
           />
-          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+          {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
         </View>
 
         {/* Verify Email Button */}
@@ -378,66 +411,66 @@ const SignupScreen = ({ navigation }) => {
       <View style={styles.form}>
         <Text style={styles.verificationText}>Great! Now complete your profile information.</Text>
 
-        {/* Full Name Field */}
+        {/* Name Field */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={[styles.input, fullNameError && styles.inputError]}
+            style={[styles.input, errors.name && styles.inputError]}
             placeholder="Enter your full name"
             placeholderTextColor="#999"
-            value={fullName}
-            onChangeText={setFullName}
+            value={inputs.name}
+            onChangeText={(value) => handleChange("name", value)}
             autoCapitalize="words"
           />
-          {fullNameError ? <Text style={styles.errorText}>{fullNameError}</Text> : null}
+          {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
+        </View>
+
+        {/* Phone Field */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[styles.input, errors.phone && styles.inputError]}
+            placeholder="Enter your phone number"
+            placeholderTextColor="#999"
+            value={inputs.phone}
+            onChangeText={(value) => handleChange("phone", value)}
+            keyboardType="phone-pad"
+          />
+          {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
         </View>
 
         {/* Password Field */}
         <View style={styles.inputContainer}>
-          <View style={[styles.passwordInputContainer, passwordError && styles.inputError]}>
+          <View style={[styles.passwordInputContainer, errors.password && styles.inputError]}>
             <TextInput
               style={styles.passwordInput}
               placeholder="Create password"
               placeholderTextColor="#999"
               secureTextEntry={secureTextEntry}
-              value={password}
-              onChangeText={setPassword}
+              value={inputs.password}
+              onChangeText={(value) => handleChange("password", value)}
             />
             <TouchableOpacity onPress={toggleSecureTextEntry} style={styles.eyeIcon}>
               <Ionicons name={secureTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
             </TouchableOpacity>
           </View>
-          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+          {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
         </View>
 
         {/* Confirm Password Field */}
         <View style={styles.inputContainer}>
-          <View style={[styles.passwordInputContainer, confirmPasswordError && styles.inputError]}>
+          <View style={[styles.passwordInputContainer, errors.confirmPassword && styles.inputError]}>
             <TextInput
               style={styles.passwordInput}
               placeholder="Confirm password"
               placeholderTextColor="#999"
               secureTextEntry={secureConfirmTextEntry}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              value={inputs.confirmPassword}
+              onChangeText={(value) => handleChange("confirmPassword", value)}
             />
             <TouchableOpacity onPress={toggleSecureConfirmTextEntry} style={styles.eyeIcon}>
               <Ionicons name={secureConfirmTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
             </TouchableOpacity>
           </View>
-          {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
-        </View>
-
-        {/* Phone Field (Optional for car owner) */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, phoneError && styles.inputError]}
-            placeholder="Enter your phone number (optional)"
-            placeholderTextColor="#999"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
-          {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
+          {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
         </View>
 
         {/* Sign Up Button */}
@@ -472,7 +505,7 @@ const SignupScreen = ({ navigation }) => {
         >
           {/* Top Section with Background Image */}
           <View style={styles.topSection}>
-            <Image source={require("../../assets/Screenshot 2025-05-16 at 10.22.10 PM.png")} style={styles.backgroundImage} />
+            <Image source={require("../../assets/signup.png")} style={styles.backgroundImage} />
           </View>
 
           {/* Bottom Section with White Background */}
@@ -526,7 +559,7 @@ const SignupScreen = ({ navigation }) => {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <ActivityIndicator size="large" color="#007EFD" />
-            <Text style={styles.modalText}>Account created successfully!</Text>
+            <Text style={styles.modalText}>{message || "Account created successfully!"}</Text>
             <Text style={styles.modalSubText}>Redirecting to login...</Text>
           </View>
         </View>
@@ -535,6 +568,7 @@ const SignupScreen = ({ navigation }) => {
   )
 }
 
+// Styles remain the same as in your original file
 const styles = StyleSheet.create({
   container: {
     flex: 1,
