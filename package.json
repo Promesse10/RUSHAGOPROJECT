@@ -24,6 +24,7 @@
     "car-makes-icons": "^1.0.0",
     "expo": "^53.0.7",
     "expo-asset": "~11.1.5",
+    "expo-auth-session": "~6.2.1",
     "expo-env": "^1.1.1",
     "expo-image-picker": "^16.0.6",
     "expo-linear-gradient": "^14.0.2",
