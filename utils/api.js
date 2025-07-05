@@ -10,6 +10,13 @@ const api = axios.create({
   },
 });
 
+const API = axios.create({ baseURL: 'http://localhost:5000/api' });
+
+export const registerUser = (userData) => API.post('/users/register', userData);
+export const loginUser = (credentials) => API.post('/users/login', credentials);
+export const addCar = (carData) => API.post('/cars', carData);
+export const getCars = () => API.get('/cars');
+
 // Enhanced POST request with better error handling
 export const postData = async (endpoint, data, config = {}) => {
   console.log('=-=-=-=-=-=-=-=-=>>>>>', endpoint, data, config)

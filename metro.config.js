@@ -9,6 +9,7 @@ config.resolver.sourceExts = [
   'web.jsx',
   'web.ts',
   'web.tsx',
+  
 ];
 
 module.exports = config;

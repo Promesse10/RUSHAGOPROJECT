@@ -49,7 +49,7 @@ const Settings = () => {
   const handleLogout = () => {
     navigation.reset({
       index: 0,
-      routes: [{ name: "Onboarding" }],
+      routes: [{ name: "AuthScreen" }],
     });
   };
 

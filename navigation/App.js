@@ -1,16 +1,17 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
 import AppNavigator from './AppNavigator';
 import { I18nProvider } from '../utils/i18n';
+import { AppContextProvider } from '../context/AppContext';
+import { ThemeProvider } from '../navigation/theme-context';
 
-const App = () => {
-  return (
-    <I18nProvider>
-      <NavigationContainer>
+const App = () => (
+  <I18nProvider>
+    <AppContextProvider>
+      <ThemeProvider>
         <AppNavigator />
-      </NavigationContainer>
-    </I18nProvider>
-  );
-};
+      </ThemeProvider>
+    </AppContextProvider>
+  </I18nProvider>
+);
 
 export default App;

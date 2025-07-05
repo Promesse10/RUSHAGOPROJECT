@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }) => {
       return { success: true, data: response.data };
     } catch (error) {
       Alert.alert(
-        'Signup Failed',
+        'Signup Failed---jjj',
         error.message || 'Unable to create account. Please try again.'
       );
       return { success: false, error: error.message };

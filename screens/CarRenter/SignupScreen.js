@@ -21,7 +21,8 @@ import {
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import { signupAction } from "../../redux/actions/SignupActions"
+import { signupAction } from "../../redux/action/signupAction"
+
 
 const { width, height } = Dimensions.get("window")
 
@@ -53,7 +54,10 @@ const SignupScreen = ({ navigation }) => {
   const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   // Redux state
-  const { isLoading, isSignupSuccess, isSignupFailed, error, message } = useSelector((state) => state.signupReducer)
+const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
+  (state) => state.signup || {}
+);
+  
   const dispatch = useDispatch()
 
   // Handle input changes
@@ -86,7 +90,7 @@ const SignupScreen = ({ navigation }) => {
         try {
           // Store user data in AsyncStorage
           const userData = {
-            userType,
+            role: userType,
             name: inputs.name,
             email: inputs.email,
             phone: inputs.phone,
@@ -233,31 +237,28 @@ const SignupScreen = ({ navigation }) => {
   }
 
   const handleSignUp = async () => {
-    let isValid = false
-
-    if (userType === "renter") {
-      isValid = validateForm()
-    } else {
-      isValid = validateForm()
-    }
-
+    console.log("Signup button clicked");
+    let isValid = validateForm();
+  
     if (!isValid) {
-      return
+      console.log("Form validation failed");
+      return;
     }
-
-    // Prepare user data for Redux action
+  
     const userData = {
-      userType,
+      role: userType,  
+      
       name: inputs.name,
       email: inputs.email,
       phone: inputs.phone,
       password: inputs.password,
       isVerified: false,
-    }
-
-    // Dispatch signup action
-    dispatch(signupAction(userData))
+    };
+  
+    console.log("Dispatching signupAction with:", userData);
+    dispatch(signupAction(userData));
   }
+  
 
   const handleGoogleSignUp = () => {
     Alert.alert("Google Sign Up", "Google Sign Up functionality will be implemented soon.")
@@ -357,7 +358,11 @@ const SignupScreen = ({ navigation }) => {
 
         {/* Sign Up Button */}
         <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} disabled={isLoading}>
-          <Text style={styles.signUpButtonText}>{isLoading ? "Signing Up..." : "Sign Up"}</Text>
+        {isLoading 
+  ? <ActivityIndicator color="#fff" size="small" /> 
+  : <Text style={styles.signUpButtonText}>Sign Up</Text>
+}
+
         </TouchableOpacity>
 
         {/* OR Divider */}
@@ -551,19 +556,19 @@ const SignupScreen = ({ navigation }) => {
 
       {/* Success Modal */}
       <Modal
-        transparent={true}
-        visible={showSuccessModal}
-        animationType="fade"
-        onRequestClose={() => setShowSuccessModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <ActivityIndicator size="large" color="#007EFD" />
-            <Text style={styles.modalText}>{message || "Account created successfully!"}</Text>
-            <Text style={styles.modalSubText}>Redirecting to login...</Text>
-          </View>
-        </View>
-      </Modal>
+  transparent={true}
+  visible={showSuccessModal}
+  animationType="fade"
+  onRequestClose={() => setShowSuccessModal(false)}
+>
+  <View style={styles.modalContainer}>
+    <View style={styles.modalContent}>
+      <ActivityIndicator size="large" color="#007EFD" />
+      <Text style={styles.modalText}>Account created successfully!</Text>
+      <Text style={styles.modalSubText}>Redirecting to login...</Text>
+    </View>
+  </View>
+</Modal>
     </SafeAreaView>
   )
 }

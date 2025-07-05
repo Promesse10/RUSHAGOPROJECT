@@ -1,17 +1,10 @@
+import { configureStore } from '@reduxjs/toolkit'
+import signupReducer from './slices/signupSlice'
+// import loginReducer from "./slices/loginSlice";
 
-import { createStore, applyMiddleware } from 'redux';
-import { composeWithDevTools } from 'redux-devtools-extension'
-import thunk from 'redux-thunk';
-import reducer from './reducers/index';
-
-const initialState = {};
-
-const middleware = [thunk];
-
-const store = createStore(
-  reducer,
-  initialState,
-  composeWithDevTools(applyMiddleware(...middleware)),
-);
-
-export default store;
+export const store = configureStore({
+  reducer: {
+    signup: signupReducer,
+    // auth: loginReducer, 
+  },
+})

@@ -1,14 +1,16 @@
 "use client"
 
 import { createStackNavigator } from "@react-navigation/stack"
-import { NavigationContainer } from "@react-navigation/native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { StatusBar } from "react-native"
+import { useEffect } from "react"
+import { useTranslation } from "react-i18next"
+import "../utils/i18n" // Import i18n configuration
 
 // Import screens
 import OnboardingScreen from "../screens/OnboardingScreen"
 import AuthScreen from "../screens/auth-screen"
-import LoginScreen from "../screens/CarRenter/LoginScreen" // Import the LoginScreen
+import LoginScreen from "../screens/CarRenter/LoginScreen"
 import UserTypeSelectionScreen from "../screens/UserTypeSelectionScreen"
 
 // Car Owner Screens
@@ -18,11 +20,10 @@ import CarOwnerLoginScreen from "../screens/CarOwner/LoginScreen"
 // Car Owner Dashboard Screens
 import DashboardScreen from "../screens/CarOwner/DashboardScreen"
 import MyCarsScreen from "../screens/CarOwner/MyCarsScreen"
-import AddNewCarScreen from "../screens/CarOwner/AddNewCarScreen"
-import CarDetailScreen from "../screens/CarOwner/CarDetailScreen"
-import TopChoiceAdsScreen from "../screens/CarOwner/TopChoiceAdsScreen"
-import SubscriptionPlanScreen from "../screens/CarOwner/SubscriptionPlanScreen"
-import ProfileSettingsScreen from "../screens/CarOwner/ProfileSettingsScreen"
+import AddCarScreen from "../screens/CarOwner/AddCarScreen"
+import SettingsScreen from "../screens/CarOwner/SettingsScreen"
+import PaymentMethodsScreen from "../screens/CarOwner/PaymentMethodsScreen"
+import SavedDraftsScreen from "../screens/CarOwner/SavedDraftsScreen"
 
 // Car Rental Screens
 import CarRentalSignupScreen from "../screens/CarRenter/SignupScreen"
@@ -35,8 +36,6 @@ import Home from "../screens/CarRenter/Home"
 import AllCarsScreen from "../screens/CarRenter/AllCarsScreen"
 import CompaniesScreen from "../screens/CarRenter/CompaniesScreen"
 import MapView from "../screens/CarRenter/MapView"
-import Settings from "../screens/CarRenter/Settings"
-
 
 // Settings Related Screens
 import AccountInformation from "../screens/CarRenter/AccountInformation"
@@ -49,158 +48,257 @@ import NotificationsScreen from "../screens/CarRenter/NotificationsScreen"
 import PushNotifications from "../screens/CarRenter/PushNotifications"
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen"
 
-// Import the drawer navigator for car owner dashboard
-import { createDrawerNavigator } from "@react-navigation/drawer"
-import CustomDrawer from "../components/Map/CustomDrawer"
+// Import bottom tab navigator
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
+import { Ionicons } from "@expo/vector-icons"
 
 const Stack = createStackNavigator()
-const Drawer = createDrawerNavigator()
+const Tab = createBottomTabNavigator()
 
-// Car Owner Dashboard Drawer Navigator
-const CarOwnerDashboardNavigator = () => {
+// Car Owner Bottom Tab Navigator - Enhanced with better padding
+const CarOwnerTabNavigator = () => {
+  const { t } = useTranslation()
+
   return (
-    <Drawer.Navigator
-      drawerContent={(props) => <CustomDrawer {...props} />}
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: "#FFFFFF",
-          elevation: 0,
-          shadowOpacity: 0,
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName
+          if (route.name === "Dashboard") {
+            iconName = focused ? "home" : "home-outline"
+          } else if (route.name === "MyCars") {
+            iconName = focused ? "car" : "car-outline"
+          } else if (route.name === "AddCar") {
+            iconName = focused ? "add" : "add-outline"
+          } else if (route.name === "Settings") {
+            iconName = focused ? "settings" : "settings-outline"
+          }
+          return <Ionicons name={iconName} size={24} color={color} />
         },
-        headerTintColor: "#333333",
-        drawerActiveBackgroundColor: "#007EFD",
-        drawerActiveTintColor: "#FFFFFF",
-        drawerInactiveTintColor: "#333333",
-      }}
+        tabBarActiveTintColor: "#007EFD",
+        tabBarInactiveTintColor: "#9CA3AF",
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: "#FFFFFF",
+          borderTopWidth: 0,
+          elevation: 8,
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: -2,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 3.84,
+          paddingBottom: 20,
+          paddingTop: 12,
+          height: 85,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: "500",
+          marginTop: 4,
+          marginBottom: 8,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 8,
+        },
+      })}
     >
-      <Drawer.Screen name="Dashboard" component={DashboardScreen} />
-      <Drawer.Screen
+      <Tab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{
+          tabBarLabel: t("home", "Home"),
+        }}
+      />
+      <Tab.Screen
         name="MyCars"
         component={MyCarsScreen}
         options={{
-          title: "My Cars",
+          tabBarLabel: t("myCars", "My Cars"),
         }}
       />
-      <Drawer.Screen
-        name="AddNewCar"
-        component={AddNewCarScreen}
+      <Tab.Screen
+        name="AddCar"
+        component={AddCarScreen}
         options={{
-          title: "Add New Car",
+          tabBarLabel: t("addCar", "Add Car"),
         }}
       />
-      <Drawer.Screen
-        name="TopChoiceAds"
-        component={TopChoiceAdsScreen}
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
         options={{
-          title: "Top Choice Ads",
+          tabBarLabel: t("settings", "Settings"),
         }}
       />
-      <Drawer.Screen
-        name="SubscriptionPlan"
-        component={SubscriptionPlanScreen}
-        options={{
-          title: "Subscription Plan",
-        }}
-      />
-      <Drawer.Screen
-        name="ProfileSettings"
-        component={ProfileSettingsScreen}
-        options={{
-          title: "Profile & Settings",
-        }}
-      />
-    </Drawer.Navigator>
+    </Tab.Navigator>
   )
 }
 
-// Main App Navigator - always showing onboarding for testing
+// Main App Navigator
 const AppNavigator = () => {
+  const { i18n } = useTranslation()
+
+  useEffect(() => {
+    // Set Kinyarwanda as default language for car owner screens
+    if (!i18n.language || i18n.language === "en") {
+      i18n.changeLanguage("rw")
+    }
+  }, [i18n])
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={false} />
       <Stack.Navigator
-        initialRouteName="Onboarding" // Always start with Onboarding for testing
+        initialRouteName="Onboarding"
         screenOptions={{
           headerShown: false,
-          gestureEnabled: true,
+          gestureEnabled: false,
           gestureDirection: "horizontal",
         }}
       >
-        {/* Always include Onboarding in the stack */}
         <Stack.Screen
           name="Onboarding"
           component={OnboardingScreen}
           options={{
             headerShown: false,
-            gestureEnabled: false, // Disable swipe back from onboarding
+            gestureEnabled: false,
           }}
         />
-
         <Stack.Screen
           name="AuthScreen"
           component={AuthScreen}
           options={{
             headerShown: false,
-            presentation: "fullScreenModal", // Make it full screen
-            gestureEnabled: true, // Enable swipe gestures
+            presentation: "fullScreenModal",
+            gestureEnabled: false,
           }}
         />
-
-        {/* Add LoginScreen to the navigator */}
         <Stack.Screen
           name="LoginScreen"
           component={LoginScreen}
           options={{
             headerShown: false,
-            gestureEnabled: true,
+            gestureEnabled: false,
           }}
         />
-
-        <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="FilterScreen" component={FilterScreen} options={{ headerShown: false }} />
-
-        {/* Car Owner Auth Screens */}
-        <Stack.Screen name="CarOwnerSignup" component={CarOwnerSignupScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="CarOwnerLogin" component={CarOwnerLoginScreen} options={{ headerShown: false }} />
-
-        {/* Car Owner Dashboard Screens */}
         <Stack.Screen
-          name="CarOwnerDashboard"
-          component={CarOwnerDashboardNavigator}
-          options={{ headerShown: false }}
+          name="UserTypeSelection"
+          component={UserTypeSelectionScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
         />
         <Stack.Screen
-  name="CarDetail"
-  component={CarDetailScreen}
-  options={{ headerShown: false }}
-/>
+          name="FilterScreen"
+          component={FilterScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+
+        {/* Car Owner Auth Screens */}
+        <Stack.Screen
+          name="CarOwnerSignup"
+          component={CarOwnerSignupScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="CarOwnerLogin"
+          component={CarOwnerLoginScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+
+        {/* Car Owner Dashboard - Direct to Tab Navigator */}
+        <Stack.Screen
+          name="CarOwnerDashboard"
+          component={CarOwnerTabNavigator}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+
+        {/* Additional Screens */}
+        <Stack.Screen
+          name="PaymentMethods"
+          component={PaymentMethodsScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="SavedDrafts"
+          component={SavedDraftsScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
 
         {/* Car Rental Auth Screens */}
-        <Stack.Screen name="CarRentalSignup" component={CarRentalSignupScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="CarRentalLogin" component={CarRentalLoginScreen} options={{ headerShown: false }} />
+        <Stack.Screen
+          name="CarRentalSignup"
+          component={CarRentalSignupScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="CarRentalLogin"
+          component={CarRentalLoginScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
 
         {/* Verification Screen */}
-        <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }} />
+        <Stack.Screen
+          name="Notifications"
+          component={NotificationsScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
 
         {/* Car Brand Selection Screen */}
-        <Stack.Screen name="CarBrandSelection" component={CarBrandSelection} options={{ headerShown: false }} />
-        
+        <Stack.Screen
+          name="CarBrandSelection"
+          component={CarBrandSelection}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+
         {/* Main App Screens */}
-        <Stack.Screen name="Home" component={Home} options={{ headerShown: false }} />
-        <Stack.Screen name="Bookings" component={AllCarsScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="CompaniesScreen" component={CompaniesScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="MapView" component={MapView} options={{ headerShown: false }} />
-        <Stack.Screen name="Settings" component={Settings} options={{ headerShown: false }} />
+        <Stack.Screen name="Home" component={Home} options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen
+          name="Bookings"
+          component={AllCarsScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="CompaniesScreen"
+          component={CompaniesScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+        <Stack.Screen name="MapView" component={MapView} options={{ headerShown: false, gestureEnabled: false }} />
 
         {/* Settings Related Screens */}
-        <Stack.Screen name="AccountInformation" component={AccountInformation} options={{ headerShown: false }} />
-        <Stack.Screen name="LinkAccount" component={LinkAccount} options={{ headerShown: false }} />
-        <Stack.Screen name="Language" component={Language} options={{ headerShown: false }} />
-        <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="AboutRushGo" component={AboutRushGo} options={{ headerShown: false }} />
-        <Stack.Screen name="GetHelp" component={GetHelp} options={{ headerShown: false }} />
-        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} options={{ headerShown: false }} />
-        <Stack.Screen name="PushNotifications" component={PushNotifications} options={{ headerShown: false }} />
+        <Stack.Screen
+          name="AccountInformation"
+          component={AccountInformation}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="LinkAccount"
+          component={LinkAccount}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+        <Stack.Screen name="Language" component={Language} options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen
+          name="NotificationsScreen"
+          component={NotificationsScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="AboutRushGo"
+          component={AboutRushGo}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+        <Stack.Screen name="GetHelp" component={GetHelp} options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen
+          name="PrivacyPolicy"
+          component={PrivacyPolicy}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="PushNotifications"
+          component={PushNotifications}
+          options={{ headerShown: false, gestureEnabled: false }}
+        />
+
         <Stack.Screen
           name="ForgotPasswordScreen"
           component={ForgotPasswordScreen}
@@ -214,14 +312,4 @@ const AppNavigator = () => {
   )
 }
 
-// Wrap with NavigationContainer if this is your root navigator
-const RootNavigator = () => {
-  return (
-    <NavigationContainer>
-      <AppNavigator />
-    </NavigationContainer>
-  )
-}
-
-// Export the appropriate navigator based on your app structure
-export default AppNavigator // or export default RootNavigator;
+export default AppNavigator

@@ -319,25 +319,26 @@ const OnboardingScreen = ({ navigation }) => {
         ]}
       >
         {/* Logo */}
-        <View style={styles.logoContainer}>
-          <Image source={require("../assets/logo.png")} style={styles.logo} resizeMode="contain" />
-        </View>
+        
 
         {/* Title */}
         <View style={styles.titleContainer}>
-          <Text style={styles.titleText}>RUSHGO</Text>
-          <Text style={styles.sloganText}>Your Driving Partner</Text>
+        <View style={styles.logoContainer}>
+          <Image source={require("../assets/logo.png")} style={styles.logo} resizeMode="contain" />
+          
+        </View>
+        <Text style={styles.titleText}>"Rent a car anytime"</Text>
+          <Text style={styles.sloganText}>We are Driving Partner</Text>
         </View>
 
         {/* Description - English */}
         <Text style={styles.description}>
-          Connecting car owners and renters seamlessly. Experience the freedom of mobility with just a few taps.
+        Connecting car owners and renters through RushGo to easily and securely make rental agreements. Gain the freedom to travel wherever you want with ease.
         </Text>
 
         {/* Description - Kinyarwanda */}
         <Text style={styles.descriptionKinyarwanda}>
-          Guhuza ba nyir'imodoka n'abakodesha mu buryo bworoshye. Bona uburenganzira bwo kugenda aho ushaka mu buryo
-          bworoshye.
+        Guhuza ba nyir’imodoka n’abakodesha binyuze muri RushGo, kugira ngo bagirane amasezerano yo gukodesha mu buryo bwihuse kandi bwizewe. Bona uburenganzira bwo kugenda aho ushaka mu buryo bworoshye
         </Text>
 
         {/* Navigation Controls - Positioned directly here instead of in a car image container */}
@@ -363,8 +364,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   loadingLogo: {
-    width: width * 0.4,
-    height: height * 0.2,
+    width: width * 0.9,
+    height: height * 0.6,
   },
   contentContainer: {
     flex: 1,
@@ -374,11 +375,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   logoContainer: {
-    width: 150,
-    height: 80,
+    width: 300,
+    height: 300,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    
   },
   logo: {
     width: "100%",
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     alignItems: "center",
-    marginBottom: 10,
+    
   },
   titleText: {
     fontSize: 32,
@@ -394,6 +395,7 @@ const styles = StyleSheet.create({
     color: "#007EFD",
     textAlign: "center",
     lineHeight: 40,
+    marginBottom: 10,
   },
   sloganText: {
     fontSize: 18,
