@@ -13,27 +13,82 @@ import {
   Image,
   Modal,
   Dimensions,
-  TouchableWithoutFeedback,
-  Keyboard,
+  FlatList,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useNavigation, useRoute } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
+import { useDispatch, useSelector } from "react-redux"
 import * as ImagePicker from "expo-image-picker"
 import MapView, { Marker } from "react-native-maps"
 import * as Location from "expo-location"
 import carIcon from "../../assets/car-marker.png"
 import { rwandaLocations, searchLocations, getProvinceCoordinates } from "../../utils/rwandaLocations"
+import { createCarAction, updateCarAction } from "../../redux/action/CarActions"
+import { getCurrentUserAction, searchUsersAction } from "../../redux/action/UserActions"
+import { clearSearchResults } from "../../redux/slices/userSlice"
+import { clearCreateState, clearUpdateState } from "../../redux/slices/carSlice"
+import { carMakes, carModels, carTypes, transmissionTypes, fuelTypes, seatOptions } from "../../utils/carData"
+import PaymentBottomSheet from "./PaymentBottomSheet"
 import "../../utils/i18n"
 
 const { height: screenHeight } = Dimensions.get("window")
 
+const initialFormData = {
+  make: "",
+  model: "",
+  year: "",
+  type: "",
+  transmission: "",
+  fuel_type: "",
+  seatings: "",
+  features: [],
+  ownerType: "individual",
+  ownerName: "",
+  countryCode: "+250",
+  ownerPhone: "",
+  province: "",
+  address: "",
+  country: "Rwanda",
+  latitude: "",
+  longitude: "",
+  base_price: "",
+  currency: "FRW",
+  weekly_discount: "",
+  monthly_discount: "",
+  images: {
+    interior: null,
+    exterior_front: null,
+    exterior_side: null,
+    exterior_rear: null,
+  },
+  thumbnail: null,
+  category: "",
+}
+
 const AddCarScreen = () => {
+  const dispatch = useDispatch()
   const navigation = useNavigation()
   const route = useRoute()
   const { t } = useTranslation()
 
-  // Check if we're in editing mode
+  // ✅ FIXED: Get user from auth state and user state
+  const authUser = useSelector((state) => state.auth?.user)
+  const { currentUser, searchResults, isSearching } = useSelector((state) => state.user || {})
+  const user = currentUser || authUser // Use currentUser if available, fallback to authUser
+
+  // Redux state
+  const {
+    isCreating = false,
+    isUpdating = false,
+    isCreateSuccess = false,
+    isUpdateSuccess = false,
+    isCreateFailed = false,
+    isUpdateFailed = false,
+    createError = null,
+    updateError = null,
+  } = useSelector((state) => state.cars || {})
+
   const isEditing = route.params?.draftData?.isEditing || false
   const editingCarId = route.params?.draftData?.id
 
@@ -48,21 +103,21 @@ const AddCarScreen = () => {
   const [showProvinceDropdown, setShowProvinceDropdown] = useState(false)
   const [showCountryCodeDropdown, setShowCountryCodeDropdown] = useState(false)
   const [showMapModal, setShowMapModal] = useState(false)
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [validationErrors, setValidationErrors] = useState({})
   const [filteredModels, setFilteredModels] = useState([])
   const [addressSuggestions, setAddressSuggestions] = useState([])
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState("")
-  const [paymentData, setPaymentData] = useState({
-    momoPhone: "",
-    cardNumber: "",
-    cardHolder: "",
-    expiryDate: "",
-    cvv: "",
-    cardType: "",
-  })
   const [isCustomModel, setIsCustomModel] = useState(false)
+
+  // ✅ NEW: Owner autocomplete states
+  const [showOwnerSuggestions, setShowOwnerSuggestions] = useState(false)
+  const [ownerSearchQuery, setOwnerSearchQuery] = useState("")
+  const [isManualEntry, setIsManualEntry] = useState(false)
+
+  // Payment states
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentCompleted, setPaymentCompleted] = useState(false)
+  const [selectedImages, setSelectedImages] = useState([])
 
   const [mapRegion, setMapRegion] = useState({
     latitude: -1.9441,
@@ -72,48 +127,179 @@ const AddCarScreen = () => {
   })
   const [selectedLocation, setSelectedLocation] = useState(null)
 
-  const [formData, setFormData] = useState({
-    // Basic Information
-    make: "",
-    model: "",
-    year: "",
-    type: "",
-    transmission: "",
-    fuel_type: "",
-    seatings: "",
-    features: [],
+  const [formData, setFormData] = useState(initialFormData)
 
-    // Owner Information
-    ownerType: "individual",
-    ownerName: "",
-    countryCode: "+250",
-    ownerPhone: "",
+  // ✅ FIXED: Fetch current user on component mount
+  useEffect(() => {
+    if (!user && authUser) {
+      console.log("🔄 Fetching current user profile...")
+      dispatch(getCurrentUserAction())
+    }
+  }, [dispatch, user, authUser])
 
-    // Location
-    province: "",
-    address: "",
-    country: "Rwanda",
-    latitude: "",
-    longitude: "",
+  // ✅ FIXED: Auto-fill owner information when user is available
+  useEffect(() => {
+    if (user && !isEditing && !isManualEntry) {
+      console.log("👤 Auto-filling owner information:", user)
+      setFormData((prev) => ({
+        ...prev,
+        ownerName: user.name || "",
+        ownerPhone: user.phone?.replace("+250", "") || "",
+      }))
+    }
+  }, [user, isEditing, isManualEntry])
 
-    // Pricing
-    base_price: "",
-    currency: "FRW",
-    weekly_discount: "",
-    monthly_discount: "",
+  // ✅ NEW: Handle owner name search for autocomplete
+  const handleOwnerNameSearch = (text) => {
+    setOwnerSearchQuery(text)
+    setFormData({ ...formData, ownerName: text })
+    setValidationErrors((prev) => ({ ...prev, ownerName: false }))
 
-    // Media
-    images: {
-      interior: null,
-      exterior_front: null,
-      exterior_side: null,
-      exterior_rear: null,
-    },
-    thumbnail: null,
+    if (text.length > 2 && !isManualEntry) {
+      dispatch(searchUsersAction(text))
+      setShowOwnerSuggestions(true)
+    } else {
+      setShowOwnerSuggestions(false)
+      dispatch(clearSearchResults())
+    }
+  }
 
-    // Category
-    category: "",
-  })
+  // ✅ NEW: Select user from autocomplete
+  const selectOwnerFromSuggestions = (selectedUser) => {
+    console.log("👤 Selected user from suggestions:", selectedUser)
+    setFormData({
+      ...formData,
+      ownerName: selectedUser.name,
+      ownerPhone: selectedUser.phone?.replace("+250", "") || "",
+    })
+    setOwnerSearchQuery(selectedUser.name)
+    setShowOwnerSuggestions(false)
+    dispatch(clearSearchResults())
+    setValidationErrors((prev) => ({ ...prev, ownerName: false, ownerPhone: false }))
+  }
+
+  // ✅ NEW: Toggle manual entry mode
+  const toggleManualEntry = () => {
+    setIsManualEntry(!isManualEntry)
+    setShowOwnerSuggestions(false)
+    dispatch(clearSearchResults())
+
+    if (!isManualEntry) {
+      // Switching to manual entry - clear auto-filled data
+      setFormData((prev) => ({
+        ...prev,
+        ownerName: "",
+        ownerPhone: "",
+      }))
+    } else {
+      // Switching back to auto-complete - restore user data
+      if (user) {
+        setFormData((prev) => ({
+          ...prev,
+          ownerName: user.name || "",
+          ownerPhone: user.phone?.replace("+250", "") || "",
+        }))
+      }
+    }
+  }
+
+  // Load existing data if editing
+  useEffect(() => {
+    if (isEditing && route.params?.draftData?.formData) {
+      const existingData = route.params.draftData.formData
+      setFormData({
+        make: existingData.brand || existingData.make || "",
+        model: existingData.model || "",
+        year: existingData.year?.toString() || "",
+        type: existingData.type || "",
+        transmission: existingData.transmission || "",
+        fuel_type: existingData.fuelType || existingData.fuel_type || "",
+        seatings: existingData.seatings || "",
+        features: existingData.features || [],
+        ownerType: existingData.owner?.type || existingData.ownerType || "individual",
+        ownerName: existingData.owner?.name || existingData.ownerName || "",
+        countryCode: "+250",
+        ownerPhone: existingData.owner?.phone?.replace("+250", "") || existingData.ownerPhone || "",
+        province: existingData.location?.province || existingData.province || "",
+        address: existingData.location?.address || existingData.address || "",
+        country: existingData.location?.country || existingData.country || "Rwanda",
+        latitude: existingData.location?.latitude?.toString() || existingData.latitude || "",
+        longitude: existingData.location?.longitude?.toString() || existingData.longitude || "",
+        base_price: existingData.price?.toString() || existingData.base_price || "",
+        currency: existingData.currency || "FRW",
+        weekly_discount: existingData.weeklyDiscount?.toString() || existingData.weekly_discount || "",
+        monthly_discount: existingData.monthlyDiscount?.toString() || existingData.monthly_discount || "",
+        images: {
+          interior: existingData.images?.[0] || null,
+          exterior_front: existingData.images?.[1] || null,
+          exterior_side: existingData.images?.[2] || null,
+          exterior_rear: existingData.images?.[3] || null,
+        },
+        thumbnail: existingData.thumbnail || null,
+        category: existingData.category || "",
+      })
+
+      if (existingData.location?.latitude && existingData.location?.longitude) {
+        const lat = Number.parseFloat(existingData.location.latitude)
+        const lng = Number.parseFloat(existingData.location.longitude)
+        setMapRegion({
+          latitude: lat,
+          longitude: lng,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        })
+        setSelectedLocation({ latitude: lat, longitude: lng })
+      }
+
+      setPaymentCompleted(true)
+      setIsManualEntry(true) // Set to manual entry for editing
+    }
+  }, [isEditing, route.params])
+
+  // Handle Redux state changes
+  useEffect(() => {
+    if (isCreateSuccess) {
+      Alert.alert(t("Success"), t("Car listing created successfully!"), [
+        {
+          text: t("OK"),
+          onPress: () => {
+            dispatch(clearCreateState())
+            setFormData(initialFormData)
+            setCurrentStep(1)
+            navigation.navigate("MyCars")
+          },
+        },
+      ])
+    }
+  }, [isCreateSuccess, dispatch, navigation, t])
+
+  useEffect(() => {
+    if (isUpdateSuccess) {
+      Alert.alert(t("Success"), t("Car listing updated successfully!"), [
+        {
+          text: t("OK"),
+          onPress: () => {
+            dispatch(clearUpdateState())
+            navigation.navigate("MyCars")
+          },
+        },
+      ])
+    }
+  }, [isUpdateSuccess, dispatch, navigation, t])
+
+  useEffect(() => {
+    if (isCreateFailed && createError) {
+      Alert.alert(t("Error"), createError)
+      dispatch(clearCreateState())
+    }
+  }, [isCreateFailed, createError, dispatch, t])
+
+  useEffect(() => {
+    if (isUpdateFailed && updateError) {
+      Alert.alert(t("Error"), updateError)
+      dispatch(clearUpdateState())
+    }
+  }, [isUpdateFailed, updateError, dispatch, t])
 
   // Country codes with flags
   const countryCodes = [
@@ -127,211 +313,12 @@ const AddCarScreen = () => {
     { code: "+49", country: "Germany", flag: "🇩🇪" },
   ]
 
-  // Comprehensive car makes
-  const carMakes = [
-    "Acura",
-    "Alfa Romeo",
-    "Aston Martin",
-    "Audi",
-    "Bentley",
-    "BMW",
-    "Bugatti",
-    "Buick",
-    "Cadillac",
-    "Chevrolet",
-    "Chrysler",
-    "Citroën",
-    "Dacia",
-    "Daewoo",
-    "Daihatsu",
-    "Dodge",
-    "Ferrari",
-    "Fiat",
-    "Ford",
-    "Genesis",
-    "GMC",
-    "Honda",
-    "Hyundai",
-    "Infiniti",
-    "Isuzu",
-    "Jaguar",
-    "Jeep",
-    "Kia",
-    "Lamborghini",
-    "Land Rover",
-    "Lexus",
-    "Lincoln",
-    "Lotus",
-    "Maserati",
-    "Mazda",
-    "McLaren",
-    "Mercedes-Benz",
-    "Mini",
-    "Mitsubishi",
-    "Nissan",
-    "Opel",
-    "Peugeot",
-    "Porsche",
-    "Ram",
-    "Renault",
-    "Rolls-Royce",
-    "Saab",
-    "Seat",
-    "Skoda",
-    "Smart",
-    "Subaru",
-    "Suzuki",
-    "Tesla",
-    "Toyota",
-    "Volkswagen",
-    "Volvo",
-    "Other",
-  ]
-
-  // Car models by make (comprehensive list)
-  const carModels = {
-    Toyota: [
-      "Camry",
-      "Corolla",
-      "Prius",
-      "RAV4",
-      "Highlander",
-      "4Runner",
-      "Tacoma",
-      "Tundra",
-      "Sienna",
-      "Avalon",
-      "Yaris",
-      "C-HR",
-      "Venza",
-      "Sequoia",
-      "Land Cruiser",
-      "Prado",
-      "Hilux",
-      "Fortuner",
-      "Innova",
-      "Vitz",
-      "Allion",
-      "Premio",
-      "Fielder",
-      "Wish",
-    ],
-    Honda: [
-      "Civic",
-      "Accord",
-      "CR-V",
-      "Pilot",
-      "Odyssey",
-      "Fit",
-      "HR-V",
-      "Passport",
-      "Ridgeline",
-      "Insight",
-      "Clarity",
-      "Element",
-      "S2000",
-      "NSX",
-      "Prelude",
-      "Del Sol",
-      "CRX",
-      "Integra",
-    ],
-    Nissan: [
-      "Altima",
-      "Sentra",
-      "Maxima",
-      "Rogue",
-      "Murano",
-      "Pathfinder",
-      "Armada",
-      "Titan",
-      "Frontier",
-      "Versa",
-      "Kicks",
-      "Juke",
-      "Leaf",
-      "370Z",
-      "GT-R",
-      "Quest",
-      "NV200",
-      "Patrol",
-      "X-Trail",
-      "Qashqai",
-      "Micra",
-      "Note",
-      "Tiida",
-      "Sunny",
-    ],
-    BMW: [
-      "3 Series",
-      "5 Series",
-      "7 Series",
-      "X1",
-      "X3",
-      "X5",
-      "X7",
-      "Z4",
-      "i3",
-      "i8",
-      "1 Series",
-      "2 Series",
-      "4 Series",
-      "6 Series",
-      "8 Series",
-      "X2",
-      "X4",
-      "X6",
-      "M3",
-      "M5",
-      "M8",
-      "iX",
-      "i4",
-    ],
-    "Mercedes-Benz": [
-      "C-Class",
-      "E-Class",
-      "S-Class",
-      "GLA",
-      "GLC",
-      "GLE",
-      "GLS",
-      "A-Class",
-      "B-Class",
-      "CLA",
-      "CLS",
-      "G-Class",
-      "SL",
-      "SLC",
-      "AMG GT",
-      "EQC",
-      "EQS",
-      "Sprinter",
-      "Metris",
-    ],
-  }
-
   const provinces = Object.keys(rwandaLocations)
 
-  const typeOptions = [
-    t("Sedan"),
-    t("SUV"),
-    t("Hatchback"),
-    t("Coupe"),
-    t("Convertible"),
-    t("Pickup"),
-    t("Van"),
-    t("Minibus"),
-    t("Crossover"),
-    t("Station Wagon"),
-    t("Truck"),
-    t("Limousine"),
-    t("Sports Car"),
-    t("Other"),
-  ]
-
-  const transmissionOptions = [t("Automatic"), t("Manual"), t("CVT"), t("Semi-Automatic")]
-  const fuelOptions = [t("Gasoline"), t("Diesel"), t("Hybrid"), t("Electric"), t("CNG"), t("LPG")]
-  const seatsOptions = ["2", "4", "5", "7", "8", "9+"]
+  const typeOptions = carTypes.map((type) => t(type.toLowerCase(), type))
+  const transmissionOptions = transmissionTypes.map((type) => t(type.toLowerCase(), type))
+  const fuelOptions = fuelTypes.map((type) => t(type.toLowerCase(), type))
+  const seatsOptions = seatOptions
 
   const categoryOptions = [
     t("Economy"),
@@ -380,65 +367,7 @@ const AddCarScreen = () => {
     t("Ambient Lighting"),
   ]
 
-  // Generate years from 1990 to current year + 1
-  const currentYear = new Date().getFullYear()
-  const yearOptions = Array.from({ length: currentYear - 1989 }, (_, i) => (currentYear + 1 - i).toString())
-
-  // Name validation
-  const isValidName = (name) => {
-    return /^[a-zA-Z\s'-]{2,}$/.test(name)
-  }
-
-  // Phone validation (10 digits)
-  const isValidPhone = (phone) => {
-    return /^\d{10}$/.test(phone)
-  }
-
-  // Card type detection
-  const detectCardType = (cardNumber) => {
-    const number = cardNumber.replace(/\s/g, "")
-    if (/^4/.test(number)) return "Visa"
-    if (/^5[1-5]/.test(number) || /^2[2-7]/.test(number)) return "MasterCard"
-    if (/^3[47]/.test(number)) return "American Express"
-    return ""
-  }
-
-  // Format card number
-  const formatCardNumber = (value) => {
-    const number = value.replace(/\S/g, "")
-    const match = number.match(/.{1,4}/g)
-    return match ? match.join(" ") : ""
-  }
-
-  // Auto-fill current location on load
-  useEffect(() => {
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync()
-      if (status === "granted") {
-        try {
-          const location = await Location.getCurrentPositionAsync({})
-          const { latitude, longitude } = location.coords
-          setFormData((prev) => ({
-            ...prev,
-            address: t("Current Location"),
-            latitude: latitude.toString(),
-            longitude: longitude.toString(),
-          }))
-          setSelectedLocation({ latitude, longitude })
-          setMapRegion({
-            latitude,
-            longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          })
-        } catch (error) {
-          console.log("Error getting location:", error)
-        }
-      }
-    })()
-  }, [])
-
-  // Update models when make changes
+  // Auto-fill models when make changes
   useEffect(() => {
     if (formData.make && carModels[formData.make] && formData.make !== "Other") {
       setFilteredModels(carModels[formData.make])
@@ -447,71 +376,149 @@ const AddCarScreen = () => {
       setFilteredModels([])
       setIsCustomModel(true)
     }
-    // Reset model when make changes
     if (formData.model && (!carModels[formData.make] || !carModels[formData.make].includes(formData.model))) {
       setFormData((prev) => ({ ...prev, model: "" }))
     }
   }, [formData.make])
 
-  // Update map when province changes
-  useEffect(() => {
-    if (formData.province) {
-      const coordinates = getProvinceCoordinates(formData.province)
-      setMapRegion({
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
-        latitudeDelta: 0.5,
-        longitudeDelta: 0.5,
-      })
-      setSelectedLocation({ latitude: coordinates.latitude, longitude: coordinates.longitude })
-    }
-  }, [formData.province])
+  // Address search functionality
+  const handleAddressSearch = (text) => {
+    setFormData({ ...formData, address: text })
+    setValidationErrors((prev) => ({ ...prev, address: false }))
 
-  // Handle address input and suggestions
-  const handleAddressChange = (text) => {
-    setFormData((prev) => ({ ...prev, address: text }))
-
-    if (text.length >= 3) {
-      const suggestions = searchLocations(text, 5)
-      setAddressSuggestions(suggestions)
-      setShowAddressSuggestions(true)
+    if (text.length > 2) {
+      const suggestions = searchLocations(text)
+      setAddressSuggestions(suggestions.slice(0, 5))
+      setShowAddressSuggestions(suggestions.length > 0)
     } else {
+      setAddressSuggestions([])
       setShowAddressSuggestions(false)
     }
   }
 
-  // Select address suggestion
-  const selectAddressSuggestion = async (suggestion) => {
-    setFormData((prev) => ({
-      ...prev,
+  const selectAddressSuggestion = (suggestion) => {
+    setFormData({
+      ...formData,
       address: suggestion.fullAddress,
-      province: suggestion.province,
-    }))
-    setShowAddressSuggestions(false)
-    Keyboard.dismiss()
+      latitude: suggestion.latitude?.toString() || "",
+      longitude: suggestion.longitude?.toString() || "",
+    })
 
-    // Geocode the selected address
+    if (suggestion.latitude && suggestion.longitude) {
+      setSelectedLocation({
+        latitude: suggestion.latitude,
+        longitude: suggestion.longitude,
+      })
+      setMapRegion({
+        latitude: suggestion.latitude,
+        longitude: suggestion.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      })
+    }
+
+    setShowAddressSuggestions(false)
+    setValidationErrors((prev) => ({ ...prev, address: false, location: false }))
+  }
+
+  // Map functionality
+  const openMapModal = async () => {
     try {
-      const geocoded = await Location.geocodeAsync(suggestion.fullAddress + ", Rwanda")
-      if (geocoded.length > 0) {
-        const location = geocoded[0]
-        updateMapLocation(location.latitude, location.longitude)
+      const { status } = await Location.requestForegroundPermissionsAsync()
+      if (status !== "granted") {
+        Alert.alert(t("Permission Needed"), t("Location permission is required to use the map"))
+        return
       }
+
+      if (formData.province) {
+        const provinceCoords = getProvinceCoordinates(formData.province)
+        if (provinceCoords) {
+          setMapRegion({
+            latitude: provinceCoords.latitude,
+            longitude: provinceCoords.longitude,
+            latitudeDelta: 0.1,
+            longitudeDelta: 0.1,
+          })
+        }
+      }
+
+      setShowMapModal(true)
     } catch (error) {
-      console.log("Geocoding error:", error)
-      // Use province coordinates as fallback
-      const coordinates = getProvinceCoordinates(suggestion.province)
-      updateMapLocation(coordinates.latitude, coordinates.longitude)
+      console.error("Error opening map:", error)
+      Alert.alert(t("Error"), t("Unable to open map"))
     }
   }
 
-  const toggleFeature = (feature) => {
-    setFormData((prev) => ({
-      ...prev,
-      features: prev.features.includes(feature)
-        ? prev.features.filter((f) => f !== feature)
-        : [...prev.features, feature],
-    }))
+  const handleMapPress = (event) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate
+    setSelectedLocation({ latitude, longitude })
+    setFormData({
+      ...formData,
+      latitude: latitude.toString(),
+      longitude: longitude.toString(),
+    })
+    setValidationErrors((prev) => ({ ...prev, location: false }))
+  }
+
+  const confirmLocation = () => {
+    if (selectedLocation) {
+      setShowMapModal(false)
+      Alert.alert(t("Success"), t("Location selected successfully"))
+    } else {
+      Alert.alert(t("Error"), t("Please select a location on the map"))
+    }
+  }
+
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync()
+      if (status !== "granted") {
+        Alert.alert(t("Permission Needed"), t("Location permission is required"))
+        return
+      }
+
+      const location = await Location.getCurrentPositionAsync({})
+      const { latitude, longitude } = location.coords
+
+      setSelectedLocation({ latitude, longitude })
+      setMapRegion({
+        latitude,
+        longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      })
+      setFormData({
+        ...formData,
+        latitude: latitude.toString(),
+        longitude: longitude.toString(),
+      })
+      setValidationErrors((prev) => ({ ...prev, location: false }))
+    } catch (error) {
+      console.error("Error getting current location:", error)
+      Alert.alert(t("Error"), t("Unable to get current location"))
+    }
+  }
+
+  // Payment handlers
+  const handlePaymentSuccess = (paymentResult) => {
+    setPaymentCompleted(true)
+    Alert.alert(t("Payment Successful"), t("You can now upload photos and submit your car listing."))
+  }
+
+  const handlePaymentRequired = () => {
+    if (!paymentCompleted) {
+      setShowPaymentModal(true)
+    }
+  }
+
+  // Name validation
+  const isValidName = (name) => {
+    return /^[a-zA-Z\s'-]{2,}$/.test(name)
+  }
+
+  // Phone validation (9 digits for Rwanda)
+  const isValidPhone = (phone) => {
+    return /^\d{9}$/.test(phone)
   }
 
   const validateCurrentStep = () => {
@@ -559,7 +566,7 @@ const AddCarScreen = () => {
   }
 
   const handleNext = () => {
-    if (validateCurrentStep() && currentStep < 6) {
+    if (validateCurrentStep() && currentStep < 5) {
       setCurrentStep(currentStep + 1)
     }
   }
@@ -571,74 +578,131 @@ const AddCarScreen = () => {
     }
   }
 
-  const updateMapLocation = (latitude, longitude) => {
-    setSelectedLocation({ latitude, longitude })
-    setMapRegion({
-      latitude,
-      longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    })
+  // ✅ FIXED: Better error handling for user null
+  const handleSubmit = async () => {
+    console.log("🚀 Starting form submission...")
+
+    // ✅ FIXED: Check if user exists before accessing _id
+    if (!user || !user.id) {
+      Alert.alert(t("Error"), t("User information not available. Please try logging in again."))
+      console.error("❌ User is null or missing _id:", user)
+      return
+    }
+
+    if (formData.thumbnail && !paymentCompleted) {
+      Alert.alert(t("Payment Required"), t("Please complete payment to include advertisement thumbnail"))
+      return
+    }
+
+    if (!validateCurrentStep()) {
+      console.log("❌ Validation failed")
+      return
+    }
+
+    try {
+      console.log("📤 Uploading images to Cloudinary...")
+
+      // Upload all images to Cloudinary
+      const uploadedImages = []
+      for (const key of Object.keys(formData.images)) {
+        const uri = formData.images[key]
+        if (uri) {
+          console.log(`📸 Uploading ${key} image...`)
+          const cloudForm = new FormData()
+          cloudForm.append("file", {
+            uri,
+            type: "image/jpeg",
+            name: `${key}.jpg`,
+          })
+          cloudForm.append("upload_preset", "carlistings")
+
+          const cloudRes = await fetch("https://api.cloudinary.com/v1_1/def0cjmh2/image/upload", {
+            method: "POST",
+            body: cloudForm,
+          })
+          const cloudData = await cloudRes.json()
+
+          if (cloudData.secure_url) {
+            uploadedImages.push(cloudData.secure_url)
+            console.log(`✅ ${key} image uploaded successfully`)
+          } else {
+            throw new Error(`Failed to upload ${key} image`)
+          }
+        }
+      }
+
+      console.log("🏗️ Preparing submission data...")
+
+      const submitData = {
+        brand: formData.make,
+        model: formData.model,
+        year: Number.parseInt(formData.year),
+        type: formData.type,
+        transmission: formData.transmission.toLowerCase(),
+        fuelType: formData.fuel_type.toLowerCase(),
+        seatings: Number.parseInt(formData.seatings),
+        features: formData.features,
+        base_price: Number.parseFloat(formData.base_price),
+        price: Number.parseFloat(formData.base_price),
+        weekly_discount: Number.parseFloat(formData.weekly_discount || 0),
+        monthly_discount: Number.parseFloat(formData.monthly_discount || 0),
+        currency: formData.currency,
+        category: formData.category,
+        images: uploadedImages,
+        // ✅ FIXED: Better owner data handling
+        ownerName: formData.ownerName,
+        ownerPhone: formData.countryCode + formData.ownerPhone,
+        ownerType: formData.ownerType,
+        owner: {
+          userId: user.id,
+          name: formData.ownerName,
+          phone: formData.countryCode + formData.ownerPhone,
+          email: user.email,
+          type: formData.ownerType,
+        },
+        location: {
+          province: formData.province,
+          address: formData.address,
+          country: formData.country,
+          latitude: Number.parseFloat(formData.latitude),
+          longitude: Number.parseFloat(formData.longitude),
+        },
+        province: formData.province,
+        address: formData.address,
+        latitude: Number.parseFloat(formData.latitude),
+        longitude: Number.parseFloat(formData.longitude),
+        available: true,
+        description: `${formData.make} ${formData.model} ${formData.year} - ${formData.category}`,
+        status: "pending",
+      }
+
+      console.log("📋 Submit data prepared:", submitData)
+
+      if (isEditing) {
+        console.log("✏️ Updating existing car...")
+        dispatch(updateCarAction({ carId: editingCarId, updatedData: submitData }))
+      } else {
+        console.log("🆕 Creating new car...")
+        dispatch(createCarAction(submitData))
+      }
+    } catch (error) {
+      console.error("❌ Submission error:", error)
+      Alert.alert("Error", "Image upload failed or listing error: " + error.message)
+    }
+  }
+
+  const toggleFeature = (feature) => {
     setFormData((prev) => ({
       ...prev,
-      latitude: latitude.toString(),
-      longitude: longitude.toString(),
+      features: prev.features.includes(feature)
+        ? prev.features.filter((f) => f !== feature)
+        : [...prev.features, feature],
     }))
   }
 
-  const handleMapPress = (event) => {
-    const { latitude, longitude } = event.nativeEvent.coordinate
-    updateMapLocation(latitude, longitude)
-  }
-
-  const handlePayment = () => {
-    if (paymentMethod === "momo") {
-      if (!isValidPhone(paymentData.momoPhone)) {
-        Alert.alert(t("Invalid Phone"), t("Enter a valid phone number"))
-        return
-      }
-    } else if (paymentMethod === "card") {
-      if (!paymentData.cardNumber || !paymentData.cardHolder || !paymentData.expiryDate || !paymentData.cvv) {
-        Alert.alert(t("Incomplete Card Details"), t("Fill in all card information"))
-        return
-      }
-    }
-
-    // Simulate payment processing
-    Alert.alert(t("Processing Payment"), t("Please wait while we process your payment"), [{ text: t("OK") }])
-
-    setTimeout(() => {
-      Alert.alert(t("Payment Successful"), t("Payment processed successfully"), [
-        {
-          text: t("OK"),
-          onPress: () => {
-            setShowPaymentModal(false)
-            pickImageAfterPayment()
-          },
-        },
-      ])
-    }, 2000)
-  }
-
-  const pickImageAfterPayment = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    })
-
-    if (!result.canceled) {
-      setFormData((prev) => ({
-        ...prev,
-        thumbnail: result.assets[0].uri,
-      }))
-    }
-  }
-
   const pickImage = async (imageType) => {
-    if (imageType === "thumbnail") {
-      setShowPaymentModal(true)
+    if (imageType === "thumbnail" && !paymentCompleted) {
+      handlePaymentRequired()
       return
     }
 
@@ -662,67 +726,84 @@ const AddCarScreen = () => {
       return
     }
 
+    const aspectRatio = imageType === "thumbnail" ? [100, 85] : [4, 3]
+
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: aspectRatio,
       quality: 0.8,
     })
 
     if (!result.canceled) {
+      const imageUri = result.assets[0].uri
+
+      if (imageType !== "thumbnail" && selectedImages.includes(imageUri)) {
+        Alert.alert(
+          t("Image Already Selected"),
+          t("This image has already been selected for another photo type. It will be highlighted in your gallery."),
+        )
+      }
+
+      if (imageType !== "thumbnail") {
+        const currentImage = formData.images[imageType]
+        if (currentImage) {
+          setSelectedImages((prev) => prev.filter((uri) => uri !== currentImage))
+        }
+        setSelectedImages((prev) => [...prev, imageUri])
+      }
+
       setFormData((prev) => ({
         ...prev,
-        images: {
-          ...prev.images,
-          [imageType]: result.assets[0].uri,
-        },
+        [imageType === "thumbnail" ? "thumbnail" : "images"]:
+          imageType === "thumbnail"
+            ? imageUri
+            : {
+                ...prev.images,
+                [imageType]: imageUri,
+              },
       }))
     }
   }
 
   const openGallery = async (imageType) => {
+    const aspectRatio = imageType === "thumbnail" ? [100, 85] : [4, 3]
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: aspectRatio,
       quality: 0.8,
     })
 
     if (!result.canceled) {
-      setFormData((prev) => ({
-        ...prev,
-        images: {
-          ...prev.images,
-          [imageType]: result.assets[0].uri,
-        },
-      }))
-    }
-  }
+      const imageUri = result.assets[0].uri
 
-  const handleSubmit = () => {
-    if (validateCurrentStep()) {
-      const carData = {
-        id: isEditing ? editingCarId : Date.now().toString(),
-        name: `${formData.make} ${formData.model}`,
-        ...formData,
-        price: Number.parseInt(formData.base_price),
-        year: Number.parseInt(formData.year),
-        image: formData.images.exterior_front || "https://via.placeholder.com/300x200/E2E8F0/64748B?text=Car+Image",
-        status: "active",
-        available: true,
-        views: 0,
-        rating: 0,
-        reviews: 0,
+      if (imageType !== "thumbnail" && selectedImages.includes(imageUri)) {
+        Alert.alert(
+          t("Image Already Selected"),
+          t("This image has already been selected for another photo type. It will be highlighted in your gallery."),
+        )
       }
 
-      const message = isEditing ? t("Listing Updated") : t("Listing Submitted")
+      if (imageType !== "thumbnail") {
+        const currentImage = formData.images[imageType]
+        if (currentImage) {
+          setSelectedImages((prev) => prev.filter((uri) => uri !== currentImage))
+        }
+        setSelectedImages((prev) => [...prev, imageUri])
+      }
 
-      Alert.alert(t("Success"), message, [
-        {
-          text: t("OK"),
-          onPress: () => navigation.navigate("MyCars"),
-        },
-      ])
+      setFormData((prev) => ({
+        ...prev,
+        [imageType === "thumbnail" ? "thumbnail" : "images"]:
+          imageType === "thumbnail"
+            ? imageUri
+            : {
+                ...prev.images,
+                [imageType]: imageUri,
+              },
+      }))
     }
   }
 
@@ -761,153 +842,23 @@ const AddCarScreen = () => {
     </>
   )
 
-  const renderPaymentModal = () => (
-    <Modal
-      visible={showPaymentModal}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => setShowPaymentModal(false)}
-    >
-      <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-        <View style={styles.paymentModalOverlay}>
-          <View style={styles.paymentBottomSheet}>
-            <View style={styles.paymentHeader}>
-              <Text style={styles.paymentTitle}>{t("Premium Thumbnail Upload")}</Text>
-              <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
-                <Ionicons name="close-outline" size={24} color="#1E293B" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.paymentContent}>
-              <Text style={styles.paymentAmount}>{t("Amount")}</Text>
-              <Text style={styles.paymentDescription}>
-                {t("Upload your business poster for premium visibility and better customer engagement")}
-              </Text>
-
-              <Text style={styles.paymentMethodTitle}>{t("Choose Payment Method")}</Text>
-
-              <View style={styles.paymentMethods}>
-                <TouchableOpacity
-                  style={[styles.paymentMethodButton, paymentMethod === "momo" && styles.selectedPaymentMethod]}
-                  onPress={() => setPaymentMethod("momo")}
-                >
-                  <Image
-                    source={{
-                      uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSoXU9ZNvjHa2LUc6_xyeEBa_bl0IGDKbzrTg&s",
-                    }}
-                    style={styles.paymentIcon}
-                  />
-                  <Text style={styles.paymentMethodText}>{t("MTN MoMo")}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.paymentMethodButton, paymentMethod === "card" && styles.selectedPaymentMethod]}
-                  onPress={() => setPaymentMethod("card")}
-                >
-                  <Image
-                    source={{ uri: "https://img.freepik.com/free-vector/realistic-credit-card-design_23-2149126088.jpg" }}
-                    style={styles.paymentIcon}
-                  />
-                  <Text style={styles.paymentMethodText}>{t("Credit Card")}</Text>
-                </TouchableOpacity>
-              </View>
-
-              {paymentMethod === "momo" && (
-                <View style={styles.paymentForm}>
-                  <Text style={styles.formLabel}>{t("Phone Number")}</Text>
-                  <View style={styles.phoneInputContainer}>
-                    <Text style={styles.countryCodeText}>+250</Text>
-                    <TextInput
-                      style={styles.phoneInput}
-                      value={paymentData.momoPhone}
-                      onChangeText={(text) => setPaymentData((prev) => ({ ...prev, momoPhone: text }))}
-                      placeholder="788123456"
-                      keyboardType="numeric"
-                      maxLength={10}
-                    />
-                  </View>
-                </View>
-              )}
-
-              {paymentMethod === "card" && (
-                <View style={styles.paymentForm}>
-                  <View style={styles.cardInputContainer}>
-                    <Text style={styles.formLabel}>{t("Card Number")}</Text>
-                    <View style={styles.cardNumberContainer}>
-                      <TextInput
-                        style={styles.cardInput}
-                        value={paymentData.cardNumber}
-                        onChangeText={(text) => {
-                          const formatted = formatCardNumber(text)
-                          const cardType = detectCardType(text)
-                          setPaymentData((prev) => ({
-                            ...prev,
-                            cardNumber: formatted,
-                            cardType: cardType,
-                          }))
-                        }}
-                        placeholder="1234 5678 9012 3456"
-                        keyboardType="numeric"
-                        maxLength={19}
-                      />
-                      {paymentData.cardType && <Text style={styles.cardType}>{paymentData.cardType}</Text>}
-                    </View>
-                  </View>
-
-                  <Text style={styles.formLabel}>{t("Cardholder Name")}</Text>
-                  <TextInput
-                    style={styles.cardInput}
-                    value={paymentData.cardHolder}
-                    onChangeText={(text) => setPaymentData((prev) => ({ ...prev, cardHolder: text }))}
-                    placeholder="John Doe"
-                  />
-
-                  <View style={styles.cardRow}>
-                    <View style={styles.cardInputHalf}>
-                      <Text style={styles.formLabel}>{t("Expiry Date")}</Text>
-                      <TextInput
-                        style={styles.cardInput}
-                        value={paymentData.expiryDate}
-                        onChangeText={(text) => {
-                          // Format MM/YY
-                          let formatted = text.replace(/\D/g, "")
-                          if (formatted.length >= 2) {
-                            formatted = formatted.substring(0, 2) + "/" + formatted.substring(2, 4)
-                          }
-                          setPaymentData((prev) => ({ ...prev, expiryDate: formatted }))
-                        }}
-                        placeholder="MM/YY"
-                        keyboardType="numeric"
-                        maxLength={5}
-                      />
-                    </View>
-
-                    <View style={styles.cardInputHalf}>
-                      <Text style={styles.formLabel}>{t("CVV")}</Text>
-                      <TextInput
-                        style={styles.cardInput}
-                        value={paymentData.cvv}
-                        onChangeText={(text) => setPaymentData((prev) => ({ ...prev, cvv: text }))}
-                        placeholder="123"
-                        keyboardType="numeric"
-                        maxLength={paymentData.cardType === "American Express" ? 4 : 3}
-                        secureTextEntry
-                      />
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {paymentMethod && (
-                <TouchableOpacity style={styles.confirmPaymentButton} onPress={handlePayment}>
-                  <Text style={styles.confirmPaymentText}>{t("Confirm Payment")}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+  const renderStepIndicator = () => (
+    <View style={styles.stepIndicatorContainer}>
+      {[1, 2, 3, 4, 5].map((step) => (
+        <View key={step} style={styles.stepIndicatorItem}>
+          <View style={[styles.stepCircle, currentStep >= step ? styles.stepCircleActive : styles.stepCircleInactive]}>
+            <Text
+              style={[styles.stepNumber, currentStep >= step ? styles.stepNumberActive : styles.stepNumberInactive]}
+            >
+              {step}
+            </Text>
           </View>
+          {step < 5 && (
+            <View style={[styles.stepLine, currentStep > step ? styles.stepLineActive : styles.stepLineInactive]} />
+          )}
         </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+      ))}
+    </View>
   )
 
   const renderStep = () => {
@@ -1083,19 +1034,65 @@ const AddCarScreen = () => {
               </View>
             </View>
 
+            {/* ✅ NEW: Auto-complete toggle */}
+            <View style={styles.autoCompleteToggle}>
+              <TouchableOpacity style={styles.toggleButton} onPress={toggleManualEntry}>
+                <Ionicons
+                  name={isManualEntry ? "create-outline" : "people-outline"}
+                  size={20}
+                  color={isManualEntry ? "#F59E0B" : "#007EFD"}
+                />
+                <Text style={[styles.toggleButtonText, { color: isManualEntry ? "#F59E0B" : "#007EFD" }]}>
+                  {isManualEntry ? t("Manual Entry") : t("Auto-Complete")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>
-                {formData.ownerType === "company" ? t("Company Name") : t("Full Name")}
-              </Text>
-              <TextInput
-                style={[styles.input, validationErrors.ownerName && styles.errorBorder]}
-                value={formData.ownerName}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, ownerName: text })
-                  setValidationErrors((prev) => ({ ...prev, ownerName: false }))
-                }}
-                placeholder={formData.ownerType === "company" ? t("Enter company name") : t("Enter your full name")}
-              />
+              <Text style={styles.label}>{formData.ownerType === "company" ? t("Company Name") : t("Full Name")}</Text>
+              <View style={styles.ownerInputContainer}>
+                <TextInput
+                  style={[styles.input, validationErrors.ownerName && styles.errorBorder]}
+                  value={formData.ownerName}
+                  onChangeText={handleOwnerNameSearch}
+                  placeholder={
+                    isManualEntry
+                      ? formData.ownerType === "company"
+                        ? t("Enter company name")
+                        : t("Enter your full name")
+                      : t("Search or use your name")
+                  }
+                />
+                {!isManualEntry && (
+                  <TouchableOpacity style={styles.searchIcon}>
+                    <Ionicons name="search-outline" size={20} color="#64748B" />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* ✅ NEW: Owner suggestions dropdown */}
+              {showOwnerSuggestions && searchResults.length > 0 && (
+                <View style={styles.suggestionsContainer}>
+                  <FlatList
+                    data={searchResults}
+                    keyExtractor={(item) => item._id}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity style={styles.suggestionItem} onPress={() => selectOwnerFromSuggestions(item)}>
+                        <Ionicons name="person-outline" size={16} color="#64748B" />
+                        <View style={styles.suggestionText}>
+                          <Text style={styles.suggestionName}>{item.name}</Text>
+                          <Text style={styles.suggestionDetails}>
+                            {item.phone} • {item.email}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    )}
+                    style={styles.suggestionsList}
+                    nestedScrollEnabled
+                  />
+                </View>
+              )}
+
               {validationErrors.ownerName && <Text style={styles.errorText}>{t("Invalid Name")}</Text>}
             </View>
 
@@ -1119,47 +1116,22 @@ const AddCarScreen = () => {
                   style={[styles.phoneInput, validationErrors.ownerPhone && styles.errorBorder]}
                   value={formData.ownerPhone}
                   onChangeText={(text) => {
-                    // Only allow digits and limit to 10
-                    const cleaned = text.replace(/\D/g, "").slice(0, 10)
+                    const cleaned = text.replace(/\D/g, "").slice(0, 9)
                     setFormData({ ...formData, ownerPhone: cleaned })
                     setValidationErrors((prev) => ({ ...prev, ownerPhone: false }))
                   }}
                   placeholder="788123456"
                   keyboardType="numeric"
-                  maxLength={10}
+                  maxLength={9}
+                  editable={isManualEntry || !user?.phone} // Allow editing if manual or no user phone
                 />
               </View>
               {validationErrors.ownerPhone && <Text style={styles.errorText}>{t("Invalid Phone")}</Text>}
-
-              {showCountryCodeDropdown && (
-                <Modal transparent visible={showCountryCodeDropdown} animationType="fade">
-                  <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowCountryCodeDropdown(false)}>
-                    <View style={styles.dropdownModal}>
-                      <ScrollView>
-                        {countryCodes.map((country, index) => (
-                          <TouchableOpacity
-                            key={index}
-                            style={styles.dropdownOption}
-                            onPress={() => {
-                              setFormData({ ...formData, countryCode: country.code })
-                              setShowCountryCodeDropdown(false)
-                            }}
-                          >
-                            <Text style={styles.countryOption}>
-                              {country.flag} {country.code} {country.country}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
-                  </TouchableOpacity>
-                </Modal>
-              )}
             </View>
           </View>
         )
 
-      case 3: // Location
+      case 3: // Location Details
         return (
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>{t("Location Details")}</Text>
@@ -1169,7 +1141,18 @@ const AddCarScreen = () => {
               {renderDropdown(
                 provinces,
                 formData.province,
-                (value) => setFormData({ ...formData, province: value }),
+                (value) => {
+                  setFormData({ ...formData, province: value })
+                  const provinceCoords = getProvinceCoordinates(value)
+                  if (provinceCoords) {
+                    setMapRegion({
+                      latitude: provinceCoords.latitude,
+                      longitude: provinceCoords.longitude,
+                      latitudeDelta: 0.1,
+                      longitudeDelta: 0.1,
+                    })
+                  }
+                },
                 t("Select Province"),
                 showProvinceDropdown,
                 setShowProvinceDropdown,
@@ -1179,25 +1162,38 @@ const AddCarScreen = () => {
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>{t("Address")}</Text>
-              <TextInput
-                style={[styles.input, validationErrors.address && styles.errorBorder]}
-                value={formData.address}
-                onChangeText={handleAddressChange}
-                placeholder={t("Enter Address")}
-              />
+              <View style={styles.addressInputContainer}>
+                <TextInput
+                  style={[styles.input, validationErrors.address && styles.errorBorder]}
+                  value={formData.address}
+                  onChangeText={handleAddressSearch}
+                  placeholder={t("Enter district, sector, or street name")}
+                  autoComplete="street-address"
+                />
+                <TouchableOpacity style={styles.searchIcon}>
+                  <Ionicons name="search-outline" size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
 
-              {showAddressSuggestions && addressSuggestions.length > 0 && (
+              {showAddressSuggestions && (
                 <View style={styles.suggestionsContainer}>
-                  {addressSuggestions.map((suggestion, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.suggestionItem}
-                      onPress={() => selectAddressSuggestion(suggestion)}
-                    >
-                      <Ionicons name="location-outline" size={16} color="#64748B" />
-                      <Text style={styles.suggestionText}>{suggestion.fullAddress}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  <ScrollView style={styles.suggestionsList} nestedScrollEnabled>
+                    {addressSuggestions.map((suggestion, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={styles.suggestionItem}
+                        onPress={() => selectAddressSuggestion(suggestion)}
+                      >
+                        <Ionicons name="location-outline" size={16} color="#64748B" />
+                        <View style={styles.suggestionText}>
+                          <Text style={styles.suggestionAddress}>{suggestion.fullAddress}</Text>
+                          <Text style={styles.suggestionDetails}>
+                            {suggestion.district}, {suggestion.province}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
               )}
             </View>
@@ -1207,55 +1203,34 @@ const AddCarScreen = () => {
               <TextInput style={styles.input} value={formData.country} editable={false} />
             </View>
 
-            <View style={styles.mapContainer}>
-              <Text style={styles.label}>
-                <Ionicons name="location-outline" size={16} /> {t("Location on Map")}
-              </Text>
-              {validationErrors.location && <Text style={styles.errorText}>{t("Select Location on Map")}</Text>}
+            <View style={styles.locationContainer}>
+              <Text style={styles.label}>{t("Pin Location on Map")}</Text>
+              {validationErrors.location && (
+                <Text style={styles.errorText}>{t("Please select a location on the map")}</Text>
+              )}
 
-              <TouchableOpacity style={styles.mapPreview} onPress={() => setShowMapModal(true)}>
-                {selectedLocation ? (
-                  <MapView style={styles.miniMap} region={mapRegion} scrollEnabled={false} zoomEnabled={false}>
-                    <Marker coordinate={selectedLocation}>
-                      <Image source={carIcon} style={styles.markerIcon} />
-                    </Marker>
-                  </MapView>
-                ) : (
-                  <View style={styles.mapPlaceholder}>
-                    <Ionicons name="location-outline" size={48} color="#9CA3AF" />
-                    <Text style={styles.mapPlaceholderText}>{t("Tap to Select Location")}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
+              <View style={styles.locationActions}>
+                <TouchableOpacity style={styles.mapButton} onPress={openMapModal}>
+                  <Ionicons name="map-outline" size={20} color="#007EFD" />
+                  <Text style={styles.mapButtonText}>{t("Select on Map")}</Text>
+                </TouchableOpacity>
 
-            {/* Full Screen Map Modal */}
-            <Modal visible={showMapModal} animationType="slide">
-              <SafeAreaView style={styles.mapModalContainer}>
-                <View style={styles.mapModalHeader}>
-                  <TouchableOpacity onPress={() => setShowMapModal(false)}>
-                    <Ionicons name="close-outline" size={24} color="#1E293B" />
-                  </TouchableOpacity>
-                  <Text style={styles.mapModalTitle}>{t("Select Location")}</Text>
-                  <TouchableOpacity onPress={() => setShowMapModal(false)}>
-                    <Text style={styles.mapModalDone}>{t("Done")}</Text>
-                  </TouchableOpacity>
+                <TouchableOpacity style={styles.currentLocationButton} onPress={getCurrentLocation}>
+                  <Ionicons name="locate-outline" size={20} color="#10B981" />
+                  <Text style={styles.currentLocationButtonText}>{t("Current Location")}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {selectedLocation && (
+                <View style={styles.selectedLocationContainer}>
+                  <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                  <Text style={styles.selectedLocationText}>
+                    {t("Location selected")}: {selectedLocation.latitude.toFixed(6)},{" "}
+                    {selectedLocation.longitude.toFixed(6)}
+                  </Text>
                 </View>
-
-                <MapView
-                  style={styles.fullMap}
-                  region={mapRegion}
-                  onPress={handleMapPress}
-                  onRegionChangeComplete={setMapRegion}
-                >
-                  {selectedLocation && (
-                    <Marker coordinate={selectedLocation}>
-                      <Image source={carIcon} style={styles.markerIcon} />
-                    </Marker>
-                  )}
-                </MapView>
-              </SafeAreaView>
-            </Modal>
+              )}
+            </View>
           </View>
         )
 
@@ -1278,7 +1253,7 @@ const AddCarScreen = () => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>{t("Base Price")}</Text>
+              <Text style={styles.label}>{t("Base Price (FRW per day)")}</Text>
               <TextInput
                 style={[styles.input, validationErrors.base_price && styles.errorBorder]}
                 value={formData.base_price}
@@ -1293,7 +1268,7 @@ const AddCarScreen = () => {
 
             <View style={styles.inputRow}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t("Weekly Discount")}</Text>
+                <Text style={styles.label}>{t("Weekly Discount (%)")}</Text>
                 <TextInput
                   style={styles.input}
                   value={formData.weekly_discount}
@@ -1304,7 +1279,7 @@ const AddCarScreen = () => {
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t("Monthly Discount")}</Text>
+                <Text style={styles.label}>{t("Monthly Discount (%)")}</Text>
                 <TextInput
                   style={styles.input}
                   value={formData.monthly_discount}
@@ -1313,13 +1288,6 @@ const AddCarScreen = () => {
                   keyboardType="numeric"
                 />
               </View>
-            </View>
-
-            <View style={styles.noteContainer}>
-              <Text style={styles.noteText}>
-                <Text style={styles.noteLabel}>{t("Note")}:</Text>{" "}
-                {t("Discounts are optional and will be applied automatically for weekly and monthly rentals")}
-              </Text>
             </View>
           </View>
         )
@@ -1364,115 +1332,44 @@ const AddCarScreen = () => {
               </View>
             </View>
 
-            {/* Thumbnail Upload (Premium Feature) */}
             <View style={styles.thumbnailContainer}>
               <Text style={styles.label}>
-                {t("Business Thumbnail")} <Ionicons name="star-outline" size={16} color="#F59E0B" />
-              </Text>
-              <Text style={styles.thumbnailDescription}>
-                {t("Upload your business poster for premium visibility (5000 FRW)")}
+                {t("Advertisement Thumbnail")} <Text style={styles.optionalText}>({t("Optional")})</Text>
               </Text>
 
-              <View style={styles.thumbnailUpload}>
+              {!paymentCompleted && (
+                <View style={styles.paymentRequiredContainer}>
+                  <Ionicons name="warning-outline" size={24} color="#F59E0B" />
+                  <Text style={styles.paymentRequiredText}>
+                    {t("Payment of 5,000 RWF is required for advertisement thumbnail")}
+                  </Text>
+                  <TouchableOpacity style={styles.paymentButton} onPress={() => setShowPaymentModal(true)}>
+                    <Text style={styles.paymentButtonText}>{t("Pay Now")}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <View style={[styles.thumbnailUploadContainer, !paymentCompleted && styles.disabledPhotoContainer]}>
                 {formData.thumbnail ? (
                   <Image source={{ uri: formData.thumbnail }} style={styles.thumbnailImage} />
                 ) : (
                   <View style={styles.thumbnailPlaceholder}>
-                    <Ionicons name="business-outline" size={32} color="#9CA3AF" />
-                    <Text style={styles.thumbnailPlaceholderText}>{t("Business Poster")}</Text>
+                    <Ionicons name="image-outline" size={40} color="#9CA3AF" />
+                    <Text style={styles.thumbnailPlaceholderText}>{t("Advertisement Image")}</Text>
+                    <Text style={styles.thumbnailDimensionsText}>{t("Cropped to 100:85 ratio")}</Text>
                   </View>
                 )}
-                <TouchableOpacity style={styles.premiumButton} onPress={() => pickImage("thumbnail")}>
-                  <Ionicons name="diamond-outline" size={16} color="#F59E0B" />
-                  <Text style={styles.premiumButtonText}>{t("Upload Premium")}</Text>
+                <TouchableOpacity
+                  style={[styles.thumbnailChooseButton, !paymentCompleted && styles.disabledButton]}
+                  onPress={() => pickImage("thumbnail")}
+                  disabled={!paymentCompleted}
+                >
+                  <Ionicons name="cloud-upload-outline" size={16} color={paymentCompleted ? "#007EFD" : "#9CA3AF"} />
+                  <Text style={[styles.chooseButtonText, !paymentCompleted && styles.disabledButtonText]}>
+                    {t("Choose Thumbnail")}
+                  </Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
-        )
-
-      case 6: // Review & Submit
-        return (
-          <View style={styles.stepContainer}>
-            <View style={styles.reviewHeader}>
-              <Ionicons name="checkmark-circle-outline" size={64} color="#10B981" />
-              <Text style={styles.stepTitle}>{t("Review and Submit")}</Text>
-              <Text style={styles.reviewSubtitle}>
-                {isEditing ? t("Review your changes before updating") : t("Review your car details before submitting")}
-              </Text>
-            </View>
-
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>{t("Vehicle Summary")}</Text>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{t("Vehicle")}:</Text>
-                <Text style={styles.summaryValue}>
-                  {formData.make} {formData.model} {formData.year}
-                </Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{t("Type")}:</Text>
-                <Text style={styles.summaryValue}>{formData.type}</Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{t("Category")}:</Text>
-                <Text style={styles.summaryValue}>{formData.category}</Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{t("Owner")}:</Text>
-                <Text style={styles.summaryValue}>
-                  {formData.ownerName} ({formData.ownerType})
-                </Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{t("Phone")}:</Text>
-                <Text style={styles.summaryValue}>
-                  {formData.countryCode} {formData.ownerPhone}
-                </Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{t("Location")}:</Text>
-                <Text style={styles.summaryValue}>
-                  {formData.address}, {formData.province}
-                </Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{t("Base Price")}:</Text>
-                <Text style={[styles.summaryValue, styles.priceText]}>{formData.base_price} FRW per day</Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{t("Features")}:</Text>
-                <Text style={styles.summaryValue}>{formData.features.length} {t("selected")}</Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>{t("Photos")}:</Text>
-                <Text style={styles.summaryValue}>{t("4 uploaded")}</Text>
-              </View>
-
-              {formData.thumbnail && (
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>{t("Premium Thumbnail")}:</Text>
-                  <Text style={[styles.summaryValue, { color: "#F59E0B" }]}>{t("Included")}</Text>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.finalNoteContainer}>
-              <Text style={styles.noteText}>
-                <Text style={styles.noteLabel}>{t("Note")}:</Text>{" "}
-                {isEditing
-                  ? t("Your changes will be saved and the listing will be updated immediately")
-                  : t("Your listing will be reviewed within 24 hours. You'll receive a notification once approved and live")}
-              </Text>
             </View>
           </View>
         )
@@ -1482,49 +1379,25 @@ const AddCarScreen = () => {
     }
   }
 
-  const stepTitles = [
-    t("Step 1: Vehicle"),
-    t("Step 2: Owner"),
-    t("Step 3: Location"),
-    t("Step 4: Pricing"),
-    t("Step 5: Media"),
-    t("Step 6: Review"),
-  ]
-
   return (
     <SafeAreaView style={styles.container}>
-      {/* Fixed Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back-outline" size={24} color="#1E293B" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>{isEditing ? t("Edit Car") : t("Add New Car")}</Text>
-          <Text style={styles.subtitle}>{t("Step {{current}} of {{total}}", { current: currentStep, total: 6 })}</Text>
+          <Text style={styles.subtitle}>{t("Step {{current}} of {{total}}", { current: currentStep, total: 5 })}</Text>
         </View>
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${(currentStep / 6) * 100}%` }]} />
-        </View>
-        <View style={styles.progressLabels}>
-          {stepTitles.map((title, index) => (
-            <Text key={index} style={styles.progressLabel}>
-              {title}
-            </Text>
-          ))}
-        </View>
-      </View>
+      {renderStepIndicator()}
 
-      {/* Form Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.formCard}>{renderStep()}</View>
       </ScrollView>
 
-      {/* Navigation Buttons */}
       <View style={styles.navigationContainer}>
         <TouchableOpacity
           style={[styles.navButton, styles.prevButton, currentStep === 1 && styles.disabledButton]}
@@ -1535,16 +1408,15 @@ const AddCarScreen = () => {
           <Text style={[styles.navButtonText, currentStep === 1 && styles.disabledButtonText]}>{t("Previous")}</Text>
         </TouchableOpacity>
 
-        {!isEditing && (
-          <TouchableOpacity style={styles.draftButton} onPress={() => {}}>
-            <Ionicons name="save-outline" size={16} color="#64748B" />
-            <Text style={styles.draftButtonText}>{t("Save Draft")}</Text>
-          </TouchableOpacity>
-        )}
-
-        {currentStep === 6 ? (
-          <TouchableOpacity style={[styles.navButton, styles.submitButton]} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>{isEditing ? t("Save Changes") : t("Submit")}</Text>
+        {currentStep === 5 ? (
+          <TouchableOpacity
+            style={[styles.navButton, styles.submitButton, (isCreating || isUpdating) && styles.disabledButton]}
+            onPress={handleSubmit}
+            disabled={isCreating || isUpdating}
+          >
+            <Text style={styles.submitButtonText}>
+              {isCreating || isUpdating ? t("Processing...") : isEditing ? t("Save Changes") : t("Submit")}
+            </Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={[styles.navButton, styles.nextButton]} onPress={handleNext}>
@@ -1554,8 +1426,73 @@ const AddCarScreen = () => {
         )}
       </View>
 
-      {/* Payment Modal */}
-      {renderPaymentModal()}
+      <PaymentBottomSheet
+        isVisible={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onPaymentSuccess={handlePaymentSuccess}
+        amount={5000}
+      />
+
+      <Modal visible={showMapModal} animationType="slide" presentationStyle="fullScreen">
+        <SafeAreaView style={styles.mapModalContainer}>
+          <View style={styles.mapModalHeader}>
+            <TouchableOpacity onPress={() => setShowMapModal(false)} style={styles.mapCloseButton}>
+              <Ionicons name="close-outline" size={24} color="#1E293B" />
+            </TouchableOpacity>
+            <Text style={styles.mapModalTitle}>{t("Select Location")}</Text>
+            <TouchableOpacity onPress={confirmLocation} style={styles.mapConfirmButton}>
+              <Text style={styles.mapConfirmButtonText}>{t("Confirm")}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <MapView
+            style={styles.map}
+            region={mapRegion}
+            onPress={handleMapPress}
+            showsUserLocation={true}
+            showsMyLocationButton={false}
+          >
+            {selectedLocation && (
+              <Marker
+                coordinate={selectedLocation}
+                title={t("Selected Location")}
+                description={formData.address || t("Car Location")}
+              >
+                <Image source={carIcon} style={styles.carMarker} />
+              </Marker>
+            )}
+          </MapView>
+
+          <View style={styles.mapInstructions}>
+            <Text style={styles.mapInstructionsText}>{t("Tap on the map to select your car's location")}</Text>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {showCountryCodeDropdown && (
+        <Modal transparent visible={showCountryCodeDropdown} animationType="fade">
+          <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowCountryCodeDropdown(false)}>
+            <View style={styles.dropdownModal}>
+              <ScrollView>
+                {countryCodes.map((country, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.dropdownOption}
+                    onPress={() => {
+                      setFormData({ ...formData, countryCode: country.code })
+                      setShowCountryCodeDropdown(false)
+                    }}
+                  >
+                    <Text style={styles.countryOption}>
+                      {country.flag} {country.code} {country.country}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </SafeAreaView>
   )
 }
@@ -1594,42 +1531,65 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748B",
   },
-  progressContainer: {
-    padding: 20,
+  stepIndicatorContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 20,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
-  progressBar: {
-    height: 8,
-    backgroundColor: "#E2E8F0",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#007EFD",
-    borderRadius: 4,
-  },
-  progressLabels: {
+  stepIndicatorItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
+    alignItems: "center",
   },
-  progressLabel: {
-    fontSize: 12,
+  stepCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+  },
+  stepCircleActive: {
+    backgroundColor: "#007EFD",
+    borderColor: "#007EFD",
+  },
+  stepCircleInactive: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E2E8F0",
+  },
+  stepNumber: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  stepNumberActive: {
+    color: "#FFFFFF",
+  },
+  stepNumberInactive: {
     color: "#64748B",
-    fontWeight: "500",
+  },
+  stepLine: {
+    width: 40,
+    height: 2,
+    marginHorizontal: 8,
+  },
+  stepLineActive: {
+    backgroundColor: "#007EFD",
+  },
+  stepLineInactive: {
+    backgroundColor: "#E2E8F0",
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
     paddingTop: 20,
   },
   formCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 24,
+    marginHorizontal: 20,
     marginBottom: 20,
     shadowColor: "#000",
     shadowOffset: {
@@ -1661,6 +1621,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#374151",
     marginBottom: 8,
+  },
+  optionalText: {
+    fontSize: 14,
+    fontWeight: "400",
+    color: "#9CA3AF",
   },
   input: {
     borderWidth: 1,
@@ -1726,6 +1691,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#1E293B",
   },
+  countryOption: {
+    fontSize: 16,
+    color: "#1E293B",
+  },
   ownerTypeContainer: {
     gap: 12,
   },
@@ -1761,6 +1730,39 @@ const styles = StyleSheet.create({
     color: "#374151",
     fontWeight: "500",
   },
+  // ✅ NEW: Auto-complete styles
+  autoCompleteToggle: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  toggleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  ownerInputContainer: {
+    position: "relative",
+  },
+  searchIcon: {
+    position: "absolute",
+    right: 16,
+    top: 16,
+  },
+  suggestionName: {
+    fontSize: 16,
+    color: "#1E293B",
+    fontWeight: "500",
+  },
   phoneContainer: {
     flexDirection: "row",
     gap: 8,
@@ -1794,30 +1796,166 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     color: "#1E293B",
   },
-  countryOption: {
-    fontSize: 16,
-    color: "#1E293B",
+  addressInputContainer: {
+    position: "relative",
   },
   suggestionsContainer: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    borderRadius: 8,
-    marginTop: 4,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
     maxHeight: 200,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  suggestionsList: {
+    flex: 1,
   },
   suggestionItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
   suggestionText: {
-    fontSize: 14,
-    color: "#374151",
+    marginLeft: 12,
     flex: 1,
+  },
+  suggestionAddress: {
+    fontSize: 16,
+    color: "#1E293B",
+    fontWeight: "500",
+  },
+  suggestionDetails: {
+    fontSize: 14,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  locationContainer: {
+    gap: 16,
+  },
+  locationActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  mapButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#007EFD",
+    borderRadius: 8,
+    backgroundColor: "#F0F9FF",
+  },
+  mapButtonText: {
+    fontSize: 16,
+    color: "#007EFD",
+    fontWeight: "600",
+  },
+  currentLocationButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: "#10B981",
+    borderRadius: 8,
+    backgroundColor: "#ECFDF5",
+  },
+  currentLocationButtonText: {
+    fontSize: 16,
+    color: "#10B981",
+    fontWeight: "600",
+  },
+  selectedLocationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    backgroundColor: "#ECFDF5",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#10B981",
+  },
+  selectedLocationText: {
+    fontSize: 14,
+    color: "#10B981",
+    fontWeight: "500",
+  },
+  mapModalContainer: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  mapModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  mapCloseButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  mapModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1E293B",
+  },
+  mapConfirmButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#007EFD",
+    borderRadius: 8,
+  },
+  mapConfirmButtonText: {
+    fontSize: 16,
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+  map: {
+    flex: 1,
+  },
+  carMarker: {
+    width: 40,
+    height: 40,
+    resizeMode: "contain",
+  },
+  mapInstructions: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    padding: 16,
+    borderRadius: 8,
+  },
+  mapInstructionsText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    textAlign: "center",
+    fontWeight: "500",
   },
   featuresContainer: {
     gap: 16,
@@ -1847,60 +1985,33 @@ const styles = StyleSheet.create({
   featureButtonTextSelected: {
     color: "#FFFFFF",
   },
-  mapContainer: {
-    gap: 12,
-  },
-  mapPreview: {
-    height: 200,
-    borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "#E2E8F0",
-    borderStyle: "dashed",
-  },
-  miniMap: {
-    flex: 1,
-  },
-  mapPlaceholder: {
-    flex: 1,
-    justifyContent: "center",
+  paymentRequiredContainer: {
+    flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    gap: 12,
+    padding: 16,
+    backgroundColor: "#FEF3C7",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+    marginBottom: 20,
   },
-  mapPlaceholderText: {
-    fontSize: 16,
-    color: "#64748B",
-    marginTop: 8,
+  paymentRequiredText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#92400E",
     fontWeight: "500",
   },
-  mapModalContainer: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
+  paymentButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#F59E0B",
+    borderRadius: 6,
   },
-  mapModalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  mapModalTitle: {
-    fontSize: 18,
+  paymentButtonText: {
+    fontSize: 14,
+    color: "#FFFFFF",
     fontWeight: "600",
-    color: "#1E293B",
-  },
-  mapModalDone: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#007EFD",
-  },
-  fullMap: {
-    flex: 1,
-  },
-  markerIcon: {
-    width: 32,
-    height: 32,
   },
   photosContainer: {
     gap: 16,
@@ -1920,6 +2031,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     backgroundColor: "#F8FAFC",
+  },
+  disabledPhotoContainer: {
+    opacity: 0.5,
+    backgroundColor: "#F1F5F9",
   },
   photoPlaceholder: {
     width: 60,
@@ -1959,123 +2074,62 @@ const styles = StyleSheet.create({
     color: "#007EFD",
     fontWeight: "600",
   },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledButtonText: {
+    color: "#9CA3AF",
+  },
   thumbnailContainer: {
-    marginTop: 24,
-    padding: 20,
-    backgroundColor: "#FFFBEB",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#FED7AA",
+    gap: 16,
+    marginTop: 20,
   },
-  thumbnailDescription: {
-    fontSize: 14,
-    color: "#92400E",
-    marginBottom: 16,
-  },
-  thumbnailUpload: {
+  thumbnailUploadContainer: {
     alignItems: "center",
-    gap: 12,
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    padding: 16,
+    backgroundColor: "#F8FAFC",
   },
   thumbnailImage: {
-    width: 120,
-    height: 80,
+    width: 100,
+    height: 85,
     borderRadius: 8,
+    marginBottom: 12,
   },
   thumbnailPlaceholder: {
-    width: 120,
-    height: 80,
+    width: 80,
+    height: 68,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FEF3C7",
+    backgroundColor: "#F1F5F9",
     borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "#FCD34D",
-    borderStyle: "dashed",
+    marginBottom: 12,
   },
   thumbnailPlaceholderText: {
     fontSize: 12,
-    color: "#92400E",
+    color: "#9CA3AF",
+    textAlign: "center",
     marginTop: 4,
   },
-  premiumButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: "#FEF3C7",
-    borderWidth: 1,
-    borderColor: "#F59E0B",
-    borderRadius: 8,
-  },
-  premiumButtonText: {
-    fontSize: 14,
-    color: "#F59E0B",
-    fontWeight: "600",
-  },
-  noteContainer: {
-    backgroundColor: "#EBF8FF",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-  },
-  noteText: {
-    fontSize: 14,
-    color: "#1E40AF",
-    lineHeight: 20,
-  },
-  noteLabel: {
-    fontWeight: "600",
-  },
-  reviewHeader: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  reviewSubtitle: {
-    fontSize: 16,
+  thumbnailDimensionsText: {
+    fontSize: 10,
     color: "#64748B",
     textAlign: "center",
-    marginTop: 12,
+    marginTop: 2,
   },
-  summaryCard: {
-    borderWidth: 2,
-    borderColor: "#007EFD",
-    borderRadius: 12,
-    padding: 20,
-    backgroundColor: "#F0F9FF",
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#007EFD",
-    marginBottom: 20,
-  },
-  summaryRow: {
+  thumbnailChooseButton: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1E293B",
-  },
-  priceText: {
-    color: "#007EFD",
-    fontSize: 16,
-  },
-  finalNoteContainer: {
-    backgroundColor: "#EBF8FF",
-    padding: 16,
-    borderRadius: 12,
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
+    borderColor: "#007EFD",
+    borderRadius: 6,
+    backgroundColor: "#FFFFFF",
   },
   navigationContainer: {
     flexDirection: "row",
@@ -2099,35 +2153,16 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     backgroundColor: "#FFFFFF",
   },
-  draftButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 8,
-    backgroundColor: "#FFFFFF",
-  },
   nextButton: {
     backgroundColor: "#007EFD",
   },
   submitButton: {
     backgroundColor: "#007EFD",
   },
-  disabledButton: {
-    opacity: 0.5,
-  },
   navButtonText: {
     fontSize: 14,
     fontWeight: "600",
     color: "#475569",
-  },
-  draftButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#64748B",
   },
   nextButtonText: {
     fontSize: 14,
@@ -2136,144 +2171,6 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-  disabledButtonText: {
-    color: "#9CA3AF",
-  },
-  // Payment Modal Styles
-  paymentModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  paymentBottomSheet: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: screenHeight * 0.8,
-  },
-  paymentHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  paymentTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
-  paymentContent: {
-    padding: 20,
-  },
-  paymentAmount: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#F59E0B",
-    marginBottom: 8,
-  },
-  paymentDescription: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 24,
-  },
-  paymentMethodTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1E293B",
-    marginBottom: 16,
-  },
-  paymentMethods: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
-  },
-  paymentMethodButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: "#E2E8F0",
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-  },
-  selectedPaymentMethod: {
-    borderColor: "#007EFD",
-    backgroundColor: "#F0F9FF",
-  },
-  paymentIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-  },
-  paymentMethodText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1E293B",
-  },
-  paymentForm: {
-    gap: 16,
-  },
-  formLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
-  },
-  phoneInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    backgroundColor: "#FFFFFF",
-  },
-  cardInput: {
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
-    backgroundColor: "#FFFFFF",
-    color: "#1E293B",
-  },
-  cardInputContainer: {
-    marginBottom: 16,
-  },
-  cardNumberContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  cardType: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#007EFD",
-  },
-  cardRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  cardInputHalf: {
-    flex: 1,
-  },
-  confirmPaymentButton: {
-    backgroundColor: "#007EFD",
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 24,
-  },
-  confirmPaymentText: {
-    fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
   },

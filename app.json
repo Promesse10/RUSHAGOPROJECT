@@ -4,23 +4,36 @@
     "slug": "your-app-slug",
     "version": "1.0.0",
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      "expo-secure-store"
     ],
     "experiments": {
       "newArchEnabled": true
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "Y"
+      "bundleIdentifier": "Y",
+      "runtimeVersion": "1.0.0"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#FFFFFF"
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "web": {
       "favicon": "./assets/logo.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b87efb77-1283-40d1-8f42-eabc0bb33e5e"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b87efb77-1283-40d1-8f42-eabc0bb33e5e"
     }
   }
 }

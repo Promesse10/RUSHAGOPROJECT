@@ -1,0 +1,115 @@
+import { createAsyncThunk } from "@reduxjs/toolkit"
+import axiosInstance from "../../utils/axios"
+
+const API_URL = "/listings"
+
+// Get my cars (owner only)
+export const getMyCarsAction = createAsyncThunk("cars/getMine", async (_, { rejectWithValue }) => {
+  try {
+    console.log("🚗 Fetching my cars...")
+    const response = await axiosInstance.get(`${API_URL}/me`)
+    console.log("✅ My cars fetched:", response.data?.length || 0)
+    return response.data || []
+  } catch (err) {
+    console.error("❌ Get my cars error:", err)
+    return rejectWithValue(err.response?.data?.message || "Failed to fetch your cars")
+  }
+})
+
+// Get all cars (Admin only or if needed elsewhere)
+export const getCarsAction = createAsyncThunk("cars/getAll", async (_, { rejectWithValue }) => {
+  try {
+    console.log("🚗 Fetching all cars...")
+    const response = await axiosInstance.get(API_URL)
+    console.log("✅ All cars fetched:", response.data?.length || 0)
+    return response.data || []
+  } catch (err) {
+    console.error("❌ Get all cars error:", err)
+    return rejectWithValue(err.response?.data?.message || "Failed to fetch cars")
+  }
+})
+
+// Create a car
+export const createCarAction = createAsyncThunk("cars/create", async (carData, { rejectWithValue }) => {
+  try {
+    console.log("🆕 Creating new car:", carData.brand, carData.model)
+    const response = await axiosInstance.post(API_URL, carData)
+    console.log("✅ Car created successfully:", response.data._id)
+    return response.data
+  } catch (err) {
+    console.error("❌ Create car error:", err)
+    return rejectWithValue(err.response?.data?.message || "Failed to create car")
+  }
+})
+
+// Update a car
+export const updateCarAction = createAsyncThunk("cars/update", async ({ carId, updatedData }, { rejectWithValue }) => {
+  try {
+    console.log("✏️ Updating car:", carId)
+    const response = await axiosInstance.put(`${API_URL}/${carId}`, updatedData)
+    console.log("✅ Car updated successfully")
+    return response.data
+  } catch (err) {
+    console.error("❌ Update car error:", err)
+    return rejectWithValue(err.response?.data?.message || "Failed to update car")
+  }
+})
+
+// Delete a car
+export const deleteCarAction = createAsyncThunk("cars/delete", async (carId, { rejectWithValue }) => {
+  try {
+    console.log("🗑️ Deleting car:", carId)
+    await axiosInstance.delete(`${API_URL}/${carId}`)
+    console.log("✅ Car deleted successfully")
+    return carId
+  } catch (err) {
+    console.error("❌ Delete car error:", err)
+    return rejectWithValue(err.response?.data?.message || "Failed to delete car")
+  }
+})
+
+// Update car availability
+export const updateCarAvailabilityAction = createAsyncThunk(
+  "cars/updateAvailability",
+  async ({ carId, available }, { rejectWithValue }) => {
+    try {
+      console.log("🔄 Updating car availability:", carId, "to:", available)
+      const response = await axiosInstance.patch(`${API_URL}/${carId}/availability`, { available })
+      console.log("✅ Car availability updated")
+      return { carId, available: response.data.available }
+    } catch (err) {
+      console.error("❌ Update availability error:", err)
+      return rejectWithValue("Failed to update availability")
+    }
+  },
+)
+
+// Update car views
+export const updateCarViewsAction = createAsyncThunk(
+  "cars/updateViews",
+  async ({ carId, views }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.patch(`${API_URL}/${carId}/views`, { views })
+      return { carId, views: response.data.views }
+    } catch (err) {
+      return rejectWithValue("Failed to update views")
+    }
+  },
+)
+
+// Update car rating
+export const updateCarRatingAction = createAsyncThunk(
+  "cars/updateRating",
+  async ({ carId, rating, reviews }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.patch(`${API_URL}/${carId}/rating`, { rating, reviews })
+      return {
+        carId,
+        rating: response.data.rating,
+        reviews: response.data.reviews,
+      }
+    } catch (err) {
+      return rejectWithValue("Failed to update rating")
+    }
+  },
+)

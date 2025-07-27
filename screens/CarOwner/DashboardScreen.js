@@ -18,14 +18,27 @@ import { Ionicons } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import "../../i18n"
+import { useDispatch, useSelector } from "react-redux"
+import { fetchDashboardStats } from "../../redux/action/DashboardActions"
 
 const { width, height } = Dimensions.get("window")
 
 const DashboardScreen = () => {
   const navigation = useNavigation()
   const { t, i18n } = useTranslation()
-  const [loading, setLoading] = useState(true)
+  const dispatch = useDispatch()
+
+  // ✅ FIXED: Get authenticated user data
+  const { user, isAuthenticated } = useSelector((state) => state.auth || {})
+  const {
+    totalCars,
+    activeCars,
+    pendingCars,
+    recentActivity,
+    loading: dashboardLoading,
+    error: dashboardError,
+  } = useSelector((state) => state.dashboard || {})
+
   const [stats, setStats] = useState([])
   const [activities, setActivities] = useState([])
   const [newCarName, setNewCarName] = useState("")
@@ -39,10 +52,29 @@ const DashboardScreen = () => {
   // RushGo logo URL
   const rushGoLogo = "https://res.cloudinary.com/def0cjmh2/image/upload/v1747228499/logo_jlnvdx.png"
 
+  // ✅ FIXED: Check authentication and load data
   useEffect(() => {
+    if (!isAuthenticated || !user) {
+      console.log("❌ User not authenticated, should redirect to login...")
+      return
+    }
+
+    console.log("✅ User authenticated:", user.name)
     loadSavedLanguage()
-    loadData()
-  }, [])
+    dispatch(fetchDashboardStats())
+  }, [isAuthenticated, user, dispatch])
+
+  // ✅ FIXED: Refetch when screen is focused
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      if (isAuthenticated && user) {
+        console.log("🔄 Dashboard focused, refetching stats...")
+        dispatch(fetchDashboardStats())
+      }
+    })
+
+    return unsubscribe
+  }, [navigation, dispatch, isAuthenticated, user])
 
   // Load saved language preference
   const loadSavedLanguage = async () => {
@@ -64,126 +96,63 @@ const DashboardScreen = () => {
     }
   }
 
-  const loadData = () => {
-    setTimeout(() => {
+  // ✅ FIXED: Better data processing
+  useEffect(() => {
+    if (!dashboardLoading) {
+      console.log("📈 Processing dashboard data:", { totalCars, activeCars, pendingCars })
+
       setStats([
-        { title: t("totalCars", "Ibinyabiziga byose"), count: 5, icon: "car-outline", color: "#007EFD" },
-        { title: t("active", "Bikora"), count: 3, icon: "checkmark-circle-outline", color: "#10B981" },
-        { title: t("pending", "Bitegereje"), count: 2, icon: "time-outline", color: "#F59E0B" },
-      ])
-      setActivities([
         {
-          id: 1,
-          message: t("auditApproved", "Audi Q7 yawe yemewe"),
-          time: t("hoursAgo", "amasaha 2 ashize"),
+          title: t("totalCars", "Ibinyabiziga byose"),
+          count: totalCars || 0,
+          icon: "car-outline",
+          color: "#007EFD",
+        },
+        {
+          title: t("active", "Bikora"),
+          count: activeCars || 0,
           icon: "checkmark-circle-outline",
           color: "#10B981",
         },
         {
-          id: 2,
-          message: t("bmwViews", "BMW X5 yabonye abantu 12 bashya"),
-          time: t("hoursAgo5", "amasaha 5 ashize"),
-          icon: "trending-up-outline",
-          color: "#007EFD",
-        },
-        {
-          id: 3,
-          message: t("mercedesInquiry", "Ikibazo gishya kuri Mercedes GLE"),
-          time: t("dayAgo", "umunsi 1 ushize"),
-          icon: "star-outline",
+          title: t("pending", "Bitegereje"),
+          count: pendingCars || 0,
+          icon: "time-outline",
           color: "#F59E0B",
         },
       ])
-      setNotifications([
-        {
-          id: 1,
-          title: t("updateCarAvailability", "Kuvugurura kuboneka kw'imodoka"),
-          message: t("updateCarMessage", "Kuvugurura kuboneka kwa BMW X5 yawe"),
-          fullMessage: t(
-            "updateCarFullMessage",
-            "Mwaramutse! Ni byiza kuvugurura buri gihe kuboneka kw'imodoka yawe BMW X5 kugira ngo abakiriya babone neza igihe ishobora gukoreshwa.",
-          ),
-          time: t("minutesAgo", "iminota 10 ishize"),
-          isRead: false,
-          type: "reminder",
-          hasRushGoIcon: true,
-        },
-        {
-          id: 2,
-          title: t("listingApproved", "Iyandikwa ryemewe"),
-          message: t("approvedMessage", "Audi Q7 yawe yemerewe kandi iragaragara"),
-          fullMessage: t(
-            "approvedFullMessage",
-            "Amakuru meza! Audi Q7 yawe yemerewe kandi ubu iragaragara kuri RushGo. Abakiriya bashobora kubona no kuyigurisha.",
-          ),
-          time: t("hoursAgo", "amasaha 2 ashize"),
-          isRead: false,
-          type: "approval",
-          hasRushGoIcon: true,
-        },
-        {
-          id: 3,
-          title: t("newBooking", "Gusaba gushya kw'ikodesha"),
-          message: t("bookingMessage", "Umuntu ashaka gukodesha BMW X5 yawe"),
-          fullMessage: t(
-            "bookingFullMessage",
-            "Jean Uwimana asabye gukodesha BMW X5 yawe iminsi 3 kuva ku ya 15-17 Werurwe 2024. Igiciro cyose ni 150,000 FRW.",
-          ),
-          time: t("hoursAgo3", "amasaha 3 ashize"),
-          isRead: true,
-          type: "booking",
-          hasRushGoIcon: false,
-        },
-        {
-          id: 4,
-          title: t("paymentReceived", "Kwishyura byakiriwe"),
-          message: t("paymentMessage", "Kwishyura kwa 120,000 FRW byakiriwe"),
-          fullMessage: t(
-            "paymentFullMessage",
-            "Wakiriye kwishyura kwa 120,000 FRW kubera gukodesha Mercedes GLE yawe. Amafaranga yatanzwe kandi azohererezwa kuri konti yawe mu minsi 2-3 y'akazi.",
-          ),
-          time: t("dayAgo", "umunsi 1 ushize"),
-          isRead: true,
-          type: "payment",
-          hasRushGoIcon: false,
-        },
-        {
-          id: 5,
-          title: t("maintenanceReminder", "Kwibutsa ubusugire"),
-          message: t("maintenanceMessage", "BMW X5 ikeneye ubusugire vuba"),
-          fullMessage: t(
-            "maintenanceFullMessage",
-            "BMW X5 yawe ikeneye ubusugire. Nyamuneka witondere ko imodoka yawe isuzumwa neza kugira ngo utange serivisi nziza ku bakiriya.",
-          ),
-          time: t("daysAgo", "iminsi 2 ishize"),
-          isRead: true,
-          type: "maintenance",
-          hasRushGoIcon: true,
-        },
-        {
-          id: 6,
-          title: t("reviewReceived", "Igitekerezo gishya"),
-          message: t("reviewMessage", "Wahawe inyenyeri 5 mu gitekerezo"),
-          fullMessage: t(
-            "reviewFullMessage",
-            "Marie Mukamana yaguha inyenyeri 5 kuri Toyota Camry yawe: 'Imodoka nziza cyane kandi serivisi nziza! Imodoka yari isukuye kandi yitabwaho neza. Ndayisaba cyane!'",
-          ),
-          time: t("daysAgo3", "iminsi 3 ishize"),
-          isRead: true,
-          type: "review",
-          hasRushGoIcon: false,
-        },
-      ])
-      setLoading(false)
-    }, 1500)
-  }
+
+      // ✅ FIXED: Better activity processing
+      if (recentActivity && Array.isArray(recentActivity)) {
+        const activityData = recentActivity.map((item, index) => ({
+          id: item.id || index,
+          message: item.message || item.title || item.name || "Recent activity",
+          time: item.time || item.createdAt || "Just now",
+          icon: item.icon || "star-outline",
+          color: item.color || "#007EFD",
+        }))
+        setActivities(activityData)
+      } else {
+        // Default activities if none from API
+        setActivities([
+          {
+            id: 1,
+            message: t("welcomeMessage", "Welcome to RushGo!"),
+            time: t("justNow", "Just now"),
+            icon: "star-outline",
+            color: "#007EFD",
+          },
+        ])
+      }
+    }
+  }, [dashboardLoading, t, totalCars, activeCars, pendingCars, recentActivity])
 
   // Update data when language changes
   useEffect(() => {
-    if (!loading) {
-      loadData()
+    if (isAuthenticated && user) {
+      dispatch(fetchDashboardStats())
     }
-  }, [i18n.language, t])
+  }, [i18n.language, dispatch, isAuthenticated, user])
 
   const handleAddCar = () => {
     if (newCarName.trim()) {
@@ -194,7 +163,7 @@ const DashboardScreen = () => {
             customMake: "",
             year: "",
             type: "",
-            phone: "+250 788 123 456",
+            phone: user?.phone || "+250 788 123 456",
             ownerType: "individual",
             companyName: "",
             companyPhone: "",
@@ -251,7 +220,7 @@ const DashboardScreen = () => {
 
       // Force re-render of data with new language
       setTimeout(() => {
-        loadData()
+        dispatch(fetchDashboardStats())
       }, 100)
     } catch (error) {
       console.log("Error changing language:", error)
@@ -327,13 +296,49 @@ const DashboardScreen = () => {
     }
   }
 
+  // ✅ FIXED: Show error state
+  if (dashboardError) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>{t("dashboard", "Imbonerahamwe")}</Text>
+            <Text style={styles.subtitle}>
+              {t("welcome", "Murakaza neza")} {user?.name || "User"}!
+            </Text>
+          </View>
+        </View>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+          <Text style={styles.errorText}>{dashboardError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => dispatch(fetchDashboardStats())}>
+            <Text style={styles.retryButtonText}>{t("retry", "Retry")}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  // ✅ FIXED: Show loading if not authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.title}>{t("dashboard", "Imbonerahamwe")}</Text>
-          <Text style={styles.subtitle}>{t("welcome", "Murakaza neza")} John!</Text>
+          <Text style={styles.subtitle}>
+            {t("welcome", "Murakaza neza")} {user?.name || "User"}!
+          </Text>
         </View>
 
         {/* Header Actions */}
@@ -409,33 +414,45 @@ const DashboardScreen = () => {
         {/* Stats */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("quickStats", "Imibare y'ibanze")}</Text>
-          <View style={styles.statsGrid}>
-            {stats.map((stat, index) => (
-              <View key={index} style={styles.statCard}>
-                <Ionicons name={stat.icon} size={32} color={stat.color} />
-                <Text style={styles.statCount}>{stat.count}</Text>
-                <Text style={styles.statTitle}>{stat.title}</Text>
-              </View>
-            ))}
-          </View>
+          {dashboardLoading ? (
+            <View style={styles.loadingStats}>
+              <Text style={styles.loadingText}>{t("loading", "Loading...")}</Text>
+            </View>
+          ) : (
+            <View style={styles.statsGrid}>
+              {stats.map((stat, index) => (
+                <View key={index} style={styles.statCard}>
+                  <Ionicons name={stat.icon} size={32} color={stat.color} />
+                  <Text style={styles.statCount}>{stat.count}</Text>
+                  <Text style={styles.statTitle}>{stat.title}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Activities */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("recentActivity", "Ibikorwa bya vuba")}</Text>
-          <View style={styles.activitiesList}>
-            {activities.map((activity) => (
-              <View key={activity.id} style={styles.activityCard}>
-                <View style={[styles.activityIcon, { backgroundColor: `${activity.color}15` }]}>
-                  <Ionicons name={activity.icon} size={20} color={activity.color} />
+          {dashboardLoading ? (
+            <View style={styles.loadingStats}>
+              <Text style={styles.loadingText}>{t("loading", "Loading...")}</Text>
+            </View>
+          ) : (
+            <View style={styles.activitiesList}>
+              {activities.map((activity) => (
+                <View key={activity.id} style={styles.activityCard}>
+                  <View style={[styles.activityIcon, { backgroundColor: `${activity.color}15` }]}>
+                    <Ionicons name={activity.icon} size={20} color={activity.color} />
+                  </View>
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityMessage}>{activity.message}</Text>
+                    <Text style={styles.activityTime}>{activity.time}</Text>
+                  </View>
                 </View>
-                <View style={styles.activityContent}>
-                  <Text style={styles.activityMessage}>{activity.message}</Text>
-                  <Text style={styles.activityTime}>{activity.time}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -539,6 +556,35 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#EF4444",
+    textAlign: "center",
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: "#007EFD",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -637,6 +683,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 16,
     color: "#1E293B",
+  },
+  loadingStats: {
+    padding: 40,
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#64748B",
   },
   statsGrid: {
     flexDirection: "row",

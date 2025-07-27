@@ -1,118 +1,99 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from "react-native"
+import { useEffect } from "react"
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  ActivityIndicator,
+  Alert,
+  Image,
+} from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
+import { useDispatch, useSelector } from "react-redux"
+import { loadDrafts, deleteDraft } from "../../redux/action/draftsActions"
 
 const SavedDraftsScreen = () => {
   const navigation = useNavigation()
   const { t } = useTranslation()
-  const [loading, setLoading] = useState(true)
-  const [drafts, setDrafts] = useState([])
+  const dispatch = useDispatch()
+
+  // Redux state
+  const { drafts, loading, error } = useSelector(
+    (state) =>
+      state.drafts || {
+        drafts: [],
+        loading: false,
+        error: null,
+      },
+  )
 
   useEffect(() => {
-    // Simulate loading drafts from storage
-    setTimeout(() => {
-      setDrafts([
-        {
-          id: "1",
-          carName: "Toyota Corolla 2023",
-          currentStep: 2,
-          savedAt: "2024-06-20T10:30:00Z",
-          formData: {
-            make: "Toyota",
-            year: "2023",
-            type: "Sedan",
-            phone: "+250 788 123 456",
-            ownerType: "individual",
-            transmission: "Automatic",
-            fuelType: "Gasoline",
-            seats: "5",
-          },
-        },
-        {
-          id: "2",
-          carName: "BMW X5 2022",
-          currentStep: 4,
-          savedAt: "2024-06-19T15:45:00Z",
-          formData: {
-            make: "BMW",
-            year: "2022",
-            type: "SUV",
-            phone: "+250 788 123 456",
-            ownerType: "company",
-            companyName: "Elite Cars Rwanda",
-            companyPhone: "+250 788 654 321",
-            transmission: "Automatic",
-            fuelType: "Gasoline",
-            seats: "7",
-            address: "Kigali - Gasabo",
-            price: "120000",
-            pricingType: "daily",
-          },
-        },
-        {
-          id: "3",
-          carName: "Honda Civic 2021",
-          currentStep: 1,
-          savedAt: "2024-06-18T09:15:00Z",
-          formData: {
-            make: "Honda",
-            year: "2021",
-            type: "Sedan",
-            phone: "+250 788 123 456",
-            ownerType: "individual",
-          },
-        },
-      ])
-      setLoading(false)
-    }, 1000)
-  }, [])
+    dispatch(loadDrafts())
+  }, [dispatch])
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffTime = Math.abs(now - date)
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-    if (diffDays === 1) return "Yesterday"
-    if (diffDays < 7) return `${diffDays} days ago`
-    return date.toLocaleDateString()
-  }
-
-  const getStepName = (step) => {
-    const steps = ["Basic Info", "Specifications", "Location", "Pricing", "Review"]
-    return steps[step - 1] || "Unknown"
-  }
-
-  const getProgressPercentage = (step) => {
-    return (step / 5) * 100
-  }
-
-  const handleContinueEditing = (draft) => {
-    navigation.navigate("AddCar", { draftData: draft })
+  const handleEditDraft = (draft) => {
+    navigation.navigate("AddCar", {
+      draftData: draft,
+      isDraft: true,
+    })
   }
 
   const handleDeleteDraft = (draftId) => {
-    Alert.alert("Delete Draft", "Are you sure you want to delete this draft? This action cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => {
-          setDrafts(drafts.filter((draft) => draft.id !== draftId))
+    Alert.alert(
+      t("deleteDraft", "Delete Draft"),
+      t("deleteDraftConfirm", "Are you sure you want to delete this draft?"),
+      [
+        {
+          text: t("cancel", "Cancel"),
+          style: "cancel",
         },
-      },
-    ])
+        {
+          text: t("delete", "Delete"),
+          style: "destructive",
+          onPress: () => dispatch(deleteDraft(draftId)),
+        },
+      ],
+    )
+  }
+
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    } catch (error) {
+      return "Recently"
+    }
+  }
+
+  const getCarImage = (draft) => {
+    if (draft.formData?.photos?.frontExterior) {
+      return { uri: draft.formData.photos.frontExterior }
+    }
+    if (draft.formData?.images?.exterior_front) {
+      return { uri: draft.formData.images.exterior_front }
+    }
+    return null
   }
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back-outline" size={24} color="#1E293B" />
+          </TouchableOpacity>
+          <Text style={styles.title}>{t("savedDrafts", "Saved Drafts")}</Text>
+          <View style={styles.placeholder} />
+        </View>
         <View style={styles.loadingContainer}>
-          <Text>{t("loading", "Loading...")}</Text>
+          <ActivityIndicator size="large" color="#007EFD" />
+          <Text style={styles.loadingText}>{t("loading", "Loading...")}</Text>
         </View>
       </SafeAreaView>
     )
@@ -120,102 +101,66 @@ const SavedDraftsScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Fixed Header */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back-outline" size={24} color="#1E293B" />
         </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>{t("savedDrafts", "Saved Drafts")}</Text>
-          <Text style={styles.subtitle}>{drafts.length} draft(s) saved</Text>
-        </View>
-        <View style={{ width: 40 }} />
+        <Text style={styles.title}>{t("savedDrafts", "Saved Drafts")}</Text>
+        <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {drafts.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="document-outline" size={64} color="#9CA3AF" />
-            <Text style={styles.emptyTitle}>No Saved Drafts</Text>
-            <Text style={styles.emptySubtitle}>
-              Your saved car listing drafts will appear here. Start creating a new listing to save a draft.
-            </Text>
-            <TouchableOpacity style={styles.createButton} onPress={() => navigation.navigate("AddCar")}>
-              <Ionicons name="add-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.createButtonText}>Create New Listing</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.draftsList}>
-            {drafts.map((draft) => (
-              <View key={draft.id} style={styles.draftCard}>
-                <View style={styles.draftHeader}>
-                  <View style={styles.draftInfo}>
-                    <Text style={styles.draftTitle}>{draft.carName}</Text>
-                    <Text style={styles.draftDate}>Saved {formatDate(draft.savedAt)}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteDraft(draft.id)}>
-                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                  </TouchableOpacity>
+      {drafts.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="document-outline" size={64} color="#9CA3AF" />
+          <Text style={styles.emptyTitle}>{t("noDrafts", "No Saved Drafts")}</Text>
+          <Text style={styles.emptyDescription}>{t("noDraftsDesc", "Your saved car listings will appear here")}</Text>
+          <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate("AddCar")}>
+            <Text style={styles.addButtonText}>{t("addCar", "Add New Car")}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {drafts.map((draft) => (
+            <View key={draft.id} style={styles.draftCard}>
+              <View style={styles.draftHeader}>
+                {getCarImage(draft) && <Image source={getCarImage(draft)} style={styles.carImage} />}
+                <View style={styles.draftInfo}>
+                  <Text style={styles.carTitle}>
+                    {draft.formData?.make || "Unknown"} {draft.formData?.model || ""}
+                  </Text>
+                  <Text style={styles.carDetails}>
+                    {draft.formData?.year && `${draft.formData.year} • `}
+                    {draft.formData?.type || "Car"}
+                  </Text>
+                  <Text style={styles.savedDate}>
+                    {t("saved", "Saved")}: {formatDate(draft.updatedAt || draft.createdAt)}
+                  </Text>
                 </View>
+              </View>
 
-                <View style={styles.progressSection}>
-                  <View style={styles.progressInfo}>
-                    <Text style={styles.progressText}>
-                      Step {draft.currentStep} of 5 - {getStepName(draft.currentStep)}
-                    </Text>
-                    <Text style={styles.progressPercentage}>
-                      {Math.round(getProgressPercentage(draft.currentStep))}% complete
-                    </Text>
-                  </View>
-                  <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: `${getProgressPercentage(draft.currentStep)}%` }]} />
-                  </View>
+              <View style={styles.progressContainer}>
+                <Text style={styles.progressText}>
+                  {t("step", "Step")} {draft.currentStep || 1} {t("of", "of")} 6
+                </Text>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${((draft.currentStep || 1) / 6) * 100}%` }]} />
                 </View>
+              </View>
 
-                <View style={styles.draftDetails}>
-                  <View style={styles.detailRow}>
-                    <Ionicons name="car-outline" size={16} color="#64748B" />
-                    <Text style={styles.detailText}>
-                      {draft.formData.make} {draft.formData.year} - {draft.formData.type}
-                    </Text>
-                  </View>
-                  {draft.formData.ownerType === "company" && (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="business-outline" size={16} color="#64748B" />
-                      <Text style={styles.detailText}>{draft.formData.companyName}</Text>
-                    </View>
-                  )}
-                  {draft.formData.address && (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="location-outline" size={16} color="#64748B" />
-                      <Text style={styles.detailText}>{draft.formData.address}</Text>
-                    </View>
-                  )}
-                  {draft.formData.price && (
-                    <View style={styles.detailRow}>
-                      <Ionicons name="pricetag-outline" size={16} color="#64748B" />
-                      <Text style={styles.detailText}>
-                        {draft.formData.price} FRW{" "}
-                        {draft.formData.pricingType === "daily"
-                          ? "per day"
-                          : draft.formData.pricingType === "weekly"
-                            ? "per week"
-                            : "per month"}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                <TouchableOpacity style={styles.continueButton} onPress={() => handleContinueEditing(draft)}>
-                  <Text style={styles.continueButtonText}>Continue Editing</Text>
-                  <Ionicons name="arrow-forward-outline" size={16} color="#FFFFFF" />
+              <View style={styles.draftActions}>
+                <TouchableOpacity style={styles.editButton} onPress={() => handleEditDraft(draft)}>
+                  <Ionicons name="pencil-outline" size={20} color="#007EFD" />
+                  <Text style={styles.editButtonText}>{t("continue", "Continue")}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteDraft(draft.id)}>
+                  <Ionicons name="trash-outline" size={20} color="#EF4444" />
                 </TouchableOpacity>
               </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+            </View>
+          ))}
+        </ScrollView>
+      )}
     </SafeAreaView>
   )
 }
@@ -225,15 +170,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#FFFFFF",
@@ -241,22 +181,25 @@ const styles = StyleSheet.create({
     borderBottomColor: "#E2E8F0",
   },
   backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerContent: {
-    alignItems: "center",
+    padding: 8,
   },
   title: {
     fontSize: 20,
     fontWeight: "700",
     color: "#1E293B",
-    marginBottom: 2,
   },
-  subtitle: {
-    fontSize: 14,
+  placeholder: {
+    width: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
     color: "#64748B",
   },
   content: {
@@ -265,133 +208,121 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   emptyState: {
-    alignItems: "center",
+    flex: 1,
     justifyContent: "center",
-    paddingVertical: 80,
-    paddingHorizontal: 40,
+    alignItems: "center",
+    padding: 40,
   },
   emptyTitle: {
     fontSize: 24,
     fontWeight: "700",
     color: "#1E293B",
-    marginTop: 24,
-    marginBottom: 12,
+    marginTop: 16,
+    marginBottom: 8,
   },
-  emptySubtitle: {
+  emptyDescription: {
     fontSize: 16,
     color: "#64748B",
     textAlign: "center",
-    lineHeight: 24,
     marginBottom: 32,
   },
-  createButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  addButton: {
     backgroundColor: "#007EFD",
     paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-  createButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
+  addButtonText: {
     color: "#FFFFFF",
-  },
-  draftsList: {
-    gap: 16,
-    paddingBottom: 20,
+    fontWeight: "600",
+    fontSize: 16,
   },
   draftCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
   },
   draftHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
     marginBottom: 16,
+  },
+  carImage: {
+    width: 80,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: "#F1F5F9",
   },
   draftInfo: {
     flex: 1,
+    justifyContent: "center",
   },
-  draftTitle: {
+  carTitle: {
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1E293B",
     marginBottom: 4,
   },
-  draftDate: {
+  carDetails: {
     fontSize: 14,
     color: "#64748B",
+    marginBottom: 4,
   },
-  deleteButton: {
-    padding: 8,
+  savedDate: {
+    fontSize: 12,
+    color: "#9CA3AF",
   },
-  progressSection: {
+  progressContainer: {
     marginBottom: 16,
-  },
-  progressInfo: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
   },
   progressText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
-  },
-  progressPercentage: {
-    fontSize: 12,
     color: "#64748B",
+    marginBottom: 8,
   },
   progressBar: {
-    height: 6,
+    height: 4,
     backgroundColor: "#E2E8F0",
-    borderRadius: 3,
+    borderRadius: 2,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
     backgroundColor: "#007EFD",
-    borderRadius: 3,
+    borderRadius: 2,
   },
-  draftDetails: {
-    gap: 8,
-    marginBottom: 20,
+  draftActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  detailRow: {
+  editButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  detailText: {
-    fontSize: 14,
-    color: "#64748B",
-  },
-  continueButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    backgroundColor: "#F0F9FF",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    flex: 1,
+    marginRight: 12,
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#007EFD",
-    paddingVertical: 14,
-    borderRadius: 8,
   },
-  continueButtonText: {
-    fontSize: 16,
+  editButtonText: {
+    color: "#007EFD",
     fontWeight: "600",
-    color: "#FFFFFF",
+    fontSize: 14,
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: "#FEF2F2",
   },
 })
 

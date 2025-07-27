@@ -91,7 +91,7 @@ const AuthScreen = ({ navigation }) => {
               }}
             >
               <Text style={styles.helloText}>HELLO</Text>
-              <Text style={styles.subtitleText}>Welcome to RUSHGO</Text>
+              <Text style={styles.subtitleText}>Welcome to RUSHAGO</Text>
             </Animated.View>
 
             {/* Buttons Container */}

@@ -24,12 +24,10 @@ import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { signupAction } from "../../redux/action/signupAction"
 
-
 const { width, height } = Dimensions.get("window")
 
 const SignupScreen = ({ navigation }) => {
   const [userType, setUserType] = useState("renter") // 'renter' or 'owner'
-  const [step, setStep] = useState(1) // For car owner multi-step process
   const [inputs, setInputs] = useState({
     name: "",
     email: "",
@@ -53,12 +51,13 @@ const SignupScreen = ({ navigation }) => {
   const [secureTextEntry, setSecureTextEntry] = useState(true)
   const [secureConfirmTextEntry, setSecureConfirmTextEntry] = useState(true)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showVerificationModal, setShowVerificationModal] = useState(false)
+  const [verificationCode, setVerificationCode] = useState(["", "", "", "", ""])
+  const [isVerifying, setIsVerifying] = useState(false)
 
   // Redux state
-const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
-  (state) => state.signup || {}
-);
-  
+  const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector((state) => state.signup || {})
+
   const dispatch = useDispatch()
 
   // Handle input changes
@@ -80,8 +79,6 @@ const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
   useEffect(() => {
     // Clear form and errors when switching user types
     clearForm()
-    setStep(1)
-    // dispatch(clearSignupState());
   }, [userType])
 
   // Handle signup success
@@ -108,7 +105,6 @@ const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
           // Redirect to login after a delay
           setTimeout(() => {
             setShowSuccessModal(false)
-            // dispatch(clearSignupState());
             navigation.navigate("LoginScreen")
           }, 2000)
         } catch (storageError) {
@@ -145,6 +141,7 @@ const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
       confirmPassword: "",
       verification: "",
     })
+    setVerificationCode(["", "", "", "", ""])
   }
 
   const validateEmail = (email) => {
@@ -207,59 +204,75 @@ const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
     return isValid
   }
 
-  const validateOwnerEmailStep = () => {
-    let isValid = true
-    const newErrors = { ...errors }
+  const handleSignUp = async () => {
+    console.log("Signup button clicked")
+    const isValid = validateForm()
 
-    // Validate email
-    if (!inputs.email.trim()) {
-      newErrors.email = "Email is required"
-      isValid = false
-    } else if (!validateEmail(inputs.email)) {
-      newErrors.email = "Enter a valid email address"
-      isValid = false
-    }
-
-    setErrors(newErrors)
-    return isValid
-  }
-
-  const handleVerifyEmail = () => {
-    if (!validateOwnerEmailStep()) {
+    if (!isValid) {
+      console.log("Form validation failed")
       return
     }
 
-    // Simulate email verification process
-    setTimeout(() => {
-      setStep(2)
-      // In a real app, you would send a verification code to the email
-      // and then verify it in the next step
-    }, 1500)
+    // Show verification modal instead of directly dispatching signup
+    setShowVerificationModal(true)
   }
 
-  const handleSignUp = async () => {
-    console.log("Signup button clicked");
-    let isValid = validateForm();
-  
-    if (!isValid) {
-      console.log("Form validation failed");
-      return;
+  const handleVerificationCodeChange = (index, value) => {
+    if (value.length <= 1) {
+      const newCode = [...verificationCode]
+      newCode[index] = value
+      setVerificationCode(newCode)
+
+      // Auto focus next input
+      if (value && index < 4) {
+        // Focus next input (you might need to use refs for this in a real implementation)
+      }
     }
-  
-    const userData = {
-      role: userType,  
-      
-      name: inputs.name,
-      email: inputs.email,
-      phone: inputs.phone,
-      password: inputs.password,
-      isVerified: false,
-    };
-  
-    console.log("Dispatching signupAction with:", userData);
-    dispatch(signupAction(userData));
   }
-  
+
+  const handleVerifyEmail = async () => {
+    const enteredCode = verificationCode.join("")
+
+    if (enteredCode.length !== 5) {
+      setErrors({ ...errors, verification: "Please enter the complete verification code" })
+      return
+    }
+
+    setIsVerifying(true)
+
+    // Check if entered code matches default code "12345"
+    if (enteredCode === "12345") {
+      // Code is correct, proceed with signup
+      setTimeout(async () => {
+        setIsVerifying(false)
+        setShowVerificationModal(false)
+
+        const userData = {
+          role: userType,
+          name: inputs.name,
+          email: inputs.email,
+          phone: inputs.phone,
+          password: inputs.password,
+          isVerified: true,
+        }
+
+        console.log("Dispatching signupAction with:", userData)
+        dispatch(signupAction(userData))
+      }, 1500)
+    } else {
+      // Code is incorrect
+      setTimeout(() => {
+        setIsVerifying(false)
+        setErrors({ ...errors, verification: "Invalid verification code. Please try again." })
+      }, 1500)
+    }
+  }
+
+  const handleResendCode = () => {
+    Alert.alert("Code Resent", "A new verification code has been sent to your email.")
+    setVerificationCode(["", "", "", "", ""])
+    setErrors({ ...errors, verification: "" })
+  }
 
   const handleGoogleSignUp = () => {
     Alert.alert("Google Sign Up", "Google Sign Up functionality will be implemented soon.")
@@ -277,7 +290,7 @@ const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
     navigation.navigate("LoginScreen")
   }
 
-  const renderRenterForm = () => {
+  const renderForm = () => {
     return (
       <View style={styles.form}>
         {/* Name Field */}
@@ -359,11 +372,11 @@ const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
 
         {/* Sign Up Button */}
         <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} disabled={isLoading}>
-        {isLoading 
-  ? <ActivityIndicator color="#fff" size="small" /> 
-  : <Text style={styles.signUpButtonText}>Sign Up</Text>
-}
-
+          {isLoading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.signUpButtonText}>Sign Up</Text>
+          )}
         </TouchableOpacity>
 
         {/* OR Divider */}
@@ -382,121 +395,62 @@ const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
     )
   }
 
-  const renderOwnerEmailVerification = () => {
+  const renderVerificationModal = () => {
     return (
-      <View style={styles.form}>
-        <Text style={styles.verificationText}>
-          Please enter your email address to verify your account as a car owner.
-        </Text>
+      <Modal
+        transparent={true}
+        visible={showVerificationModal}
+        animationType="slide"
+        onRequestClose={() => setShowVerificationModal(false)}
+      >
+        <View style={styles.verificationModalContainer}>
+          <View style={styles.verificationModalContent}>
+            {/* Email Icon */}
+            <View style={styles.emailIconContainer}>
+              <Ionicons name="mail" size={40} color="#007EFD" />
+            </View>
 
-        {/* Email Field */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, errors.email && styles.inputError]}
-            placeholder="Enter your email"
-            placeholderTextColor="#999"
-            value={inputs.email}
-            onChangeText={(value) => handleChange("email", value)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-          {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
-        </View>
+            {/* Title */}
+            <Text style={styles.verificationTitle}>Check your email</Text>
 
-        {/* Verify Email Button */}
-        <TouchableOpacity style={styles.signUpButton} onPress={handleVerifyEmail} disabled={isLoading}>
-          <Text style={styles.signUpButtonText}>{isLoading ? "Verifying..." : "Verify Email"}</Text>
-        </TouchableOpacity>
-      </View>
-    )
-  }
+            {/* Email Display */}
+            <Text style={styles.emailDisplay}>{inputs.email}</Text>
 
-  const renderOwnerDetailsForm = () => {
-    return (
-      <View style={styles.form}>
-        <Text style={styles.verificationText}>Great! Now complete your profile information.</Text>
+            {/* Code Input */}
+            <View style={styles.codeInputContainer}>
+              {verificationCode.map((digit, index) => (
+                <TextInput
+                  key={index}
+                  style={[styles.codeInput, digit && styles.codeInputFilled]}
+                  value={digit}
+                  onChangeText={(value) => handleVerificationCodeChange(index, value)}
+                  keyboardType="numeric"
+                  maxLength={1}
+                  textAlign="center"
+                />
+              ))}
+            </View>
 
-        {/* Name Field */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, errors.name && styles.inputError]}
-            placeholder="Enter your full name"
-            placeholderTextColor="#999"
-            value={inputs.name}
-            onChangeText={(value) => handleChange("name", value)}
-            autoCapitalize="words"
-          />
-          {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
-        </View>
+            {/* Error Message */}
+            {errors.verification ? <Text style={styles.verificationErrorText}>{errors.verification}</Text> : null}
 
-        {/* Phone Field */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, errors.phone && styles.inputError]}
-            placeholder="Enter your phone number"
-            placeholderTextColor="#999"
-            value={inputs.phone}
-            onChangeText={(value) => handleChange("phone", value)}
-            keyboardType="phone-pad"
-          />
-          {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
-        </View>
+            {/* Resend Code */}
+            <TouchableOpacity onPress={handleResendCode} style={styles.resendContainer}>
+              <Text style={styles.resendText}>Didn't get a code? </Text>
+              <Text style={styles.resendLink}>resend</Text>
+            </TouchableOpacity>
 
-        {/* Password Field */}
-        <View style={styles.inputContainer}>
-          <View style={[styles.passwordInputContainer, errors.password && styles.inputError]}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Create password"
-              placeholderTextColor="#999"
-              secureTextEntry={secureTextEntry}
-              value={inputs.password}
-              onChangeText={(value) => handleChange("password", value)}
-            />
-            <TouchableOpacity onPress={toggleSecureTextEntry} style={styles.eyeIcon}>
-              <Ionicons name={secureTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
+            {/* Verify Button */}
+            <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyEmail} disabled={isVerifying}>
+              {isVerifying ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.verifyButtonText}>Verify email</Text>
+              )}
             </TouchableOpacity>
           </View>
-          {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
         </View>
-
-        {/* Confirm Password Field */}
-        <View style={styles.inputContainer}>
-          <View style={[styles.passwordInputContainer, errors.confirmPassword && styles.inputError]}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Confirm password"
-              placeholderTextColor="#999"
-              secureTextEntry={secureConfirmTextEntry}
-              value={inputs.confirmPassword}
-              onChangeText={(value) => handleChange("confirmPassword", value)}
-            />
-            <TouchableOpacity onPress={toggleSecureConfirmTextEntry} style={styles.eyeIcon}>
-              <Ionicons name={secureConfirmTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
-            </TouchableOpacity>
-          </View>
-          {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
-        </View>
-
-        {/* Sign Up Button */}
-        <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} disabled={isLoading}>
-          <Text style={styles.signUpButtonText}>{isLoading ? "Signing Up..." : "Sign Up"}</Text>
-        </TouchableOpacity>
-
-        {/* OR Divider */}
-        <View style={styles.orContainer}>
-          <View style={styles.divider} />
-          <Text style={styles.orText}>OR</Text>
-          <View style={styles.divider} />
-        </View>
-
-        {/* Google Sign Up Button */}
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignUp}>
-          <Image source={require("../../assets/google-logo.png")} style={styles.googleIcon} />
-          <Text style={styles.googleButtonText}>Sign up with Google</Text>
-        </TouchableOpacity>
-      </View>
+      </Modal>
     )
   }
 
@@ -511,7 +465,7 @@ const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
         >
           {/* Top Section with Background Image */}
           <View style={styles.topSection}>
-            <Image source={require("../../assets/signup.png")} style={styles.backgroundImage} />
+            <Image source={require("../../assets/Group 15.jpg")} style={styles.backgroundImage} />
           </View>
 
           {/* Bottom Section with White Background */}
@@ -537,12 +491,8 @@ const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
               </TouchableOpacity>
             </View>
 
-            {/* Form based on user type and step */}
-            {userType === "renter"
-              ? renderRenterForm()
-              : step === 1
-                ? renderOwnerEmailVerification()
-                : renderOwnerDetailsForm()}
+            {/* Form for both user types */}
+            {renderForm()}
 
             {/* Already have an account */}
             <View style={styles.signinContainer}>
@@ -555,26 +505,28 @@ const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
         </ScrollView>
       </KeyboardAvoidingView>
 
+      {/* Verification Modal */}
+      {renderVerificationModal()}
+
       {/* Success Modal */}
       <Modal
-  transparent={true}
-  visible={showSuccessModal}
-  animationType="fade"
-  onRequestClose={() => setShowSuccessModal(false)}
->
-  <View style={styles.modalContainer}>
-    <View style={styles.modalContent}>
-      <ActivityIndicator size="large" color="#007EFD" />
-      <Text style={styles.modalText}>Account created successfully!</Text>
-      <Text style={styles.modalSubText}>Redirecting to login...</Text>
-    </View>
-  </View>
-</Modal>
+        transparent={true}
+        visible={showSuccessModal}
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <ActivityIndicator size="large" color="#007EFD" />
+            <Text style={styles.modalText}>Account created successfully!</Text>
+            <Text style={styles.modalSubText}>Redirecting to login...</Text>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   )
 }
 
-// Styles remain the same as in your original file
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -640,12 +592,6 @@ const styles = StyleSheet.create({
   },
   form: {
     width: "100%",
-  },
-  verificationText: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 15,
-    textAlign: "center",
   },
   inputContainer: {
     marginBottom: 15,
@@ -769,6 +715,93 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 10,
     textAlign: "center",
+  },
+  // Verification Modal Styles
+  verificationModalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  verificationModalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 30,
+    alignItems: "center",
+    width: "85%",
+    maxWidth: 400,
+  },
+  emailIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#E3F2FD",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  verificationTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 10,
+  },
+  emailDisplay: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 30,
+  },
+  codeInputContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 20,
+  },
+  codeInput: {
+    width: 50,
+    height: 50,
+    borderWidth: 2,
+    borderColor: "#E0E0E0",
+    borderRadius: 10,
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  codeInputFilled: {
+    borderColor: "#007EFD",
+    backgroundColor: "#F0F8FF",
+  },
+  verificationErrorText: {
+    color: "red",
+    fontSize: 12,
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  resendContainer: {
+    flexDirection: "row",
+    marginBottom: 30,
+  },
+  resendText: {
+    fontSize: 14,
+    color: "#666",
+  },
+  resendLink: {
+    fontSize: 14,
+    color: "#007EFD",
+    fontWeight: "500",
+  },
+  verifyButton: {
+    backgroundColor: "#007EFD",
+    width: "100%",
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  verifyButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
   },
 })
 

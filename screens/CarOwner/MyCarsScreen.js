@@ -5,6 +5,8 @@ import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Switch, Sa
 import { Ionicons } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
+import { useDispatch, useSelector } from "react-redux"
+import { getMyCarsAction, updateCarAvailabilityAction } from "../../redux/action/CarActions"
 
 const CarDetailsModal = ({ visible, car, onClose, onEdit }) => {
   const { t } = useTranslation()
@@ -27,7 +29,10 @@ const CarDetailsModal = ({ visible, car, onClose, onEdit }) => {
 
         <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
           <View style={styles.carImageContainer}>
-            <Image source={{ uri: car.image }} style={styles.carDetailImage} />
+            <Image
+              source={{ uri: car.images?.[0] || car.image || "/placeholder.svg?height=200&width=300" }}
+              style={styles.carDetailImage}
+            />
             <View style={styles.statusBadgeModal}>
               <Text style={styles.statusTextModal}>{car.status}</Text>
             </View>
@@ -35,12 +40,12 @@ const CarDetailsModal = ({ visible, car, onClose, onEdit }) => {
 
           <View style={styles.detailsSection}>
             <Text style={styles.carNameModal}>
-              {car.name} {car.model}
+              {car.brand || car.name} {car.model}
             </Text>
             <Text style={styles.carYearModal}>{car.year}</Text>
 
             <View style={styles.priceSection}>
-              <Text style={styles.priceModal}>{car.price?.toLocaleString()} FRW</Text>
+              <Text style={styles.priceModal}>{(car.price || car.base_price || 0).toLocaleString()} FRW</Text>
               <Text style={styles.priceUnitModal}>per day</Text>
             </View>
 
@@ -48,13 +53,13 @@ const CarDetailsModal = ({ visible, car, onClose, onEdit }) => {
               <View style={styles.statItem}>
                 <Ionicons name="eye-outline" size={20} color="#64748B" />
                 <Text style={styles.statLabel}>Views</Text>
-                <Text style={styles.statValue}>{car.views}</Text>
+                <Text style={styles.statValue}>{car.views || 0}</Text>
               </View>
               <View style={styles.statItem}>
                 <Ionicons name="star" size={20} color="#F59E0B" />
                 <Text style={styles.statLabel}>Rating</Text>
                 <Text style={styles.statValue}>
-                  {car.rating} ({car.reviews})
+                  {car.rating || 0} ({car.reviews || 0})
                 </Text>
               </View>
             </View>
@@ -70,19 +75,19 @@ const CarDetailsModal = ({ visible, car, onClose, onEdit }) => {
               </View>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Fuel Type</Text>
-                <Text style={styles.detailValue}>{car.fuelType || "Gasoline"}</Text>
+                <Text style={styles.detailValue}>{car.fuelType || car.fuel_type || "Gasoline"}</Text>
               </View>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Seats</Text>
-                <Text style={styles.detailValue}>{car.seats || "5"}</Text>
+                <Text style={styles.detailValue}>{car.seatings || car.seats || "5"}</Text>
               </View>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Location</Text>
-                <Text style={styles.detailValue}>{car.address || "Kigali"}</Text>
+                <Text style={styles.detailValue}>{car.location?.address || car.address || "Kigali"}</Text>
               </View>
               <View style={styles.detailItem}>
                 <Text style={styles.detailLabel}>Phone</Text>
-                <Text style={styles.detailValue}>{car.phone || "+250 788 123 456"}</Text>
+                <Text style={styles.detailValue}>{car.owner?.phone || car.phone || "+250 788 123 456"}</Text>
               </View>
             </View>
 
@@ -115,85 +120,41 @@ const CarDetailsModal = ({ visible, car, onClose, onEdit }) => {
 const MyCarsScreen = () => {
   const navigation = useNavigation()
   const { t } = useTranslation()
-  const [loading, setLoading] = useState(true)
-  const [cars, setCars] = useState([])
+  const dispatch = useDispatch()
+
+  // ✅ FIXED: Get authenticated user and cars data
+  const { user, isAuthenticated } = useSelector((state) => state.auth || {})
+  const { cars, isLoading, error } = useSelector((state) => state.cars || {})
+
   const [selectedCar, setSelectedCar] = useState(null)
   const [modalVisible, setModalVisible] = useState(false)
 
+  // ✅ FIXED: Check authentication and fetch cars
   useEffect(() => {
-    setTimeout(() => {
-      setCars([
-        {
-          id: 1,
-          name: "BMW X5",
-          model: "xDrive40i",
-          year: 2023,
-          price: 120000,
-          image: "https://via.placeholder.com/300x200/E2E8F0/64748B?text=Car+Image",
-          status: "active",
-          available: true,
-          views: 245,
-          rating: 4.8,
-          reviews: 12,
-          type: "SUV",
-          transmission: "Automatic",
-          fuelType: "Gasoline",
-          seats: "7",
-          address: "Kigali - Gasabo",
-          phone: "+250 788 123 456",
-          features: ["Air Conditioning", "GPS Navigation", "Bluetooth", "Backup Camera"],
-          description:
-            "Luxury SUV in excellent condition with premium features and comfortable seating for 7 passengers.",
-        },
-        {
-          id: 2,
-          name: "Audi Q7",
-          model: "Premium Plus",
-          year: 2022,
-          price: 110000,
-          image: "https://via.placeholder.com/300x200/E2E8F0/64748B?text=Car+Image",
-          status: "active",
-          available: true,
-          views: 189,
-          rating: 4.9,
-          reviews: 8,
-          type: "SUV",
-          transmission: "Automatic",
-          fuelType: "Gasoline",
-          seats: "7",
-          address: "Kigali - Kicukiro",
-          phone: "+250 788 123 456",
-          features: ["Air Conditioning", "Leather Seats", "Premium Sound", "Sunroof"],
-          description: "Premium luxury SUV with advanced safety features and exceptional comfort.",
-        },
-        {
-          id: 3,
-          name: "Mercedes GLE",
-          model: "350 4MATIC",
-          year: 2023,
-          price: 135000,
-          image: "https://via.placeholder.com/300x200/E2E8F0/64748B?text=Car+Image",
-          status: "pending",
-          available: false,
-          views: 67,
-          rating: 4.7,
-          reviews: 5,
-          type: "SUV",
-          transmission: "Automatic",
-          fuelType: "Gasoline",
-          seats: "5",
-          address: "Kigali - Nyarugenge",
-          phone: "+250 788 123 456",
-          features: ["Air Conditioning", "GPS Navigation", "Heated Seats", "Keyless Entry"],
-          description: "Elegant and powerful SUV with cutting-edge technology and superior performance.",
-        },
-      ])
-      setLoading(false)
-    }, 1500)
-  }, [])
+    if (!isAuthenticated || !user) {
+      console.log("❌ User not authenticated, should redirect to login...")
+      return
+    }
 
-  const toggleAvailability = (carId) => {
-    setCars(cars.map((car) => (car.id === carId ? { ...car, available: !car.available } : car)))
+    console.log("🚗 Fetching my cars for user:", user.name)
+    dispatch(getMyCarsAction())
+  }, [dispatch, isAuthenticated, user])
+
+  // ✅ FIXED: Refetch when navigating back to this screen
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      if (isAuthenticated && user) {
+        console.log("🔄 MyCars screen focused, refetching cars...")
+        dispatch(getMyCarsAction())
+      }
+    })
+
+    return unsubscribe
+  }, [navigation, dispatch, isAuthenticated, user])
+
+  const toggleAvailability = (carId, available) => {
+    console.log("🔄 Toggling availability for car:", carId, "to:", !available)
+    dispatch(updateCarAvailabilityAction({ carId, available: !available }))
   }
 
   const getStatusColor = (status) => {
@@ -216,22 +177,66 @@ const MyCarsScreen = () => {
 
   const handleEditCar = () => {
     setModalVisible(false)
-    // Navigate to edit screen with car data
     navigation.navigate("AddCar", {
       draftData: {
-        id: selectedCar.id,
+        id: selectedCar._id || selectedCar.id,
         formData: selectedCar,
-        currentStep: 5, // Start at review step for editing
+        currentStep: 5,
         isEditing: true,
       },
     })
   }
 
-  if (loading) {
+  // ✅ FIXED: Show loading state
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>{t("myCars", "My Cars")}</Text>
+          <Text style={styles.subtitle}>{t("manageVehicles", "Manage your vehicle listings")}</Text>
+        </View>
         <View style={styles.loadingContainer}>
-          <Text>{t("loading", "Loading...")}</Text>
+          <Text style={styles.loadingText}>{t("loading", "Loading your cars...")}</Text>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  // ✅ FIXED: Show error state
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>{t("myCars", "My Cars")}</Text>
+          <Text style={styles.subtitle}>{t("manageVehicles", "Manage your vehicle listings")}</Text>
+        </View>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => dispatch(getMyCarsAction())}>
+            <Text style={styles.retryButtonText}>{t("retry", "Retry")}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  // ✅ FIXED: Show empty state when no cars
+  if (!cars || cars.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>{t("myCars", "My Cars")}</Text>
+          <Text style={styles.subtitle}>{t("manageVehicles", "Manage your vehicle listings")}</Text>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Ionicons name="car-outline" size={64} color="#9CA3AF" />
+          <Text style={styles.emptyTitle}>{t("noCars", "No Cars Listed")}</Text>
+          <Text style={styles.emptySubtitle}>{t("addFirstCar", "Add your first car to get started")}</Text>
+          <TouchableOpacity style={styles.addCarButton} onPress={() => navigation.navigate("AddCar")}>
+            <Ionicons name="add-outline" size={20} color="#FFFFFF" />
+            <Text style={styles.addCarButtonText}>{t("addCar", "Add Car")}</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     )
@@ -249,12 +254,15 @@ const MyCarsScreen = () => {
         {/* Cars List */}
         <View style={styles.carsList}>
           {cars.map((car) => (
-            <View key={car.id} style={styles.carCard}>
+            <View key={car._id || car.id} style={styles.carCard}>
               <View style={styles.imageContainer}>
-                <Image source={{ uri: car.image }} style={styles.carImage} />
+                <Image
+                  source={{ uri: car.images?.[0] || car.image || "/placeholder.svg?height=200&width=300" }}
+                  style={styles.carImage}
+                />
                 <View style={[styles.statusBadge, getStatusColor(car.status)]}>
                   <Text style={[styles.statusText, { color: getStatusColor(car.status).color }]}>
-                    {car.status.charAt(0).toUpperCase() + car.status.slice(1)}
+                    {car.status?.charAt(0).toUpperCase() + car.status?.slice(1) || "Pending"}
                   </Text>
                 </View>
               </View>
@@ -263,13 +271,13 @@ const MyCarsScreen = () => {
                 <View style={styles.carHeader}>
                   <View style={styles.carDetails}>
                     <Text style={styles.carName}>
-                      {car.name} {car.model}
+                      {car.brand || car.name} {car.model}
                     </Text>
                     <Text style={styles.carYear}>{car.year}</Text>
                   </View>
                   <View style={styles.priceContainer}>
                     <Text style={styles.price}>
-                      {car.price.toLocaleString()} {t("currency", "FRW")}
+                      {(car.price || car.base_price || 0).toLocaleString()} {t("currency", "FRW")}
                     </Text>
                     <Text style={styles.priceUnit}>{t("perDay", "per day")}</Text>
                   </View>
@@ -280,13 +288,13 @@ const MyCarsScreen = () => {
                   <View style={styles.stat}>
                     <Ionicons name="eye-outline" size={16} color="#64748B" />
                     <Text style={styles.statText}>
-                      {car.views} {t("views", "views")}
+                      {car.views || 0} {t("views", "views")}
                     </Text>
                   </View>
                   <View style={styles.stat}>
                     <Ionicons name="star" size={16} color="#F59E0B" />
                     <Text style={styles.statText}>
-                      {car.rating} ({car.reviews})
+                      {car.rating || 0} ({car.reviews || 0})
                     </Text>
                   </View>
                 </View>
@@ -295,14 +303,14 @@ const MyCarsScreen = () => {
                 <View style={styles.availabilityContainer}>
                   <View style={styles.switchContainer}>
                     <Switch
-                      value={car.available}
-                      onValueChange={() => toggleAvailability(car.id)}
+                      value={car.available !== false}
+                      onValueChange={() => toggleAvailability(car._id || car.id, car.available)}
                       trackColor={{ false: "#E2E8F0", true: "#007EFD" }}
                       thumbColor={car.available ? "#FFFFFF" : "#FFFFFF"}
                       style={styles.switch}
                     />
                     <Text style={styles.availabilityText}>
-                      {car.available ? t("available", "Available") : t("unavailable", "Unavailable")}
+                      {car.available !== false ? t("available", "Available") : t("unavailable", "Unavailable")}
                     </Text>
                   </View>
                   <TouchableOpacity style={styles.detailsButton} onPress={() => handleViewDetails(car)}>
@@ -334,6 +342,68 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#64748B",
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#EF4444",
+    textAlign: "center",
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: "#007EFD",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: "#64748B",
+    textAlign: "center",
+    marginBottom: 32,
+  },
+  addCarButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#007EFD",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  addCarButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
   header: {
     alignItems: "center",

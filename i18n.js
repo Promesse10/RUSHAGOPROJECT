@@ -22,10 +22,99 @@ i18n.use(initReactI18next).init({
         add: "Add",
         quickStats: "Quick Stats",
         recentActivity: "Recent Activity",
+        goodMorning: "Good Morning",
+        goodAfternoon: "Good Afternoon",
+        goodEvening: "Good Evening",
+        welcomeToRushago: "Welcome to Rushago",
+  
+        // Navigation
+        home: "Home",
+        cars: "Cars",
+        settings: "Settings",
+  
+        // Car Details
+        carDetails: "Car Details",
+        about: "About",
+        gallery: "Gallery",
+        review: "Review",
+        rentPartner: "Rent Partner",
+        owner: "Owner",
+        specification: "Specification",
+        seats: "Seats",
+        price: "Price",
+        bookNow: "Book Now",
+  
+        // Search & Filter
+        findYourCar: "Find your car",
+        searchCars: "Search cars...",
+        filterCars: "Filter Cars",
+        clearAll: "Clear All",
+        applyFilters: "Apply Filters",
+  
+        // Status
+        available: "Available",
+        notAvailable: "Not Available",
+        tracking: "Tracking",
+        findingNearestCar: "Finding nearest available car...",
+        locationRequired: "Location Required",
+        enableLocation: "Please enable location services",
+  
+        // Sharing
+        checkOutCar: "Check out this",
+        forRent: "for rent at",
+  
+        // Review
+        reviewText:
+          "Great car with excellent condition. The owner is very responsive and helpful. Highly recommended for family trips!",
       },
     },
     fr: {
       translation: {
+        // Greetings
+      goodMorning: "Bonjour",
+      goodAfternoon: "Bon après-midi",
+      goodEvening: "Bonsoir",
+      welcomeToRushago: "Bienvenue à Rushago",
+
+      // Navigation
+      home: "Accueil",
+      cars: "Voitures",
+      settings: "Paramètres",
+
+      // Car Details
+      carDetails: "Détails de la voiture",
+      about: "À propos",
+      gallery: "Galerie",
+      review: "Avis",
+      rentPartner: "Partenaire de location",
+      owner: "Propriétaire",
+      specification: "Spécification",
+      seats: "Sièges",
+      price: "Prix",
+      bookNow: "Réserver maintenant",
+
+      // Search & Filter
+      findYourCar: "Trouvez votre voiture",
+      searchCars: "Rechercher des voitures...",
+      filterCars: "Filtrer les voitures",
+      clearAll: "Tout effacer",
+      applyFilters: "Appliquer les filtres",
+
+      // Status
+      available: "Disponible",
+      notAvailable: "Non disponible",
+      tracking: "Suivi",
+      findingNearestCar: "Recherche de la voiture disponible la plus proche...",
+      locationRequired: "Localisation requise",
+      enableLocation: "Veuillez activer les services de localisation",
+
+      // Sharing
+      checkOutCar: "Découvrez cette",
+      forRent: "à louer à",
+
+      // Review
+      reviewText:
+        "Excellente voiture en excellent état. Le propriétaire est très réactif et serviable. Hautement recommandé pour les voyages en famille!",
         dashboard: "Tableau de bord",
         welcome: "Bon retour",
         totalCars: "Voitures totales",
@@ -60,6 +149,50 @@ i18n.use(initReactI18next).init({
         add: "Ongeraho",
         quickStats: "Imibare yihuse",
         recentActivity: "Ibikorwa biheruka",
+        goodMorning: "Mwaramutse",
+        goodAfternoon: "Mwiriwe",
+        goodEvening: "Muramuke",
+        welcomeToRushago: "Murakaza neza kuri Rushago",
+  
+        // Navigation
+        home: "Ahabanza",
+        cars: "Imodoka",
+        settings: "Igenamiterere",
+  
+        // Car Details
+        carDetails: "Amakuru y'imodoka",
+        about: "Ibijyanye",
+        gallery: "Amafoto",
+        review: "Isuzuma",
+        rentPartner: "Umunyeshyiramo",
+        owner: "Nyir'imodoka",
+        specification: "Ibisobanuro",
+        seats: "Intebe",
+        price: "Igiciro",
+        bookNow: "Gena ubu",
+  
+        // Search & Filter
+        findYourCar: "Shakisha imodoka yawe",
+        searchCars: "Shakisha imodoka",
+        filterCars: "Shyungura imodoka",
+        clearAll: "Siba byose",
+        applyFilters: "Koresha ishyungura",
+  
+        // Status
+        available: "Irahari",
+        notAvailable: "Ntirahari",
+        tracking: "Gukurikirana",
+        findingNearestCar: "Turashakisha imodoka iri hafi",
+        locationRequired: "Ahantu hakenewe",
+        enableLocation: "Nyamuneka emera serivisi z'ahantu",
+  
+        // Sharing
+        checkOutCar: "Reba iyi modoka",
+        forRent: "yo gukodesha ku",
+  
+        // Review
+        reviewText:
+          "Imodoka nziza ifite imiterere myiza. Nyir'imodoka asubiza vuba kandi afasha. Turayisaba cyane ku rugendo rw'umuryango!",
       },
     },
   },

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react"
 import {
   View,
   Text,
@@ -8,23 +8,63 @@ import {
   Image,
   ActivityIndicator,
   SafeAreaView,
-} from "react-native";
-import { useNavigation } from "@react-navigation/native";
+  Alert,
+  Dimensions,
+} from "react-native"
+import { useNavigation } from "@react-navigation/native"
+import { useDispatch, useSelector } from "react-redux"
+import { loginAction } from "../../redux/action/LoginActions"
+import { clearLoginState } from "../../redux/slices/LoginSlice"
 
-const CarOwnerLoginScreen = () => {
-  const navigation = useNavigation();
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+const { width, height } = Dimensions.get("window")
+
+const LoginScreen = () => {
+  const navigation = useNavigation()
+  const dispatch = useDispatch()
+
+  const {
+    isLoading,
+    isLoginSuccess,
+    isLoginFailed,
+    error,
+    user,
+    isAuthenticated,
+  } = useSelector((state) => state.loginState)
+
+  const [formData, setFormData] = useState({ email: "", password: "" })
+  const [showPassword, setShowPassword] = useState(false)
+
+  useEffect(() => {
+    if (isLoginSuccess && isAuthenticated && user) {
+      dispatch(clearLoginState())
+      // You can navigate here if needed
+    }
+  }, [isLoginSuccess, isAuthenticated, user])
+
+  useEffect(() => {
+    if (isLoginFailed && error) {
+      Alert.alert("Login Failed", error)
+      dispatch(clearLoginState())
+    }
+  }, [isLoginFailed, error])
 
   const handleLogin = () => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      // Navigate to the car owner dashboard
-      navigation.navigate("CarOwnerDashboard");
-    }, 1500);
-  };
+    if (!formData.email || !formData.password) {
+      Alert.alert("Error", "Please enter both email and password")
+      return
+    }
+    if (!formData.email.includes("@")) {
+      Alert.alert("Error", "Please enter a valid email address")
+      return
+    }
+
+    dispatch(
+      loginAction({
+        email: formData.email.toLowerCase().trim(),
+        password: formData.password,
+      })
+    )
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -37,31 +77,35 @@ const CarOwnerLoginScreen = () => {
       <Text style={styles.title}>Hey</Text>
       <Text style={styles.subtitle}>Login Now</Text>
       <Text style={styles.description}>
-        If you are new.{" "}
+        If you are new.{' '}
         <Text style={styles.link} onPress={() => navigation.navigate("CarOwnerSignup")}>
           Create Account
         </Text>
       </Text>
 
       <View style={styles.inputContainer}>
-        <Text style={styles.inputIcon}>👤</Text>
+        <Text style={styles.inputIcon}>📧</Text>
         <TextInput
           style={styles.input}
-          placeholder="User Name"
-          placeholderTextColor="#666"
+          placeholder="Email Address"
+          value={formData.email}
+          onChangeText={(text) => setFormData({ ...formData, email: text })}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
       </View>
 
       <View style={styles.inputContainer}>
         <Text style={styles.inputIcon}>🔒</Text>
-        <TextInput 
-          style={styles.input} 
-          placeholder="Enter Your Password" 
-          secureTextEntry={!showPassword} 
-          placeholderTextColor="#666" 
+        <TextInput
+          style={styles.input}
+          placeholder="Enter Your Password"
+          secureTextEntry={!showPassword}
+          value={formData.password}
+          onChangeText={(text) => setFormData({ ...formData, password: text })}
         />
         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+          <Text style={styles.eyeIcon}>{showPassword ? "👁️" : "👁‍🔨"}</Text>
         </TouchableOpacity>
       </View>
 
@@ -69,29 +113,20 @@ const CarOwnerLoginScreen = () => {
         <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleLogin} disabled={loading}>
-        {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.submitButtonText}>Log In</Text>}
+      <TouchableOpacity
+        style={[styles.submitButton, isLoading && styles.disabledButton]}
+        onPress={handleLogin}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator color="#FFF" />
+        ) : (
+          <Text style={styles.submitButtonText}>Log In</Text>
+        )}
       </TouchableOpacity>
-      
-      <View style={styles.dividerContainer}>
-        <View style={styles.divider} />
-        <Text style={styles.dividerText}>OR</Text>
-        <View style={styles.divider} />
-      </View>
-      
-      <View style={styles.socialLoginContainer}>
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialButtonText}>G</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialButtonText}>🍎</Text>
-        </TouchableOpacity>
-      </View>
-      
-      <Text style={styles.carOwnerText}>Car Owner Login</Text>
     </SafeAreaView>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -139,6 +174,10 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 30,
   },
+  link: {
+    color: "#007EFD",
+    fontWeight: "bold",
+  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -175,52 +214,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  disabledButton: {
+    opacity: 0.7,
+  },
   submitButtonText: {
     color: "#FFFFFF",
     fontSize: 18,
     fontWeight: "bold",
   },
-  link: {
-    color: "#007EFD",
-    fontWeight: "bold",
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 30,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E0E0E0",
-  },
-  dividerText: {
-    marginHorizontal: 10,
-    color: "#666",
-  },
-  socialLoginContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 30,
-  },
-  socialButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    justifyContent: "center",
-    alignItems: "center",
-    marginHorizontal: 10,
-  },
-  socialButtonText: {
-    fontSize: 20,
-  },
-  carOwnerText: {
-    textAlign: "center",
-    color: "#666",
-    marginTop: 20,
-  },
-});
+})
 
-export default CarOwnerLoginScreen;
+export default LoginScreen

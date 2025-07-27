@@ -1,334 +1,344 @@
-// NotificationsScreen.js
-import React, { useState, useEffect } from "react";
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Image, 
-  ScrollView, 
-  SafeAreaView,
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
   Modal,
-  Pressable
-} from "react-native";
-import { ArrowLeft, Check, CheckCheck } from "react-native-feather";
-import { useNavigation, useRoute } from "@react-navigation/native";
+  ScrollView,
+  Animated,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-const NotificationModal = ({ notification, visible, onClose, markAsRead }) => {
-  return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Image source={notification?.icon} style={styles.modalIcon} />
-            <Text style={styles.modalTitle}>{notification?.title}</Text>
-          </View>
-          <Text style={styles.modalMessage}>{notification?.message}</Text>
-          <Text style={styles.modalTime}>{notification?.time} • {formatDate(notification?.date)}</Text>
-          
-          {!notification?.read && (
-            <TouchableOpacity 
-              style={styles.markAsReadButton}
-              onPress={() => {
-                markAsRead(notification?.id);
-                onClose();
-              }}
-            >
-              <Text style={styles.markAsReadText}>Mark as read</Text>
-            </TouchableOpacity>
-          )}
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-};
+const NotificationChatBot = () => {
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+  const [bounceAnimation] = useState(new Animated.Value(1));
 
-const formatDate = (date) => {
-  if (!date) return "";
-  
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  
-  if (date >= today) {
-    return "Today";
-  } else if (date >= yesterday) {
-    return "Yesterday";
-  } else {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  }
-};
+  // Sample notifications from admin
+  const sampleNotifications = [
+    {
+      id: 1,
+      title: 'Welcome to Rushago!',
+      message: 'Thank you for joining our car rental platform. Explore amazing cars in your area.',
+      timestamp: new Date(Date.now() - 60000 * 30), // 30 minutes ago
+      isRead: false,
+      type: 'welcome',
+    },
+    {
+      id: 2,
+      title: 'New Cars Available',
+      message: 'We have added new BMW and Mercedes cars in Kigali area. Check them out!',
+      timestamp: new Date(Date.now() - 60000 * 120), // 2 hours ago
+      isRead: false,
+      type: 'update',
+    },
+    {
+      id: 3,
+      title: 'Special Discount',
+      message: 'Get 20% off on weekend rentals. Use code WEEKEND20 when booking.',
+      timestamp: new Date(Date.now() - 60000 * 180), // 3 hours ago
+      isRead: false,
+      type: 'promotion',
+    },
+  ];
 
-const NotificationsScreen = () => {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const { notifications: initialNotifications, setNotifications: updateNotifications } = route.params || { notifications: [], setNotifications: () => {} };
-  
-  const [notifications, setNotifications] = useState(initialNotifications);
-  const [selectedNotification, setSelectedNotification] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  
-  const todayNotifications = notifications.filter(n => n.section === "today");
-  const weekNotifications = notifications.filter(n => n.section === "week");
-  
-  const handleNotificationPress = (notification) => {
-    setSelectedNotification(notification);
-    setModalVisible(true);
-  };
-  
-  const markAsRead = (id) => {
-    const updatedNotifications = notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    );
+  useEffect(() => {
+    // Simulate receiving notifications
+    setNotifications(sampleNotifications);
+    setUnreadCount(sampleNotifications.filter(n => !n.isRead).length);
+  }, []);
+
+  useEffect(() => {
+    // Bounce animation for notification icon
+    if (unreadCount > 0) {
+      const bounceInterval = setInterval(() => {
+        Animated.sequence([
+          Animated.timing(bounceAnimation, {
+            toValue: 1.2,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bounceAnimation, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }, 3000);
+
+      return () => clearInterval(bounceInterval);
+    }
+  }, [unreadCount]);
+
+  const handleNotificationPress = () => {
+    setShowModal(true);
+    // Mark all notifications as read when modal is opened
+    const updatedNotifications = notifications.map(n => ({ ...n, isRead: true }));
     setNotifications(updatedNotifications);
-    
-    // Update parent component's state
-    if (updateNotifications) {
-      updateNotifications(updatedNotifications);
+    setUnreadCount(0);
+  };
+
+  const formatTime = (timestamp) => {
+    const now = new Date();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return 'Just now';
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'welcome': return 'hand-left';
+      case 'update': return 'car';
+      case 'promotion': return 'pricetag';
+      default: return 'notifications';
     }
   };
-  
-  const closeModal = () => {
-    setModalVisible(false);
-  };
-  
-  const handleBackPress = () => {
-    navigation.goBack();
-  };
-  
-  const renderNotificationItem = (notification) => (
-    <TouchableOpacity
-      key={notification.id}
-      style={[
-        styles.notificationItem,
-        !notification.read && styles.unreadNotification
-      ]}
-      onPress={() => handleNotificationPress(notification)}
-    >
-      <Image source={notification.icon} style={styles.notificationIcon} />
-      <View style={styles.notificationContent}>
-        <Text style={styles.notificationTitle}>{notification.title}</Text>
-        <Text style={styles.notificationMessage} numberOfLines={2}>
-          {notification.message}
-        </Text>
-        <View style={styles.notificationTimeContainer}>
-          <Text style={styles.notificationTime}>{notification.time}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-  
+
+  // Always show the notification button, but only bounce if there are unread notifications
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-            <ArrowLeft stroke="#000" width={24} height={24} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Notifications</Text>
-          {/* <View style={styles.readAllContainer}>
-            <CheckCheck stroke="#007EFD" width={24} height={24} />
-          </View> */}
+    <>
+      {/* Floating Notification Button */}
+      <Animated.View 
+        style={[
+          styles.floatingButton,
+          { transform: [{ scale: unreadCount > 0 ? bounceAnimation : 1 }] }
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.notificationButton}
+          onPress={handleNotificationPress}
+        >
+          <Icon name="chatbubble-ellipses" size={24} color="white" />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Notification Modal */}
+      <Modal
+        visible={showModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.headerLeft}>
+                <Icon name="chatbubble-ellipses" size={24} color="#007EFD" />
+                <Text style={styles.modalTitle}>Notifications</Text>
+              </View>
+              <TouchableOpacity 
+                onPress={() => setShowModal(false)}
+                style={styles.closeButton}
+              >
+                <Icon name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Chat Bot Interface */}
+            <ScrollView style={styles.chatContainer} showsVerticalScrollIndicator={false}>
+              <View style={styles.botMessage}>
+                <View style={styles.botAvatar}>
+                  <Icon name="robot" size={20} color="white" />
+                </View>
+                <View style={styles.messageContent}>
+                  <Text style={styles.botName}>Rushago Assistant</Text>
+                  <Text style={styles.messageText}>
+                    Hi! I'm here to keep you updated with the latest news and offers from Rushago.
+                  </Text>
+                  <Text style={styles.messageTime}>Now</Text>
+                </View>
+              </View>
+
+              {notifications.map((notification) => (
+                <View key={notification.id} style={styles.botMessage}>
+                  <View style={styles.botAvatar}>
+                    <Icon 
+                      name={getNotificationIcon(notification.type)} 
+                      size={16} 
+                      color="white" 
+                    />
+                  </View>
+                  <View style={styles.messageContent}>
+                    <Text style={styles.messageTitle}>{notification.title}</Text>
+                    <Text style={styles.messageText}>{notification.message}</Text>
+                    <Text style={styles.messageTime}>
+                      {formatTime(notification.timestamp)}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+
+              <View style={styles.botMessage}>
+                <View style={styles.botAvatar}>
+                  <Icon name="information-circle" size={16} color="white" />
+                </View>
+                <View style={styles.messageContent}>
+                  <Text style={styles.messageText}>
+                    That's all for now! I'll notify you when there are new updates.
+                  </Text>
+                  <Text style={styles.messageTime}>Now</Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Footer */}
+            <View style={styles.chatFooter}>
+              <Text style={styles.footerText}>
+                You'll receive notifications about new cars, offers, and updates.
+              </Text>
+            </View>
+          </View>
         </View>
-        
-        <ScrollView style={styles.scrollView}>
-          {/* Today Section */}
-          {todayNotifications.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Today</Text>
-              {todayNotifications.map(renderNotificationItem)}
-            </View>
-          )}
-          
-          {/* This Week Section */}
-          {weekNotifications.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>This Week</Text>
-              {weekNotifications.map(renderNotificationItem)}
-            </View>
-          )}
-          
-          {/* Empty State */}
-          {notifications.length === 0 && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No notifications yet</Text>
-            </View>
-          )}
-        </ScrollView>
-        
-        {/* Notification Detail Modal */}
-        <NotificationModal
-          notification={selectedNotification}
-          visible={modalVisible}
-          onClose={closeModal}
-          markAsRead={markAsRead}
-        />
-      </View>
-    </SafeAreaView>
+      </Modal>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
+  floatingButton: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    zIndex: 1000,
   },
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
+  notificationButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#007EFD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#FF3B30',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
   },
-  backButton: {
-    padding: 5,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000000",
-  },
-  readAllContainer: {
-    padding: 5,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#8E8E93",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  notificationItem: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  unreadNotification: {
-    backgroundColor: "rgba(75, 77, 255, 0.05)",
-  },
-  notificationIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 15,
-  },
-  notificationContent: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  notificationTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 5,
-    color: "#000000",
-  },
-  notificationMessage: {
-    fontSize: 14,
-    color: "#666666",
-    marginBottom: 5,
-  },
-  notificationTimeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  notificationTime: {
+  badgeText: {
+    color: 'white',
     fontSize: 12,
-    color: "#8E8E93",
+    fontWeight: 'bold',
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 50,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: "#8E8E93",
-  },
-  // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  modalContent: {
-    width: "85%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+  modalContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    minHeight: '50%',
   },
   modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  modalIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#000000",
+    fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 10,
   },
-  modalMessage: {
-    fontSize: 16,
-    color: "#333333",
-    marginBottom: 15,
-    lineHeight: 22,
+  closeButton: {
+    padding: 5,
   },
-  modalTime: {
-    fontSize: 14,
-    color: "#8E8E93",
+  chatContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  botMessage: {
+    flexDirection: 'row',
     marginBottom: 20,
+    alignItems: 'flex-start',
   },
-  markAsReadButton: {
-    backgroundColor: "#007EFD",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
+  botAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#007EFD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  markAsReadText: {
-    color: "#FFFFFF",
+  messageContent: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 15,
+    borderTopLeftRadius: 5,
+    padding: 12,
+  },
+  botName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#007EFD',
+    marginBottom: 4,
+  },
+  messageTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  messageText: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  messageTime: {
+    fontSize: 12,
+    color: '#999',
+    alignSelf: 'flex-end',
+  },
+  chatFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    backgroundColor: '#f8f9fa',
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
 
-export default NotificationsScreen;
+export default NotificationChatBot;
