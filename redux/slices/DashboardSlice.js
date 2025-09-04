@@ -1,10 +1,11 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { fetchDashboardStats, fetchUserStats } from "../action/DashboardActions"
 
+
 const initialState = {
-  totalCars: 0,
-  activeCars: 0,
-  pendingCars: 0,
+  totalListings: 0,
+  activeListings: 0,
+  pendingListings: 0,
   recentActivity: [],
   userStats: {
     totalBookings: 0,
@@ -32,9 +33,10 @@ const dashboardSlice = createSlice({
       .addCase(fetchDashboardStats.fulfilled, (state, action) => {
         state.loading = false
         const stats = action.payload
-        state.totalCars = stats.totalListings || stats.totalCars || 0
-        state.activeCars = stats.activeListings || stats.activeCars || 0
-        state.pendingCars = stats.pendingListings || stats.pendingCars || 0
+        // ✅ FIXED: Use correct field names from API
+        state.totalListings = stats.totalListings || 0
+        state.activeListings = stats.activeListings || 0
+        state.pendingListings = stats.pendingListings || 0
         state.recentActivity = stats.recentActivity || []
       })
       .addCase(fetchDashboardStats.rejected, (state, action) => {

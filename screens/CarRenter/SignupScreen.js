@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
-
 import {
   View,
   Text,
@@ -23,70 +22,66 @@ import {
 import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { signupAction } from "../../redux/action/signupAction"
+import { sendVerificationCodeAction } from "../../redux/action/verificationAction"
 
-const { width, height } = Dimensions.get("window")
+const { height } = Dimensions.get("window")
 
 const SignupScreen = ({ navigation }) => {
-  const [userType, setUserType] = useState("renter") // 'renter' or 'owner'
+  const [userType, setUserType] = useState("renter")
   const [inputs, setInputs] = useState({
     name: "",
     email: "",
     phone: "",
     password: "",
     confirmPassword: "",
-    verificationCode: "",
   })
-
-  // Form validation errors
-  const [errors, setErrors] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-    verification: "",
-  })
-
-  // UI states
+  const [errors, setErrors] = useState({})
   const [secureTextEntry, setSecureTextEntry] = useState(true)
   const [secureConfirmTextEntry, setSecureConfirmTextEntry] = useState(true)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showVerificationModal, setShowVerificationModal] = useState(false)
   const [verificationCode, setVerificationCode] = useState(["", "", "", "", ""])
   const [isVerifying, setIsVerifying] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(300) // 5 minutes
+  const [canResend, setCanResend] = useState(false)
+  const [generatedCode, setGeneratedCode] = useState("")
 
-  // Redux state
   const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector((state) => state.signup || {})
+  const { isSending, error: verificationError } = useSelector((state) => state.verification || {})
 
   const dispatch = useDispatch()
 
-  // Handle input changes
-  const handleChange = (field_name, value) => {
-    setInputs({
-      ...inputs,
-      [field_name]: value,
-    })
-    // Clear error when user starts typing
-    if (errors[field_name]) {
-      setErrors({
-        ...errors,
-        [field_name]: "",
-      })
+  // Countdown timer effect
+  useEffect(() => {
+    let interval = null
+    if (showVerificationModal && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            setCanResend(true)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
     }
-  }
+    return () => clearInterval(interval)
+  }, [showVerificationModal, timeLeft])
 
-  // Update placeholders when user type changes
+  // Auto-fill simulation after showing modal
   useEffect(() => {
-    // Clear form and errors when switching user types
-    clearForm()
-  }, [userType])
+    if (showVerificationModal && generatedCode.length === 5) {
+      const timer = setTimeout(() => {
+        setVerificationCode(generatedCode.split(""))
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [showVerificationModal, generatedCode])
 
-  // Handle signup success
   useEffect(() => {
-    const handleSignupSuccess = async () => {
-      if (isSignupSuccess) {
+    if (isSignupSuccess) {
+      (async () => {
         try {
-          // Store user data in AsyncStorage
           const userData = {
             role: userType,
             name: inputs.name,
@@ -94,77 +89,38 @@ const SignupScreen = ({ navigation }) => {
             phone: inputs.phone,
             password: inputs.password,
           }
-
           await AsyncStorage.setItem(`${userType}_${inputs.email}`, JSON.stringify(userData))
           await AsyncStorage.setItem("process", "signupComplete")
           await AsyncStorage.setItem("userEmail", inputs.email)
-
-          // Show success modal
           setShowSuccessModal(true)
-
-          // Redirect to login after a delay
           setTimeout(() => {
             setShowSuccessModal(false)
             navigation.navigate("LoginScreen")
           }, 2000)
-        } catch (storageError) {
-          console.log("Error storing user data:", storageError)
-          Alert.alert("Error", "Account created but failed to save locally. Please try logging in.")
+        } catch {
+          Alert.alert("Error", "Account created but failed to save locally.")
         }
-      }
+      })()
     }
-
-    handleSignupSuccess()
   }, [isSignupSuccess])
 
-  // Handle signup failure
   useEffect(() => {
     if (isSignupFailed && error) {
       Alert.alert("Signup Failed", error)
     }
   }, [isSignupFailed, error])
 
-  const clearForm = () => {
-    setInputs({
-      name: "",
-      email: "",
-      phone: "",
-      password: "",
-      confirmPassword: "",
-      verificationCode: "",
-    })
-    setErrors({
-      name: "",
-      email: "",
-      phone: "",
-      password: "",
-      confirmPassword: "",
-      verification: "",
-    })
-    setVerificationCode(["", "", "", "", ""])
-  }
-
-  const validateEmail = (email) => {
-    const emailRegex = /\S+@\S+\.\S+/
-    return emailRegex.test(email)
-  }
-
-  const validatePhone = (phone) => {
-    const phoneRegex = /^\d{10}$/
-    return phoneRegex.test(phone)
-  }
+  const validateEmail = (email) => /\S+@\S+\.\S+/.test(email)
+  const validatePhone = (phone) => /^\d{10}$/.test(phone)
 
   const validateForm = () => {
     let isValid = true
-    const newErrors = { ...errors }
+    const newErrors = {}
 
-    // Validate name
     if (!inputs.name.trim()) {
       newErrors.name = "Name is required"
       isValid = false
     }
-
-    // Validate email
     if (!inputs.email.trim()) {
       newErrors.email = "Email is required"
       isValid = false
@@ -172,8 +128,6 @@ const SignupScreen = ({ navigation }) => {
       newErrors.email = "Enter a valid email address"
       isValid = false
     }
-
-    // Validate phone
     if (!inputs.phone.trim()) {
       newErrors.phone = "Phone number is required"
       isValid = false
@@ -181,8 +135,6 @@ const SignupScreen = ({ navigation }) => {
       newErrors.phone = "Enter a valid 10-digit phone number"
       isValid = false
     }
-
-    // Validate password
     if (!inputs.password.trim()) {
       newErrors.password = "Password is required"
       isValid = false
@@ -190,8 +142,6 @@ const SignupScreen = ({ navigation }) => {
       newErrors.password = "Password must be at least 6 characters"
       isValid = false
     }
-
-    // Validate confirm password
     if (!inputs.confirmPassword.trim()) {
       newErrors.confirmPassword = "Confirm password is required"
       isValid = false
@@ -204,17 +154,24 @@ const SignupScreen = ({ navigation }) => {
     return isValid
   }
 
-  const handleSignUp = async () => {
-    console.log("Signup button clicked")
-    const isValid = validateForm()
+  const handleSignUp = () => {
+    if (!validateForm()) return
 
-    if (!isValid) {
-      console.log("Form validation failed")
-      return
-    }
-
-    // Show verification modal instead of directly dispatching signup
-    setShowVerificationModal(true)
+    dispatch(sendVerificationCodeAction({
+      email: inputs.email,
+      userName: inputs.name,
+    }))
+      .unwrap()
+      .then((code) => {
+        setGeneratedCode(code)
+        setVerificationCode(["", "", "", "", ""])
+        setShowVerificationModal(true)
+        setTimeLeft(300)
+        setCanResend(false)
+      })
+      .catch((err) => {
+        Alert.alert("Error", err || "Could not send verification code")
+      })
   }
 
   const handleVerificationCodeChange = (index, value) => {
@@ -222,266 +179,208 @@ const SignupScreen = ({ navigation }) => {
       const newCode = [...verificationCode]
       newCode[index] = value
       setVerificationCode(newCode)
-
-      // Auto focus next input
-      if (value && index < 4) {
-        // Focus next input (you might need to use refs for this in a real implementation)
-      }
     }
   }
 
-  const handleVerifyEmail = async () => {
+  const handleVerifyEmail = () => {
     const enteredCode = verificationCode.join("")
-
     if (enteredCode.length !== 5) {
       setErrors({ ...errors, verification: "Please enter the complete verification code" })
       return
     }
-
     setIsVerifying(true)
 
-    // Check if entered code matches default code "12345"
-    if (enteredCode === "12345") {
-      // Code is correct, proceed with signup
-      setTimeout(async () => {
+    if (enteredCode === generatedCode) {
+      setTimeout(() => {
         setIsVerifying(false)
         setShowVerificationModal(false)
-
-        const userData = {
-          role: userType,
-          name: inputs.name,
-          email: inputs.email,
-          phone: inputs.phone,
-          password: inputs.password,
-          isVerified: true,
-        }
-
-        console.log("Dispatching signupAction with:", userData)
-        dispatch(signupAction(userData))
-      }, 1500)
+        dispatch(
+          signupAction({
+            role: userType,
+            name: inputs.name,
+            email: inputs.email,
+            phone: inputs.phone,
+            password: inputs.password,
+            isVerified: true,
+          })
+        )
+      }, 1000)
     } else {
-      // Code is incorrect
       setTimeout(() => {
         setIsVerifying(false)
         setErrors({ ...errors, verification: "Invalid verification code. Please try again." })
-      }, 1500)
+      }, 1000)
     }
   }
 
   const handleResendCode = () => {
-    Alert.alert("Code Resent", "A new verification code has been sent to your email.")
-    setVerificationCode(["", "", "", "", ""])
-    setErrors({ ...errors, verification: "" })
+    if (!canResend) return
+
+    dispatch(sendVerificationCodeAction({
+      email: inputs.email,
+      userName: inputs.name,
+    }))
+      .unwrap()
+      .then((code) => {
+        setGeneratedCode(code)
+        setVerificationCode(["", "", "", "", ""])
+        setErrors({ ...errors, verification: "" })
+        setTimeLeft(300)
+        setCanResend(false)
+        Alert.alert("Success", "New verification code sent!")
+      })
+      .catch(() => {
+        Alert.alert("Error", "Could not resend verification code")
+      })
   }
 
-  const handleGoogleSignUp = () => {
-    Alert.alert("Google Sign Up", "Google Sign Up functionality will be implemented soon.")
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
   }
 
-  const toggleSecureTextEntry = () => {
-    setSecureTextEntry(!secureTextEntry)
-  }
+  const toggleSecureTextEntry = () => setSecureTextEntry(!secureTextEntry)
+  const toggleSecureConfirmTextEntry = () => setSecureConfirmTextEntry(!secureConfirmTextEntry)
+  const handleSignIn = () => navigation.navigate("LoginScreen")
 
-  const toggleSecureConfirmTextEntry = () => {
-    setSecureConfirmTextEntry(!secureConfirmTextEntry)
-  }
-
-  const handleSignIn = () => {
-    navigation.navigate("LoginScreen")
-  }
-
-  const renderForm = () => {
-    return (
-      <View style={styles.form}>
-        {/* Name Field */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, errors.name && styles.inputError]}
-            placeholder="Enter your full name"
-            placeholderTextColor="#999"
-            value={inputs.name}
-            onChangeText={(value) => handleChange("name", value)}
-            autoCapitalize="words"
-          />
-          {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
-        </View>
-
-        {/* Email Field */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, errors.email && styles.inputError]}
-            placeholder="Enter your email"
-            placeholderTextColor="#999"
-            value={inputs.email}
-            onChangeText={(value) => handleChange("email", value)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-          {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
-        </View>
-
-        {/* Phone Field */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, errors.phone && styles.inputError]}
-            placeholder="Enter your phone number"
-            placeholderTextColor="#999"
-            value={inputs.phone}
-            onChangeText={(value) => handleChange("phone", value)}
-            keyboardType="phone-pad"
-          />
-          {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
-        </View>
-
-        {/* Password Field */}
-        <View style={styles.inputContainer}>
-          <View style={[styles.passwordInputContainer, errors.password && styles.inputError]}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Create password"
-              placeholderTextColor="#999"
-              secureTextEntry={secureTextEntry}
-              value={inputs.password}
-              onChangeText={(value) => handleChange("password", value)}
-            />
-            <TouchableOpacity onPress={toggleSecureTextEntry} style={styles.eyeIcon}>
-              <Ionicons name={secureTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
-            </TouchableOpacity>
-          </View>
-          {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
-        </View>
-
-        {/* Confirm Password Field */}
-        <View style={styles.inputContainer}>
-          <View style={[styles.passwordInputContainer, errors.confirmPassword && styles.inputError]}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Confirm password"
-              placeholderTextColor="#999"
-              secureTextEntry={secureConfirmTextEntry}
-              value={inputs.confirmPassword}
-              onChangeText={(value) => handleChange("confirmPassword", value)}
-            />
-            <TouchableOpacity onPress={toggleSecureConfirmTextEntry} style={styles.eyeIcon}>
-              <Ionicons name={secureConfirmTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
-            </TouchableOpacity>
-          </View>
-          {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
-        </View>
-
-        {/* Sign Up Button */}
-        <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.signUpButtonText}>Sign Up</Text>
-          )}
-        </TouchableOpacity>
-
-        {/* OR Divider */}
-        <View style={styles.orContainer}>
-          <View style={styles.divider} />
-          <Text style={styles.orText}>OR</Text>
-          <View style={styles.divider} />
-        </View>
-
-        {/* Google Sign Up Button */}
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignUp}>
-          <Image source={require("../../assets/google-logo.png")} style={styles.googleIcon} />
-          <Text style={styles.googleButtonText}>Sign up with Google</Text>
-        </TouchableOpacity>
+  const renderForm = () => (
+    <View style={styles.form}>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={[styles.input, errors.name && styles.inputError]}
+          placeholder="Enter your full name"
+          placeholderTextColor="#999"
+          value={inputs.name}
+          onChangeText={(value) => setInputs({ ...inputs, name: value })}
+        />
+        {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
       </View>
-    )
-  }
-
-  const renderVerificationModal = () => {
-    return (
-      <Modal
-        transparent={true}
-        visible={showVerificationModal}
-        animationType="slide"
-        onRequestClose={() => setShowVerificationModal(false)}
-      >
-        <View style={styles.verificationModalContainer}>
-          <View style={styles.verificationModalContent}>
-            {/* Email Icon */}
-            <View style={styles.emailIconContainer}>
-              <Ionicons name="mail" size={40} color="#007EFD" />
-            </View>
-
-            {/* Title */}
-            <Text style={styles.verificationTitle}>Check your email</Text>
-
-            {/* Email Display */}
-            <Text style={styles.emailDisplay}>{inputs.email}</Text>
-
-            {/* Code Input */}
-            <View style={styles.codeInputContainer}>
-              {verificationCode.map((digit, index) => (
-                <TextInput
-                  key={index}
-                  style={[styles.codeInput, digit && styles.codeInputFilled]}
-                  value={digit}
-                  onChangeText={(value) => handleVerificationCodeChange(index, value)}
-                  keyboardType="numeric"
-                  maxLength={1}
-                  textAlign="center"
-                />
-              ))}
-            </View>
-
-            {/* Error Message */}
-            {errors.verification ? <Text style={styles.verificationErrorText}>{errors.verification}</Text> : null}
-
-            {/* Resend Code */}
-            <TouchableOpacity onPress={handleResendCode} style={styles.resendContainer}>
-              <Text style={styles.resendText}>Didn't get a code? </Text>
-              <Text style={styles.resendLink}>resend</Text>
-            </TouchableOpacity>
-
-            {/* Verify Button */}
-            <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyEmail} disabled={isVerifying}>
-              {isVerifying ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.verifyButtonText}>Verify email</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={[styles.input, errors.email && styles.inputError]}
+          placeholder="Enter your email"
+          placeholderTextColor="#999"
+          value={inputs.email}
+          onChangeText={(value) => setInputs({ ...inputs, email: value })}
+          keyboardType="email-address"
+        />
+        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+      </View>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={[styles.input, errors.phone && styles.inputError]}
+          placeholder="Enter your phone number"
+          placeholderTextColor="#999"
+          value={inputs.phone}
+          onChangeText={(value) => setInputs({ ...inputs, phone: value })}
+          keyboardType="phone-pad"
+        />
+        {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+      </View>
+      <View style={styles.inputContainer}>
+        <View style={[styles.passwordInputContainer, errors.password && styles.inputError]}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Create password"
+            placeholderTextColor="#999"
+            secureTextEntry={secureTextEntry}
+            value={inputs.password}
+            onChangeText={(value) => setInputs({ ...inputs, password: value })}
+          />
+          <TouchableOpacity onPress={toggleSecureTextEntry} style={styles.eyeIcon}>
+            <Ionicons name={secureTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
+          </TouchableOpacity>
         </View>
-      </Modal>
-    )
-  }
+        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+      </View>
+      <View style={styles.inputContainer}>
+        <View style={[styles.passwordInputContainer, errors.confirmPassword && styles.inputError]}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Confirm password"
+            placeholderTextColor="#999"
+            secureTextEntry={secureConfirmTextEntry}
+            value={inputs.confirmPassword}
+            onChangeText={(value) => setInputs({ ...inputs, confirmPassword: value })}
+          />
+          <TouchableOpacity onPress={toggleSecureConfirmTextEntry} style={styles.eyeIcon}>
+            <Ionicons name={secureConfirmTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
+          </TouchableOpacity>
+        </View>
+        {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+      </View>
+      <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} disabled={isLoading || isSending}>
+        {isLoading || isSending ? (
+          <ActivityIndicator color="#fff" size="small" />
+        ) : (
+          <Text style={styles.signUpButtonText}>Sign Up</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  )
+
+  const renderVerificationModal = () => (
+    <Modal transparent visible={showVerificationModal} animationType="slide">
+      <View style={styles.verificationModalContainer}>
+        <View style={styles.verificationModalContent}>
+          <Ionicons name="mail" size={40} color="#007EFD" style={{ marginBottom: 10 }} />
+          <Text style={styles.verificationTitle}>Check your email</Text>
+          <Text style={styles.emailDisplay}>{inputs.email}</Text>
+          <Text style={styles.timerText}>
+            {timeLeft > 0 ? `Code expires in ${formatTime(timeLeft)}` : "Code expired"}
+          </Text>
+          <View style={styles.codeInputContainer}>
+            {verificationCode.map((digit, index) => (
+              <TextInput
+                key={index}
+                style={[styles.codeInput, digit && styles.codeInputFilled]}
+                value={digit}
+                onChangeText={(value) => handleVerificationCodeChange(index, value)}
+                keyboardType="numeric"
+                maxLength={1}
+                textAlign="center"
+              />
+            ))}
+          </View>
+          {errors.verification && <Text style={styles.verificationErrorText}>{errors.verification}</Text>}
+          <TouchableOpacity
+            onPress={handleResendCode}
+            disabled={!canResend}
+            style={[styles.resendContainer, !canResend && { opacity: 0.5 }]}
+          >
+            <Text style={styles.resendText}>
+              {canResend ? "Resend code" : `Resend in ${formatTime(timeLeft)}`}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyEmail} disabled={isVerifying}>
+            {isVerifying ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.verifyButtonText}>Verify email</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  )
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoidingView}>
-        <ScrollView
-          contentContainerStyle={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Top Section with Background Image */}
+        <ScrollView contentContainerStyle={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.topSection}>
             <Image source={require("../../assets/Group 15.jpg")} style={styles.backgroundImage} />
           </View>
-
-          {/* Bottom Section with White Background */}
           <View style={styles.bottomSection}>
-            {/* Choose To Sign Up Section */}
             <Text style={styles.signUpHeading}>Choose To Sign Up As:</Text>
-
-            {/* User Type Selection */}
             <View style={styles.userTypeContainer}>
               <TouchableOpacity
                 style={[styles.userTypeButton, userType === "renter" && styles.activeUserTypeButton]}
                 onPress={() => setUserType("renter")}
               >
-                <Text style={[styles.userTypeText, userType === "renter" && styles.activeUserTypeText]}>
-                  Car Renter
-                </Text>
+                <Text style={[styles.userTypeText, userType === "renter" && styles.activeUserTypeText]}>Car Renter</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.userTypeButton, userType === "owner" && styles.activeUserTypeButton]}
@@ -490,11 +389,7 @@ const SignupScreen = ({ navigation }) => {
                 <Text style={[styles.userTypeText, userType === "owner" && styles.activeUserTypeText]}>Car Owner</Text>
               </TouchableOpacity>
             </View>
-
-            {/* Form for both user types */}
             {renderForm()}
-
-            {/* Already have an account */}
             <View style={styles.signinContainer}>
               <Text style={styles.haveAccountText}>Already have an account? </Text>
               <TouchableOpacity onPress={handleSignIn}>
@@ -504,25 +399,7 @@ const SignupScreen = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* Verification Modal */}
       {renderVerificationModal()}
-
-      {/* Success Modal */}
-      <Modal
-        transparent={true}
-        visible={showSuccessModal}
-        animationType="fade"
-        onRequestClose={() => setShowSuccessModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <ActivityIndicator size="large" color="#007EFD" />
-            <Text style={styles.modalText}>Account created successfully!</Text>
-            <Text style={styles.modalSubText}>Redirecting to login...</Text>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   )
 }
@@ -638,43 +515,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
-  orContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#ddd",
-  },
-  orText: {
-    paddingHorizontal: 10,
-    color: "#888",
-    fontSize: 14,
-  },
-  googleButton: {
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    height: 50,
-    borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  googleIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 10,
-    resizeMode: "contain",
-  },
-  googleButtonText: {
-    color: "#333",
-    fontSize: 16,
-    fontWeight: "500",
-  },
   signinContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -702,6 +542,7 @@ const styles = StyleSheet.create({
     padding: 25,
     alignItems: "center",
     width: "80%",
+    maxWidth: 400,
   },
   modalText: {
     fontSize: 18,
@@ -716,7 +557,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: "center",
   },
-  // Verification Modal Styles
   verificationModalContainer: {
     flex: 1,
     justifyContent: "center",
@@ -790,6 +630,12 @@ const styles = StyleSheet.create({
     color: "#007EFD",
     fontWeight: "500",
   },
+  resendDisabled: {
+    opacity: 0.5,
+  },
+  resendLinkDisabled: {
+    color: "#999",
+  },
   verifyButton: {
     backgroundColor: "#007EFD",
     width: "100%",
@@ -802,6 +648,14 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "600",
+  },
+  timerContainer: {
+    marginBottom: 20,
+  },
+  timerText: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
   },
 })
 

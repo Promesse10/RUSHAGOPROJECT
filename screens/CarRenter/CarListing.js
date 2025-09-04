@@ -15,12 +15,19 @@ import {
 } from "react-native"
 import Icon from "react-native-vector-icons/Ionicons"
 import { useTranslation } from "react-i18next"
-
+import { useDispatch, useSelector } from "react-redux"
+import { getApprovedCarsAction, updateCarViewsAction } from "../../redux/action/CarActions"
+import CarDetailsModal from "./CarDetailsScreen"
 
 const { width, height } = Dimensions.get("window")
 
 const CarListing = ({ navigation, route }) => {
   const { t } = useTranslation()
+  const dispatch = useDispatch()
+
+  // Get cars from Redux store
+  const { cars: reduxCars, isLoading, error } = useSelector((state) => state.cars)
+
   const [searchText, setSearchText] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [filteredCars, setFilteredCars] = useState([])
@@ -28,10 +35,11 @@ const CarListing = ({ navigation, route }) => {
   const [showCarDetails, setShowCarDetails] = useState(false)
   const [userLocation, setUserLocation] = useState(null)
 
-  // Get cars from route params or use default
-  const allCars = route?.params?.cars || [
+  // Fallback cars data if Redux is empty
+  const fallbackCars = [
     {
-      id: 1,
+      _id: "1",
+      brand: "BMW",
       make: "BMW",
       model: "i3",
       year: "2023",
@@ -40,6 +48,11 @@ const CarListing = ({ navigation, route }) => {
       fuel_type: "Electric",
       seatings: "4",
       features: ["GPS", "Bluetooth", "AC", "USB Charging"],
+      owner: {
+        name: "Jean Claude Uwimana",
+        phone: "788123456",
+        type: "individual",
+      },
       ownerType: "individual",
       ownerName: "Jean Claude Uwimana",
       countryCode: "+250",
@@ -47,11 +60,18 @@ const CarListing = ({ navigation, route }) => {
       province: "Kigali",
       district: "Nyarugenge",
       sector: "Nyamirambo",
+      location: "KG 15 Ave, Nyarugenge",
       address: "KG 15 Ave, Nyarugenge",
       country: "Rwanda",
+      coordinates: {
+        latitude: -1.9441,
+        longitude: 30.0619,
+      },
       latitude: -1.9441,
       longitude: 30.0619,
+      price: "3500",
       base_price: "3500",
+      dailyRate: "3500",
       currency: "FRW",
       weekly_discount: "10",
       monthly_discount: "20",
@@ -66,7 +86,8 @@ const CarListing = ({ navigation, route }) => {
       category: "Luxury",
     },
     {
-      id: 2,
+      _id: "2",
+      brand: "Toyota",
       make: "Toyota",
       model: "Camry",
       year: "2022",
@@ -75,6 +96,11 @@ const CarListing = ({ navigation, route }) => {
       fuel_type: "Gasoline",
       seatings: "5",
       features: ["GPS", "Bluetooth", "AC", "Backup Camera"],
+      owner: {
+        name: "Marie Uwimana",
+        phone: "788987654",
+        type: "individual",
+      },
       ownerType: "individual",
       ownerName: "Marie Uwimana",
       countryCode: "+250",
@@ -82,11 +108,18 @@ const CarListing = ({ navigation, route }) => {
       province: "Kigali",
       district: "Nyarugenge",
       sector: "Muhima",
+      location: "KG 21 Ave, Nyarugenge",
       address: "KG 21 Ave, Nyarugenge",
       country: "Rwanda",
+      coordinates: {
+        latitude: -1.9456,
+        longitude: 30.0598,
+      },
       latitude: -1.9456,
       longitude: 30.0598,
+      price: "3000",
       base_price: "3000",
+      dailyRate: "3000",
       currency: "FRW",
       weekly_discount: "12",
       monthly_discount: "22",
@@ -98,25 +131,78 @@ const CarListing = ({ navigation, route }) => {
       rating: 4.5,
       category: "Economy",
     },
-    // Add more cars...
   ]
+
+  // Get cars from route params, Redux, or fallback
+  const allCars =
+    route?.params?.cars || route?.params?.filteredCars || (reduxCars && reduxCars.length > 0 ? reduxCars : fallbackCars)
 
   const categories = ["All", "Economy", "Luxury", "SUV", "Electric", "Family", "Adventure"]
 
+  // Fetch cars on component mount if Redux is empty
+  useEffect(() => {
+    if (!reduxCars || reduxCars.length === 0) {
+      dispatch(getApprovedCarsAction())
+    }
+  }, [dispatch, reduxCars])
+
   useEffect(() => {
     filterCars()
-  }, [searchText, selectedCategory])
+  }, [searchText, selectedCategory, allCars])
+
+  // Normalize car data to handle different property names
+  const normalizeCar = (car) => {
+    if (!car) return null
+
+    return {
+      ...car,
+      id: car._id || car.id,
+      make: car.brand || car.make || "Unknown",
+      brand: car.brand || car.make || "Unknown",
+      model: car.model || "Unknown",
+      year: car.year || "N/A",
+      type: car.type || "Standard",
+      transmission: car.transmission || "Manual",
+      fuel_type: car.fuelType || car.fuel_type || "petrol",
+      seatings: car.seatings || "4",
+      features: car.features || [],
+      ownerName: car.owner?.name || car.ownerName || "Owner",
+      ownerPhone: car.owner?.phone || car.ownerPhone || "",
+      ownerType: car.owner?.type || car.ownerType || "individual",
+      countryCode: car.countryCode || "+250",
+      district: car.district || "Unknown",
+      sector: car.sector || "Unknown",
+      location: car.location || car.address || "Unknown Location",
+      address: car.location || car.address || "Unknown Location",
+      latitude: car.coordinates?.latitude || car.latitude || -1.9441,
+      longitude: car.coordinates?.longitude || car.longitude || 30.0619,
+      price: car.price || car.base_price || car.dailyRate || "0",
+      base_price: car.price || car.base_price || car.dailyRate || "0",
+      currency: car.currency || "FRW",
+      available: car.available !== undefined ? car.available : true,
+      images:
+        car.images && car.images.length > 0
+          ? car.images
+          : ["https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400"],
+      rating: car.rating || 4.0,
+    }
+  }
 
   const filterCars = () => {
-    let filtered = allCars
+    if (!allCars || allCars.length === 0) {
+      setFilteredCars([])
+      return
+    }
+
+    let filtered = allCars.map(normalizeCar).filter(Boolean)
 
     // Filter by search text
     if (searchText.length > 0) {
       filtered = filtered.filter(
         (car) =>
-          car.make.toLowerCase().includes(searchText.toLowerCase()) ||
-          car.model.toLowerCase().includes(searchText.toLowerCase()) ||
-          car.type.toLowerCase().includes(searchText.toLowerCase()) ||
+          car.make?.toLowerCase().includes(searchText.toLowerCase()) ||
+          car.model?.toLowerCase().includes(searchText.toLowerCase()) ||
+          car.type?.toLowerCase().includes(searchText.toLowerCase()) ||
           `${car.make} ${car.model}`.toLowerCase().includes(searchText.toLowerCase()),
       )
     }
@@ -130,54 +216,106 @@ const CarListing = ({ navigation, route }) => {
   }
 
   const getCarCategory = (car) => {
-    if (car.type === "SUV" && car.features.includes("4WD")) return "Adventure"
+    if (!car) return "Economy"
+
+    if (car.type === "SUV" && car.features?.includes("4WD")) return "Adventure"
     if (car.type === "Electric") return "Electric"
     if (car.type === "Luxury" || car.make === "BMW") return "Luxury"
-    if (Number.parseInt(car.base_price) < 3000) return "Economy"
-    if (car.seatings >= 7) return "Family"
+    if (Number.parseInt(car.price || car.base_price || "0") < 3000) return "Economy"
+    if (Number.parseInt(car.seatings || "0") >= 7) return "Family"
     return "Economy"
   }
 
   const handleCarSelect = (car) => {
-    setSelectedCar(car)
+    const normalizedCar = normalizeCar(car)
+
+    // Update view count
+    if (normalizedCar && (normalizedCar._id || normalizedCar.id)) {
+      try {
+        const currentViews = normalizedCar.views || 0
+        dispatch(
+          updateCarViewsAction({
+            carId: normalizedCar._id || normalizedCar.id,
+            views: currentViews + 1,
+          }),
+        )
+      } catch (error) {
+        console.log("Error updating views:", error)
+      }
+    }
+
+    setSelectedCar(normalizedCar)
     setShowCarDetails(true)
   }
 
-  const renderCarCard = ({ item: car }) => (
-    <TouchableOpacity style={styles.carCard} onPress={() => handleCarSelect(car)}>
-      <View style={styles.carImageContainer}>
-        <Image source={{ uri: car.images[0] }} style={styles.carImage} />
-        <View style={styles.brandBadge}>
-          <Text style={styles.brandText}>{car.make}</Text>
-        </View>
-        <View style={[styles.availabilityBadge, car.available ? styles.availableBadge : styles.unavailableBadge]}>
-          <Text style={styles.availabilityText}>{car.available ? "Available" : "Rented"}</Text>
-        </View>
-      </View>
+  const renderCarCard = ({ item: car }) => {
+    const normalizedCar = normalizeCar(car)
+    if (!normalizedCar) return null
 
-      <View style={styles.carInfo}>
-        <Text style={styles.carName}>
-          {car.make} {car.model} ({car.year})
-        </Text>
-        <Text style={styles.carLocation}>
-          {car.sector}, {car.district}
-        </Text>
-        <Text style={styles.carCategory}>{getCarCategory(car)}</Text>
-
-        <View style={styles.carFooter}>
-          <Text style={styles.carPrice}>
-            {car.base_price} {car.currency}
-            <Text style={styles.perDay}>/{t("perDay", "day")}</Text>
-          </Text>
-
-          <View style={styles.rating}>
-            <Icon name="star" size={14} color="#FFD700" />
-            <Text style={styles.ratingText}>{car.rating}</Text>
+    return (
+      <TouchableOpacity style={styles.carCard} onPress={() => handleCarSelect(normalizedCar)}>
+        <View style={styles.carImageContainer}>
+          <Image
+            source={{ uri: normalizedCar.images[0] }}
+            style={styles.carImage}
+            defaultSource={{ uri: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400" }}
+          />
+          <View style={styles.brandBadge}>
+            <Text style={styles.brandText}>{normalizedCar.make}</Text>
+          </View>
+          <View
+            style={[
+              styles.availabilityBadge,
+              normalizedCar.available ? styles.availableBadge : styles.unavailableBadge,
+            ]}
+          >
+            <Text style={styles.availabilityText}>{normalizedCar.available ? "Available" : "Rented"}</Text>
           </View>
         </View>
+
+        <View style={styles.carInfo}>
+          <Text style={styles.carName}>
+            {normalizedCar.make} {normalizedCar.model} ({normalizedCar.year})
+          </Text>
+          <Text style={styles.carLocation}>
+            {normalizedCar.sector}, {normalizedCar.district}
+          </Text>
+          <Text style={styles.carCategory}>{getCarCategory(normalizedCar)}</Text>
+
+          <View style={styles.carFooter}>
+            <Text style={styles.carPrice}>
+              {normalizedCar.price} {normalizedCar.currency}
+              <Text style={styles.perDay}>/{t("perDay", "day")}</Text>
+            </Text>
+
+            <View style={styles.rating}>
+              <Icon name="star" size={14} color="#FFD700" />
+              <Text style={styles.ratingText}>{normalizedCar.rating}</Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.loadingText}>Loading cars...</Text>
       </View>
-    </TouchableOpacity>
-  )
+    )
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.errorText}>Error: {error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => dispatch(getApprovedCarsAction())}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
 
   return (
     <View style={styles.container}>
@@ -241,7 +379,7 @@ const CarListing = ({ navigation, route }) => {
       <FlatList
         data={filteredCars}
         renderItem={renderCarCard}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => (item._id || item.id || Math.random()).toString()}
         numColumns={2}
         contentContainerStyle={styles.carsList}
         showsVerticalScrollIndicator={false}
@@ -255,7 +393,14 @@ const CarListing = ({ navigation, route }) => {
       />
 
       {/* Car Details Modal */}
-
+      <CarDetailsModal
+        visible={showCarDetails}
+        onClose={() => setShowCarDetails(false)}
+        car={selectedCar}
+        userLocation={userLocation}
+        currentLanguage="en"
+        navigation={navigation}
+      />
     </View>
   )
 }
@@ -264,6 +409,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f5f5",
+  },
+  centerContent: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 18,
+    color: "#666",
+  },
+  errorText: {
+    fontSize: 16,
+    color: "red",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: "#007EFD",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   header: {
     backgroundColor: "#007EFD",

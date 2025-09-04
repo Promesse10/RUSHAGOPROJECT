@@ -3,17 +3,19 @@ import signupReducer from './slices/signupSlice'
 import loginReducer from "./slices/LoginSlice"
 import dashboardReducer from "./slices/DashboardSlice"
 import userSlice from "./slices/userSlice"
-// import settingsReducer from "./slices/SettingsSlice"
-// import draftsReducer from "./slices/DraftsSlice"
+import settingsReducer from "./slices/settingsSlice"
+import notificationReducer from './slices/notificationSlice'
+import  verification from "./slices/verificationSlice"    
 import carReducer from "./slices/carSlice"
 export const store = configureStore({
   reducer: {
     signup: signupReducer,
-    loginState: loginReducer,
+    auth: loginReducer,
+    settings: settingsReducer,
     cars: carReducer,
     user: userSlice,
     dashboard: dashboardReducer,
-    // settings: settingsReducer,
-    // drafts: draftsReducer,
+    notificationChatBot: notificationReducer,
+    verification: verification,
   },
 })

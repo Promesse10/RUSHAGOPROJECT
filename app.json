@@ -12,7 +12,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "Y",
+      "bundleIdentifier": "com.rushago.app",
       "runtimeVersion": "1.0.0"
     },
     "android": {
@@ -22,18 +22,22 @@
       },
       "runtimeVersion": {
         "policy": "appVersion"
-      }
+      },
+      "package": "com.rushago.app"
     },
     "web": {
       "favicon": "./assets/logo.png"
     },
+    
     "extra": {
+      "expoClientId": "871915490009-hvipdhaumeh3b2589jhh1tf5dvv4210h.apps.googleusercontent.com",
       "eas": {
         "projectId": "b87efb77-1283-40d1-8f42-eabc0bb33e5e"
       }
     },
     "updates": {
       "url": "https://u.expo.dev/b87efb77-1283-40d1-8f42-eabc0bb33e5e"
-    }
+    },
+    "owner": "promesse10"
   }
 }

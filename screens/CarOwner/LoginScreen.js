@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,52 +10,56 @@ import {
   SafeAreaView,
   Alert,
   Dimensions,
-} from "react-native"
-import { useNavigation } from "@react-navigation/native"
-import { useDispatch, useSelector } from "react-redux"
-import { loginAction } from "../../redux/action/LoginActions"
-import { clearLoginState } from "../../redux/slices/LoginSlice"
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { useDispatch, useSelector } from "react-redux";
+import { loginAction } from "../../redux/action/LoginActions";
+import { clearLoginState } from "../../redux/slices/LoginSlice";
 
-const { width, height } = Dimensions.get("window")
+const { width, height } = Dimensions.get("window");
 
 const LoginScreen = () => {
-  const navigation = useNavigation()
-  const dispatch = useDispatch()
+  const navigation = useNavigation();
+  const dispatch = useDispatch();
+
+  const authState = useSelector((state) => state.auth); // ✅ match your store key
+  console.log("🟢 Redux auth state:", authState); // ✅ optional debug
 
   const {
-    isLoading,
-    isLoginSuccess,
-    isLoginFailed,
-    error,
-    user,
-    isAuthenticated,
-  } = useSelector((state) => state.loginState)
+    isLoading = false,
+    isLoginSuccess = false,
+    isLoginFailed = false,
+    error = null,
+    user = null,
+    isAuthenticated = false,
+  } = authState || {};
 
-  const [formData, setFormData] = useState({ email: "", password: "" })
-  const [showPassword, setShowPassword] = useState(false)
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (isLoginSuccess && isAuthenticated && user) {
-      dispatch(clearLoginState())
+      dispatch(clearLoginState());
       // You can navigate here if needed
+      // navigation.navigate("Home");
     }
-  }, [isLoginSuccess, isAuthenticated, user])
+  }, [isLoginSuccess, isAuthenticated, user]);
 
   useEffect(() => {
     if (isLoginFailed && error) {
-      Alert.alert("Login Failed", error)
-      dispatch(clearLoginState())
+      Alert.alert("Login Failed", error);
+      dispatch(clearLoginState());
     }
-  }, [isLoginFailed, error])
+  }, [isLoginFailed, error]);
 
   const handleLogin = () => {
     if (!formData.email || !formData.password) {
-      Alert.alert("Error", "Please enter both email and password")
-      return
+      Alert.alert("Error", "Please enter both email and password");
+      return;
     }
     if (!formData.email.includes("@")) {
-      Alert.alert("Error", "Please enter a valid email address")
-      return
+      Alert.alert("Error", "Please enter a valid email address");
+      return;
     }
 
     dispatch(
@@ -63,8 +67,8 @@ const LoginScreen = () => {
         email: formData.email.toLowerCase().trim(),
         password: formData.password,
       })
-    )
-  }
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -77,7 +81,7 @@ const LoginScreen = () => {
       <Text style={styles.title}>Hey</Text>
       <Text style={styles.subtitle}>Login Now</Text>
       <Text style={styles.description}>
-        If you are new.{' '}
+        If you are new.{" "}
         <Text style={styles.link} onPress={() => navigation.navigate("CarOwnerSignup")}>
           Create Account
         </Text>
@@ -125,8 +129,8 @@ const LoginScreen = () => {
         )}
       </TouchableOpacity>
     </SafeAreaView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -222,6 +226,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-})
+});
 
-export default LoginScreen
+export default LoginScreen;

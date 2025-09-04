@@ -20,7 +20,7 @@ import { useTranslation } from "react-i18next"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useDispatch, useSelector } from "react-redux"
 import { fetchDashboardStats } from "../../redux/action/DashboardActions"
-
+import { io } from "socket.io-client"
 const { width, height } = Dimensions.get("window")
 
 const DashboardScreen = () => {
@@ -28,12 +28,12 @@ const DashboardScreen = () => {
   const { t, i18n } = useTranslation()
   const dispatch = useDispatch()
 
-  // ✅ FIXED: Get authenticated user data
+  // ✅ Get authenticated user data from correct slice
   const { user, isAuthenticated } = useSelector((state) => state.auth || {})
   const {
-    totalCars,
-    activeCars,
-    pendingCars,
+    totalListings,
+    activeListings,
+    pendingListings,
     recentActivity,
     loading: dashboardLoading,
     error: dashboardError,
@@ -41,18 +41,68 @@ const DashboardScreen = () => {
 
   const [stats, setStats] = useState([])
   const [activities, setActivities] = useState([])
+  const socket = io(`${process.env.EXPO_PUBLIC_API_URL}`)
   const [newCarName, setNewCarName] = useState("")
   const [showLanguageOptions, setShowLanguageOptions] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [expandedNotifications, setExpandedNotifications] = useState({})
   const [currentLanguage, setCurrentLanguage] = useState("rw")
   const [hasNewNotifications, setHasNewNotifications] = useState(true)
-  const [notifications, setNotifications] = useState([])
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      title: "Welcome to RushGo!",
+      message: "Your account has been successfully created. Start listing your cars to earn money.",
+      fullMessage:
+        "Welcome to RushGo! Your account has been successfully created and verified. You can now start listing your cars and earning money from rentals. Make sure to complete your profile and add high-quality photos of your vehicles.",
+      time: "2 hours ago",
+      type: "welcome",
+      isRead: false,
+      hasRushGoIcon: true,
+    },
+    {
+      id: 2,
+      title: "Car Listing Pending",
+      message: "Your Toyota Camry listing is under review by our team.",
+      fullMessage:
+        "Your Toyota Camry listing has been submitted and is currently under review by our verification team. This process usually takes 24-48 hours. We'll notify you once it's approved and live on the platform.",
+      time: "1 day ago",
+      type: "approval",
+      isRead: false,
+      hasRushGoIcon: false,
+    },
+    {
+      id: 3,
+      title: "Profile Incomplete",
+      message: "Complete your profile to increase booking chances.",
+      fullMessage:
+        "Your profile is missing some important information. Complete your profile by adding a profile photo, business details, and verification documents to increase your chances of getting bookings.",
+      time: "3 days ago",
+      type: "reminder",
+      isRead: true,
+      hasRushGoIcon: false,
+    },
+  ])
 
   // RushGo logo URL
   const rushGoLogo = "https://res.cloudinary.com/def0cjmh2/image/upload/v1747228499/logo_jlnvdx.png"
-
-  // ✅ FIXED: Check authentication and load data
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log("✅ Connected to socket.io server")
+    })
+  
+    socket.on("carUpdated", (data) => {
+      console.log("📡 Real-time update received:", data)
+      dispatch(fetchDashboardStats()) // Refresh data live
+    })
+  
+    return () => {
+      socket.off("carUpdated")
+      socket.disconnect()
+    }
+  }, [dispatch])
+  
+  // ✅ Check authentication and load data
   useEffect(() => {
     if (!isAuthenticated || !user) {
       console.log("❌ User not authenticated, should redirect to login...")
@@ -64,7 +114,7 @@ const DashboardScreen = () => {
     dispatch(fetchDashboardStats())
   }, [isAuthenticated, user, dispatch])
 
-  // ✅ FIXED: Refetch when screen is focused
+  // ✅ Refetch when screen is focused
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
       if (isAuthenticated && user) {
@@ -84,7 +134,6 @@ const DashboardScreen = () => {
         setCurrentLanguage(savedLanguage)
         i18n.changeLanguage(savedLanguage)
       } else {
-        // Set default to Kinyarwanda
         setCurrentLanguage("rw")
         i18n.changeLanguage("rw")
         await AsyncStorage.setItem("user_language", "rw")
@@ -96,56 +145,142 @@ const DashboardScreen = () => {
     }
   }
 
-  // ✅ FIXED: Better data processing
+  // ✅ UPDATED: Process real dashboard data from API with better stats
   useEffect(() => {
     if (!dashboardLoading) {
-      console.log("📈 Processing dashboard data:", { totalCars, activeCars, pendingCars })
+      console.log("📈 Processing dashboard data:", { totalListings, activeListings, pendingListings })
+
+      // Calculate additional stats
+      const verifiedCars = activeListings || 0
+      const pendingVerification = pendingListings || 0
+      const totalCars = totalListings || 0
+      const inactiveCars = Math.max(0, totalCars - verifiedCars - pendingVerification)
 
       setStats([
         {
           title: t("totalCars", "Ibinyabiziga byose"),
-          count: totalCars || 0,
+          count: totalCars,
           icon: "car-outline",
           color: "#007EFD",
+          subtitle: t("allVehicles", "All vehicles"),
         },
         {
-          title: t("active", "Bikora"),
-          count: activeCars || 0,
+          title: t("activeCars", "Bikora"),
+          count: verifiedCars,
           icon: "checkmark-circle-outline",
           color: "#10B981",
+          subtitle: t("verified", "Verified & Active"),
         },
         {
-          title: t("pending", "Bitegereje"),
-          count: pendingCars || 0,
+          title: t("pendingCars", "Bitegereje"),
+          count: pendingVerification,
           icon: "time-outline",
           color: "#F59E0B",
+          subtitle: t("underReview", "Under review"),
+        },
+        {
+          title: t("inactiveCars", "Bidakora"),
+          count: inactiveCars,
+          icon: "pause-circle-outline",
+          color: "#EF4444",
+          subtitle: t("notActive", "Not active"),
         },
       ])
 
-      // ✅ FIXED: Better activity processing
+      // ✅ UPDATED: Process recent activities from API with better formatting
       if (recentActivity && Array.isArray(recentActivity)) {
-        const activityData = recentActivity.map((item, index) => ({
-          id: item.id || index,
-          message: item.message || item.title || item.name || "Recent activity",
-          time: item.time || item.createdAt || "Just now",
-          icon: item.icon || "star-outline",
-          color: item.color || "#007EFD",
-        }))
-        setActivities(activityData)
+        const processedActivities = []
+
+        recentActivity.forEach((activityGroup) => {
+          if (activityGroup.type === "Your Car Listings" && activityGroup.data) {
+            activityGroup.data.forEach((listing, index) => {
+              processedActivities.push({
+                id: `listing_${listing.title}_${index}_${Date.now()}`,
+                message: ` ${t("carAdded", "Car added")}: ${listing.title}`,
+                time: listing.time,
+                icon: "car-outline",
+                color: "#10B981",
+              })
+            })
+          }
+
+          if (activityGroup.type === "New Car Listings" && activityGroup.data) {
+            activityGroup.data.forEach((listing, index) => {
+              processedActivities.push({
+                id: `new_listing_${listing.title}_${index}_${Date.now()}`,
+                message: `✨ ${t("newListing", "New listing")}: ${listing.title}`,
+                time: listing.time,
+                icon: "add-circle-outline",
+                color: "#007EFD",
+              })
+            })
+          }
+
+          if (activityGroup.type === "New Commissions" && activityGroup.data) {
+            activityGroup.data.forEach((commission, index) => {
+              processedActivities.push({
+                id: `commission_${commission.user}_${index}_${Date.now()}`,
+                message: `💰 ${t("commissionReceived", "Commission received")}: ${commission.amount} FRW`,
+                time: commission.time,
+                icon: "wallet-outline",
+                color: "#8B5CF6",
+              })
+            })
+          }
+        })
+
+        if (processedActivities.length > 0) {
+          // Sort by most recent and limit to 10
+          const sortedActivities = processedActivities
+            .sort((a, b) => {
+              // Simple time sorting - you might want to improve this
+              if (a.time.includes("Just now")) return -1
+              if (b.time.includes("Just now")) return 1
+              return 0
+            })
+            .slice(0, 10)
+
+          setActivities(sortedActivities)
+        } else {
+          // Default welcome activity
+          setActivities([
+            {
+              id: 1,
+              message: `🎉 ${t("welcomeMessage", "Welcome to RushGo!")}`,
+              time: t("justNow", "Just now"),
+              icon: "star-outline",
+              color: "#007EFD",
+            },
+            {
+              id: 2,
+              message: `📱 ${t("startListing", "Start listing your cars to see activities here")}`,
+              time: t("tip", "Tip"),
+              icon: "information-circle-outline",
+              color: "#64748B",
+            },
+          ])
+        }
       } else {
         // Default activities if none from API
         setActivities([
           {
             id: 1,
-            message: t("welcomeMessage", "Welcome to RushGo!"),
+            message: `🎉 ${t("welcomeMessage", "Welcome to RushGo!")}`,
             time: t("justNow", "Just now"),
             icon: "star-outline",
             color: "#007EFD",
           },
+          {
+            id: 2,
+            message: `📱 ${t("startListing", "Start listing your cars to see activities here")}`,
+            time: t("tip", "Tip"),
+            icon: "information-circle-outline",
+            color: "#64748B",
+          },
         ])
       }
     }
-  }, [dashboardLoading, t, totalCars, activeCars, pendingCars, recentActivity])
+  }, [dashboardLoading, t, totalListings, activeListings, pendingListings, recentActivity])
 
   // Update data when language changes
   useEffect(() => {
@@ -208,7 +343,7 @@ const DashboardScreen = () => {
 
   const closeNotificationModal = () => {
     setShowNotifications(false)
-    setExpandedNotifications({}) // Reset expanded states when closing
+    setExpandedNotifications({})
   }
 
   const changeLanguage = async (lng) => {
@@ -218,7 +353,6 @@ const DashboardScreen = () => {
       await AsyncStorage.setItem("user_language", lng)
       setShowLanguageOptions(false)
 
-      // Force re-render of data with new language
       setTimeout(() => {
         dispatch(fetchDashboardStats())
       }, 100)
@@ -241,6 +375,8 @@ const DashboardScreen = () => {
         return "star-outline"
       case "reminder":
         return "notifications-outline"
+      case "welcome":
+        return "star-outline"
       default:
         return "notifications-outline"
     }
@@ -260,6 +396,8 @@ const DashboardScreen = () => {
         return "#EF4444"
       case "reminder":
         return "#007EFD"
+      case "welcome":
+        return "#10B981"
       default:
         return "#64748B"
     }
@@ -296,7 +434,7 @@ const DashboardScreen = () => {
     }
   }
 
-  // ✅ FIXED: Show error state
+  // ✅ Show error state
   if (dashboardError) {
     return (
       <SafeAreaView style={styles.container}>
@@ -319,7 +457,7 @@ const DashboardScreen = () => {
     )
   }
 
-  // ✅ FIXED: Show loading if not authenticated
+  // ✅ Show loading if not authenticated
   if (!isAuthenticated || !user) {
     return (
       <SafeAreaView style={styles.container}>
@@ -411,7 +549,7 @@ const DashboardScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Stats */}
+        {/* ✅ UPDATED: Enhanced Stats Grid */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("quickStats", "Imibare y'ibanze")}</Text>
           {dashboardLoading ? (
@@ -422,16 +560,19 @@ const DashboardScreen = () => {
             <View style={styles.statsGrid}>
               {stats.map((stat, index) => (
                 <View key={index} style={styles.statCard}>
-                  <Ionicons name={stat.icon} size={32} color={stat.color} />
+                  <View style={[styles.statIconContainer, { backgroundColor: `${stat.color}15` }]}>
+                    <Ionicons name={stat.icon} size={28} color={stat.color} />
+                  </View>
                   <Text style={styles.statCount}>{stat.count}</Text>
                   <Text style={styles.statTitle}>{stat.title}</Text>
+                  {stat.subtitle && <Text style={styles.statSubtitle}>{stat.subtitle}</Text>}
                 </View>
               ))}
             </View>
           )}
         </View>
 
-        {/* Activities */}
+        {/* ✅ UPDATED: Enhanced Activities */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("recentActivity", "Ibikorwa bya vuba")}</Text>
           {dashboardLoading ? (
@@ -451,6 +592,19 @@ const DashboardScreen = () => {
                   </View>
                 </View>
               ))}
+
+              {/* ✅ Quick Action Buttons */}
+              <View style={styles.quickActions}>
+                <TouchableOpacity style={styles.quickActionButton} onPress={() => navigation.navigate("MyCars")}>
+                  <Ionicons name="car-outline" size={20} color="#007EFD" />
+                  <Text style={styles.quickActionText}>{t("viewMyCars", "View My Cars")}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.quickActionButton} onPress={() => navigation.navigate("AddCar")}>
+                  <Ionicons name="add-circle-outline" size={20} color="#10B981" />
+                  <Text style={styles.quickActionText}>{t("addNewCar", "Add New Car")}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </View>
@@ -692,34 +846,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#64748B",
   },
+  // ✅ UPDATED: Enhanced stats grid
   statsGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 12,
   },
   statCard: {
-    flex: 1,
+    width: (width - 64) / 2, // Two cards per row with proper spacing
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    marginBottom: 12,
+  },
+  statIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
   },
   statCount: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "700",
-    marginTop: 12,
     marginBottom: 4,
     color: "#1E293B",
   },
   statTitle: {
     fontSize: 14,
     textAlign: "center",
-    fontWeight: "500",
+    fontWeight: "600",
+    color: "#1E293B",
+    marginBottom: 4,
+  },
+  statSubtitle: {
+    fontSize: 12,
+    textAlign: "center",
     color: "#64748B",
   },
   activitiesList: {
@@ -757,6 +927,29 @@ const styles = StyleSheet.create({
   activityTime: {
     fontSize: 14,
     color: "#64748B",
+  },
+  // ✅ NEW: Quick actions
+  quickActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  quickActionButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1E293B",
   },
   dropdown: {
     position: "absolute",

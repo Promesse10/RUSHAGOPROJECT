@@ -29,6 +29,32 @@ export const getCarsAction = createAsyncThunk("cars/getAll", async (_, { rejectW
   }
 })
 
+// ✅ Get Approved Cars - Enhanced with better error handling
+export const getApprovedCarsAction = createAsyncThunk("cars/getApproved", async (_, { rejectWithValue }) => {
+  try {
+    console.log("🚗 Fetching approved cars...")
+    const response = await axiosInstance.get("/listings/renter/approved")
+    const cars = response.data || []
+    console.log("✅ Approved cars fetched:", cars.length)
+
+    // Log some sample data for debugging
+    if (cars.length > 0) {
+      console.log("📊 Sample car data:", {
+        id: cars[0]._id || cars[0].id,
+        brand: cars[0].brand || cars[0].make,
+        model: cars[0].model,
+        coordinates: cars[0].coordinates || { lat: cars[0].latitude, lng: cars[0].longitude },
+      })
+    }
+
+    return cars
+  } catch (err) {
+    console.error("❌ Get approved cars error:", err)
+    const errorMessage = err.response?.data?.message || err.message || "Failed to fetch approved cars"
+    return rejectWithValue(errorMessage)
+  }
+})
+
 // Create a car
 export const createCarAction = createAsyncThunk("cars/create", async (carData, { rejectWithValue }) => {
   try {

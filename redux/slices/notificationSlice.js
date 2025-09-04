@@ -1,35 +1,18 @@
-import { createSlice } from '@reduxjs/toolkit';
-import {
-  fetchNotifications,
-  markNotificationAsRead,
-  markAllNotificationsAsRead,
-  deleteNotification,
-  createNotification,
-} from '../actions/notificationActions';
+import { createSlice } from "@reduxjs/toolkit";
+import { fetchNotifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification } from "../action/notificationActions";
 
 const initialState = {
   notifications: [],
   unreadCount: 0,
-  loading: false,
+  isLoading: false,
   error: null,
-  filters: {
-    type: 'all', // 'all', 'listing', 'system', 'admin'
-    priority: 'all', // 'all', 'low', 'medium', 'high'
-    isRead: 'all', // 'all', 'read', 'unread'
-  },
 };
 
 const notificationSlice = createSlice({
-  name: 'notifications',
+  name: "notifications",
   initialState,
   reducers: {
-    setFilters: (state, action) => {
-      state.filters = { ...state.filters, ...action.payload };
-    },
-    clearFilters: (state) => {
-      state.filters = initialState.filters;
-    },
-    clearError: (state) => {
+    clearNotificationError: (state) => {
       state.error = null;
     },
     addNotification: (state, action) => {
@@ -39,68 +22,54 @@ const notificationSlice = createSlice({
       }
     },
     updateUnreadCount: (state) => {
-      state.unreadCount = state.notifications.filter(n => !n.isRead).length;
+      state.unreadCount = state.notifications.filter((n) => !n.isRead).length;
     },
   },
   extraReducers: (builder) => {
     builder
-      // Fetch notifications
+      // fetch notifications
       .addCase(fetchNotifications.pending, (state) => {
-        state.loading = true;
+        state.isLoading = true;
         state.error = null;
       })
       .addCase(fetchNotifications.fulfilled, (state, action) => {
-        state.loading = false;
-        state.notifications = action.payload;
-        state.unreadCount = action.payload.filter(n => !n.isRead).length;
+        state.isLoading = false;
+        state.notifications = action.payload || [];
+        state.unreadCount = (action.payload || []).filter((n) => !n.isRead).length;
       })
       .addCase(fetchNotifications.rejected, (state, action) => {
-        state.loading = false;
+        state.isLoading = false;
         state.error = action.payload;
       })
 
-      // Mark as read
+      // mark notification as read
       .addCase(markNotificationAsRead.fulfilled, (state, action) => {
-        const index = state.notifications.findIndex(n => n._id === action.payload._id);
-        if (index !== -1) {
-          state.notifications[index].isRead = true;
+        const notification = state.notifications.find((n) => n._id === action.payload._id);
+        if (notification && !notification.isRead) {
+          notification.isRead = true;
           state.unreadCount = Math.max(0, state.unreadCount - 1);
         }
       })
 
-      // Mark all as read
+      // mark all notifications as read
       .addCase(markAllNotificationsAsRead.fulfilled, (state) => {
-        state.notifications.forEach(notification => {
-          notification.isRead = true;
-        });
+        state.notifications.forEach((n) => (n.isRead = true));
         state.unreadCount = 0;
       })
 
-      // Delete notification
+      // delete notification
       .addCase(deleteNotification.fulfilled, (state, action) => {
-        const deletedNotification = state.notifications.find(n => n._id === action.payload);
-        if (deletedNotification && !deletedNotification.isRead) {
-          state.unreadCount = Math.max(0, state.unreadCount - 1);
-        }
-        state.notifications = state.notifications.filter(n => n._id !== action.payload);
-      })
-
-      // Create notification
-      .addCase(createNotification.fulfilled, (state, action) => {
-        state.notifications.unshift(action.payload);
-        if (!action.payload.isRead) {
-          state.unreadCount += 1;
+        const index = state.notifications.findIndex((n) => n._id === action.payload);
+        if (index !== -1) {
+          const wasUnread = !state.notifications[index].isRead;
+          state.notifications.splice(index, 1);
+          if (wasUnread) {
+            state.unreadCount = Math.max(0, state.unreadCount - 1);
+          }
         }
       });
   },
 });
 
-export const {
-  setFilters,
-  clearFilters,
-  clearError,
-  addNotification,
-  updateUnreadCount,
-} = notificationSlice.actions;
-
+export const { clearNotificationError, addNotification, updateUnreadCount } = notificationSlice.actions;
 export default notificationSlice.reducer;

@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import {
+  getApprovedCarsAction,
   getCarsAction,
   getMyCarsAction,
   createCarAction,
@@ -26,7 +27,11 @@ const initialState = {
   isUpdateFailed: false,
   isDeleteFailed: false,
 
-  cars: [],
+  cars: [], // all cars (e.g. admin, owner, etc.)
+  approvedCars: [], // specific to approved cars
+  approvedCarsLoading: false,
+  approvedCarsError: null,
+
   selectedCar: null,
 
   error: null,
@@ -80,7 +85,8 @@ const carSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Get my cars
+
+      // Get My Cars
       .addCase(getMyCarsAction.pending, (state) => {
         state.isLoading = true
         state.isGetSuccess = false
@@ -90,8 +96,8 @@ const carSlice = createSlice({
       .addCase(getMyCarsAction.fulfilled, (state, action) => {
         state.isLoading = false
         state.isGetSuccess = true
-        state.cars = action.payload
-        state.totalCars = action.payload.length
+        state.cars = action.payload || []
+        state.totalCars = (action.payload || []).length
       })
       .addCase(getMyCarsAction.rejected, (state, action) => {
         state.isLoading = false
@@ -99,7 +105,7 @@ const carSlice = createSlice({
         state.error = action.payload || "Failed to fetch your cars"
       })
 
-      // Get all cars
+      // Get All Cars
       .addCase(getCarsAction.pending, (state) => {
         state.isLoading = true
         state.isGetSuccess = false
@@ -109,8 +115,8 @@ const carSlice = createSlice({
       .addCase(getCarsAction.fulfilled, (state, action) => {
         state.isLoading = false
         state.isGetSuccess = true
-        state.cars = action.payload
-        state.totalCars = action.payload.length
+        state.cars = action.payload || []
+        state.totalCars = (action.payload || []).length
       })
       .addCase(getCarsAction.rejected, (state, action) => {
         state.isLoading = false
@@ -118,7 +124,29 @@ const carSlice = createSlice({
         state.error = action.payload || "Failed to fetch cars"
       })
 
-      // Create car
+      // ✅ Get Approved Cars - Enhanced
+      .addCase(getApprovedCarsAction.pending, (state) => {
+        state.approvedCarsLoading = true
+        state.approvedCarsError = null
+        state.isLoading = true // Also set general loading for compatibility
+      })
+      .addCase(getApprovedCarsAction.fulfilled, (state, action) => {
+        state.approvedCarsLoading = false
+        state.isLoading = false
+        state.approvedCars = action.payload || []
+        state.isGetSuccess = true
+        console.log("✅ Approved cars loaded in Redux:", (action.payload || []).length)
+      })
+      .addCase(getApprovedCarsAction.rejected, (state, action) => {
+        state.approvedCarsLoading = false
+        state.isLoading = false
+        state.approvedCarsError = action.payload || "Failed to fetch approved cars"
+        state.isGetFailed = true
+        state.error = action.payload || "Failed to fetch approved cars"
+        console.error("❌ Failed to load approved cars:", action.payload)
+      })
+
+      // Create Car
       .addCase(createCarAction.pending, (state) => {
         state.isCreating = true
         state.isCreateSuccess = false
@@ -128,8 +156,10 @@ const carSlice = createSlice({
       .addCase(createCarAction.fulfilled, (state, action) => {
         state.isCreating = false
         state.isCreateSuccess = true
-        state.cars.unshift(action.payload)
-        state.totalCars += 1
+        if (action.payload) {
+          state.cars.unshift(action.payload)
+          state.totalCars += 1
+        }
       })
       .addCase(createCarAction.rejected, (state, action) => {
         state.isCreating = false
@@ -137,7 +167,7 @@ const carSlice = createSlice({
         state.createError = action.payload || "Failed to create car"
       })
 
-      // Update car
+      // Update Car
       .addCase(updateCarAction.pending, (state) => {
         state.isUpdating = true
         state.isUpdateSuccess = false
@@ -147,12 +177,19 @@ const carSlice = createSlice({
       .addCase(updateCarAction.fulfilled, (state, action) => {
         state.isUpdating = false
         state.isUpdateSuccess = true
-        const index = state.cars.findIndex((car) => car._id === action.payload._id)
-        if (index !== -1) {
-          state.cars[index] = action.payload
-        }
-        if (state.selectedCar && state.selectedCar._id === action.payload._id) {
-          state.selectedCar = action.payload
+        if (action.payload) {
+          // Update in cars array
+          const index = state.cars.findIndex((car) => car._id === action.payload._id)
+          if (index !== -1) state.cars[index] = action.payload
+
+          // Update in approvedCars array
+          const approvedIndex = state.approvedCars.findIndex((car) => car._id === action.payload._id)
+          if (approvedIndex !== -1) state.approvedCars[approvedIndex] = action.payload
+
+          // Update selected car
+          if (state.selectedCar?._id === action.payload._id) {
+            state.selectedCar = action.payload
+          }
         }
       })
       .addCase(updateCarAction.rejected, (state, action) => {
@@ -161,35 +198,66 @@ const carSlice = createSlice({
         state.updateError = action.payload || "Failed to update car"
       })
 
-      // Update car availability
+      // Update Car Availability
       .addCase(updateCarAvailabilityAction.fulfilled, (state, action) => {
-        const { carId, available } = action.payload
-        const index = state.cars.findIndex((car) => car._id === carId)
-        if (index !== -1) {
-          state.cars[index].available = available
+        if (action.payload) {
+          const { carId, available } = action.payload
+
+          // Update in cars array
+          const index = state.cars.findIndex((car) => car._id === carId)
+          if (index !== -1) {
+            state.cars[index].available = available
+          }
+
+          // Update in approvedCars array
+          const approvedIndex = state.approvedCars.findIndex((car) => car._id === carId)
+          if (approvedIndex !== -1) {
+            state.approvedCars[approvedIndex].available = available
+          }
         }
       })
 
-      // Update car views
+      // Update Car Views
       .addCase(updateCarViewsAction.fulfilled, (state, action) => {
-        const { carId, views } = action.payload
-        const index = state.cars.findIndex((car) => car._id === carId)
-        if (index !== -1) {
-          state.cars[index].views = views
+        if (action.payload) {
+          const { carId, views } = action.payload
+
+          // Update in cars array
+          const index = state.cars.findIndex((car) => car._id === carId)
+          if (index !== -1) {
+            state.cars[index].views = views
+          }
+
+          // Update in approvedCars array
+          const approvedIndex = state.approvedCars.findIndex((car) => car._id === carId)
+          if (approvedIndex !== -1) {
+            state.approvedCars[approvedIndex].views = views
+          }
         }
       })
 
-      // Update car rating
+      // Update Rating
       .addCase(updateCarRatingAction.fulfilled, (state, action) => {
-        const { carId, rating, reviews } = action.payload
-        const index = state.cars.findIndex((car) => car._id === carId)
-        if (index !== -1) {
-          state.cars[index].rating = rating
-          state.cars[index].reviews = reviews
+        if (action.payload) {
+          const { carId, rating, reviews } = action.payload
+
+          // Update in cars array
+          const index = state.cars.findIndex((car) => car._id === carId)
+          if (index !== -1) {
+            state.cars[index].rating = rating
+            state.cars[index].reviews = reviews
+          }
+
+          // Update in approvedCars array
+          const approvedIndex = state.approvedCars.findIndex((car) => car._id === carId)
+          if (approvedIndex !== -1) {
+            state.approvedCars[approvedIndex].rating = rating
+            state.approvedCars[approvedIndex].reviews = reviews
+          }
         }
       })
 
-      // Delete car
+      // Delete Car
       .addCase(deleteCarAction.pending, (state) => {
         state.isDeleting = true
         state.isDeleteSuccess = false
@@ -199,10 +267,19 @@ const carSlice = createSlice({
       .addCase(deleteCarAction.fulfilled, (state, action) => {
         state.isDeleting = false
         state.isDeleteSuccess = true
-        state.cars = state.cars.filter((car) => car._id !== action.payload)
-        state.totalCars -= 1
-        if (state.selectedCar && state.selectedCar._id === action.payload) {
-          state.selectedCar = null
+        if (action.payload) {
+          // Remove from cars array
+          state.cars = state.cars.filter((car) => car._id !== action.payload)
+
+          // Remove from approvedCars array
+          state.approvedCars = state.approvedCars.filter((car) => car._id !== action.payload)
+
+          state.totalCars -= 1
+
+          // Clear selected car if it was deleted
+          if (state.selectedCar?._id === action.payload) {
+            state.selectedCar = null
+          }
         }
       })
       .addCase(deleteCarAction.rejected, (state, action) => {

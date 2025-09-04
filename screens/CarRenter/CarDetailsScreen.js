@@ -12,45 +12,129 @@ import {
   Linking,
   Alert,
   Dimensions,
-  FlatList,
   Share,
   StatusBar,
 } from "react-native"
 import MapView, { Marker, Polyline } from "react-native-maps"
 import Icon from "react-native-vector-icons/Ionicons"
 import I18n from "../../utils/i18n"
-import ImageViewer from "react-native-image-zoom-viewer"
+import ImageGallery from "../../screens/CarRenter/ImageGallery"
+import { getTurnByTurnDirections } from "../../utils/googleDirections"
 
 const { width, height } = Dimensions.get("window")
 
 const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage, navigation }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [showImageGallery, setShowImageGallery] = useState(false)
-  const [showImageViewer, setShowImageViewer] = useState(false)
-  const [showDirections, setShowDirections] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [userRating, setUserRating] = useState(0)
 
+  // Internal route state for "Menyainzira" button
+  const [internalRouteCoordinates, setInternalRouteCoordinates] = useState([])
+  const [internalRouteInfo, setInternalRouteInfo] = useState(null)
+  const [showInternalRoute, setShowInternalRoute] = useState(false)
+
   if (!car) return null
 
-  const carImages = car.images.map((image, index) => ({
-    url: image,
-    props: {
-      source: { uri: image },
-    },
-  }))
+  // Normalize car data to handle different property structures
+  const normalizedCar = {
+    ...car,
+    make: car.brand || car.make || "Unknown",
+    brand: car.brand || car.make || "Unknown",
+    model: car.model || "Unknown",
+    year: car.year || "N/A",
+    type: car.type || "Standard",
+    transmission: car.transmission || "Manual",
+    fuel_type: car.fuelType || car.fuel_type || "petrol",
+    fuelType: car.fuelType || car.fuel_type || "petrol",
+    seatings: car.seatings || "4",
+    features: car.features || [],
+    ownerName: car.owner?.name || car.ownerName || "Owner",
+    ownerPhone: car.owner?.phone || car.ownerPhone || "",
+    ownerType: car.owner?.type || car.ownerType || "individual",
+    countryCode: car.countryCode || "+250",
+    district: car.district || "Unknown",
+    sector: car.sector || "Unknown",
+    location: car.location || car.address || "Unknown Location",
+    address: car.location || car.address || "Unknown Location",
+    latitude: car.coordinates?.latitude || car.latitude || -1.9441,
+    longitude: car.coordinates?.longitude || car.longitude || 30.0619,
+    price: car.price || car.base_price || car.dailyRate || "0",
+    base_price: car.price || car.base_price || car.dailyRate || "0",
+    dailyRate: car.price || car.base_price || car.dailyRate || "0",
+    currency: car.currency || "FRW",
+    available: car.available !== undefined ? car.available : true,
+    images:
+      car.images && car.images.length > 0
+        ? car.images
+        : ["https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400"],
+    rating: car.rating || 4.0,
+    views: car.views || 0,
+    description: car.description || "",
+    weeklyDiscount: car.weeklyDiscount || 0,
+    monthlyDiscount: car.monthlyDiscount || 0,
+  }
+
+  // Handle "Menyainzira" button - show route on internal map
+  const handleMenyainzira = async () => {
+    if (!userLocation) {
+      Alert.alert(
+        I18n.t("locationRequired", "Location Required"),
+        I18n.t("enableLocationMessage", "Please enable location to get directions"),
+      )
+      return
+    }
+
+    try {
+      const carCoords = {
+        latitude: normalizedCar.latitude,
+        longitude: normalizedCar.longitude,
+      }
+
+      const directions = await getTurnByTurnDirections(userLocation, carCoords)
+      setInternalRouteCoordinates(directions.coordinates)
+      setInternalRouteInfo({
+        distance: directions.totalDistance,
+        duration: directions.totalDuration,
+        steps: directions.steps,
+      })
+      setShowInternalRoute(true)
+
+      Alert.alert(
+        "Route Displayed",
+        `Route to ${normalizedCar.make} ${normalizedCar.model} is now shown on the map.\nDistance: ${directions.totalDistance}\nDuration: ${directions.totalDuration}`,
+      )
+    } catch (error) {
+      console.log("Error getting directions for Menyainzira:", error)
+      // Fallback to simple polyline
+      setInternalRouteCoordinates([
+        userLocation,
+        {
+          latitude: normalizedCar.latitude,
+          longitude: normalizedCar.longitude,
+        },
+      ])
+      setShowInternalRoute(true)
+      Alert.alert("Route Displayed", "Basic route is now shown on the map")
+    }
+  }
 
   const handleShare = async () => {
     try {
       const shareContent = {
-        message: `Check out this amazing ${car.make} ${car.model} (${car.year}) available for rent!\n\nPrice: ${car.base_price} ${car.currency}/day\nLocation: ${car.address}\nFeatures: ${car.features.join(", ")}\n\nContact: ${car.countryCode}${car.ownerPhone}`,
-        title: `${car.make} ${car.model} - Car Rental`,
+        message: `Check out this amazing ${normalizedCar.make} ${normalizedCar.model} (${normalizedCar.year}) available for rent!
+
+Price: ${normalizedCar.base_price} ${normalizedCar.currency}/day
+Location: ${normalizedCar.address}
+Features: ${normalizedCar.features.join(", ")}
+
+Contact: ${normalizedCar.countryCode}${normalizedCar.ownerPhone}`,
+        title: `${normalizedCar.make} ${normalizedCar.model} - Car Rental`,
       }
 
       const result = await Share.share(shareContent)
 
       if (result.action === Share.sharedAction) {
-        // Check if user is logged in, if not prompt for signup
         const isLoggedIn = false // Replace with actual auth check
 
         if (!isLoggedIn) {
@@ -61,7 +145,7 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
               { text: I18n.t("cancel", "Cancel"), style: "cancel" },
               {
                 text: I18n.t("signup", "Sign Up"),
-                onPress: () => navigation.navigate("CarRentalSignup"),
+                onPress: () => navigation?.navigate("CarRentalSignup"),
               },
             ],
           )
@@ -81,20 +165,23 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
       return
     }
 
-    // Close modal and navigate back to home with directions
     onClose()
 
-    // Navigate to home with car location for turn-by-turn directions
-    navigation.navigate("Home", {
+    navigation?.navigate("Home", {
       showDirections: true,
-      destinationCar: car,
+      destinationCar: normalizedCar,
       userLocation: userLocation,
     })
   }
 
   const handleContactOwner = (method) => {
-    const { ownerPhone, countryCode } = car
+    const { ownerPhone, countryCode } = normalizedCar
     const fullPhone = `${countryCode}${ownerPhone}`
+
+    if (!ownerPhone) {
+      Alert.alert("Error", "Owner contact information not available")
+      return
+    }
 
     let alertMessage = ""
     switch (method) {
@@ -119,7 +206,6 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
               Linking.openURL(`tel:${fullPhone}`).catch(() => {
                 Alert.alert("Error", "Unable to make phone call")
               })
-              // Show review modal after call attempt
               setTimeout(() => setShowReviewModal(true), 2000)
               break
             case "sms":
@@ -128,7 +214,7 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
               })
               break
             case "whatsapp":
-              const whatsappUrl = `https://wa.me/${fullPhone.replace("+", "")}?text=Hi, I'm interested in your ${car.make} ${car.model}`
+              const whatsappUrl = `https://wa.me/${fullPhone.replace("+", "")}?text=Hi, I'm interested in your ${normalizedCar.make} ${normalizedCar.model}`
               Linking.openURL(whatsappUrl).catch(() => {
                 Alert.alert("Error", "WhatsApp not available")
               })
@@ -141,7 +227,7 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
 
   const handleImagePress = (index) => {
     setSelectedImageIndex(index)
-    setShowImageViewer(true)
+    setShowImageGallery(true)
   }
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -156,53 +242,39 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
     return distance.toFixed(1)
   }
 
-  const getDirectionsCoordinates = () => {
-    if (!userLocation) return []
-    return [
-      {
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-      },
-      {
-        latitude: car.latitude,
-        longitude: car.longitude,
-      },
-    ]
-  }
-
   const renderStars = (rating) => {
+    const numRating = Number(rating) || 0
     const stars = []
-    const fullStars = Math.floor(rating)
-    const hasHalfStar = rating % 1 !== 0
+    const fullStars = Math.floor(numRating)
+    const hasHalfStar = numRating % 1 !== 0
 
     for (let i = 0; i < fullStars; i++) {
-      stars.push(<Icon key={i} name="star" size={16} color="#FFD700" />)
+      stars.push(<Icon key={`star-${i}`} name="star" size={16} color="#FFD700" />)
     }
 
     if (hasHalfStar) {
-      stars.push(<Icon key="half" name="star-half" size={16} color="#FFD700" />)
+      stars.push(<Icon key="half-star" name="star-half" size={16} color="#FFD700" />)
     }
 
-    const emptyStars = 5 - Math.ceil(rating)
+    const emptyStars = 5 - Math.ceil(numRating)
     for (let i = 0; i < emptyStars; i++) {
-      stars.push(<Icon key={`empty-${i}`} name="star-outline" size={16} color="#E5E5E5" />)
+      stars.push(<Icon key={`empty-star-${i}`} name="star-outline" size={16} color="#E5E5E5" />)
     }
 
     return stars
   }
 
   const getCarCategory = (car) => {
-    // Determine car category based on type and features
     if (car.type === "SUV" && car.features.includes("4WD")) return "Adventure"
     if (car.type === "Electric") return "Eco-Friendly"
     if (car.type === "Luxury" || car.make === "BMW") return "Luxury"
-    if (car.base_price < 3000) return "Economy"
-    if (car.seatings >= 7) return "Family"
+    if (Number.parseInt(car.base_price || "0") < 3000) return "Economy"
+    if (Number.parseInt(car.seatings || "0") >= 7) return "Family"
     return "Standard"
   }
 
   const distance = userLocation
-    ? calculateDistance(userLocation.latitude, userLocation.longitude, car.latitude, car.longitude)
+    ? calculateDistance(userLocation.latitude, userLocation.longitude, normalizedCar.latitude, normalizedCar.longitude)
     : null
 
   const handleSubmitReview = () => {
@@ -215,12 +287,6 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
     ])
     setUserRating(0)
   }
-
-  const renderImageItem = ({ item, index }) => (
-    <TouchableOpacity style={styles.galleryImageContainer} onPress={() => handleImagePress(index)}>
-      <Image source={{ uri: item }} style={styles.galleryImage} />
-    </TouchableOpacity>
-  )
 
   return (
     <>
@@ -242,13 +308,13 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
             </View>
 
             <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-              {/* Map Section */}
+              {/* Map Section with Route */}
               <View style={styles.mapContainer}>
                 <MapView
                   style={styles.map}
                   initialRegion={{
-                    latitude: car.latitude,
-                    longitude: car.longitude,
+                    latitude: normalizedCar.latitude,
+                    longitude: normalizedCar.longitude,
                     latitudeDelta: 0.01,
                     longitudeDelta: 0.01,
                   }}
@@ -264,11 +330,11 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
                   )}
 
                   {/* Car Location */}
-                  <Marker coordinate={{ latitude: car.latitude, longitude: car.longitude }}>
+                  <Marker coordinate={{ latitude: normalizedCar.latitude, longitude: normalizedCar.longitude }}>
                     <View style={styles.carMarker}>
                       <Image
                         source={
-                          car.available
+                          normalizedCar.available
                             ? require("../../assets/available.png")
                             : require("../../assets/nonavailable.png")
                         }
@@ -277,13 +343,13 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
                     </View>
                   </Marker>
 
-                  {/* Directions Polyline */}
-                  {showDirections && userLocation && (
+                  {/* Internal Route Polyline - shown when "Menyainzira" is pressed */}
+                  {showInternalRoute && internalRouteCoordinates.length > 0 && (
                     <Polyline
-                      coordinates={getDirectionsCoordinates()}
+                      coordinates={internalRouteCoordinates}
                       strokeColor="#007EFD"
-                      strokeWidth={3}
-                      lineDashPattern={[5, 5]}
+                      strokeWidth={4}
+                      lineDashPattern={[1]}
                     />
                   )}
                 </MapView>
@@ -299,33 +365,68 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
                     <Icon name="navigate" size={20} color="white" />
                     <Text style={styles.directionsButtonText}>{I18n.t("getDirections")}</Text>
                   </TouchableOpacity>
+                  {/* Menyainzira Button */}
+                  <TouchableOpacity style={styles.menyainziraButton} onPress={handleMenyainzira}>
+                    <Icon name="map" size={18} color="white" />
+                    <Text style={styles.menyainziraButtonText}>Menyainzira</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
+
+              {/* Internal Route Info Section */}
+              {showInternalRoute && internalRouteInfo && (
+                <View style={styles.internalRouteSection}>
+                  <View style={styles.internalRouteHeader}>
+                    <Text style={styles.sectionTitle}>Route Information</Text>
+                    <TouchableOpacity
+                      style={styles.clearRouteButton}
+                      onPress={() => {
+                        setShowInternalRoute(false)
+                        setInternalRouteCoordinates([])
+                        setInternalRouteInfo(null)
+                      }}
+                    >
+                      <Icon name="close" size={16} color="#666" />
+                      <Text style={styles.clearRouteText}>Clear</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.routeInfo}>
+                    <View style={styles.routeInfoItem}>
+                      <Icon name="time" size={16} color="#007EFD" />
+                      <Text style={styles.routeInfoText}>{internalRouteInfo.duration}</Text>
+                    </View>
+                    <View style={styles.routeInfoItem}>
+                      <Icon name="location" size={16} color="#007EFD" />
+                      <Text style={styles.routeInfoText}>{internalRouteInfo.distance}</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
 
               {/* Car Info Section */}
               <View style={styles.carInfoSection}>
                 <View style={styles.carHeader}>
                   <View style={styles.carHeaderLeft}>
-                    <Text style={styles.carCategory}>{getCarCategory(car)}</Text>
+                    <Text style={styles.carCategory}>{getCarCategory(normalizedCar)}</Text>
                     <Text style={styles.carTitle}>
-                      {car.make} {car.model} ({car.year})
+                      {normalizedCar.make} {normalizedCar.model} ({normalizedCar.year})
                     </Text>
                     <Text style={styles.carPrice}>
-                      {car.base_price} {car.currency}/{I18n.t("perDay")}
+                      {normalizedCar.base_price} {normalizedCar.currency}/{I18n.t("perDay")}
                     </Text>
                     <View style={styles.ratingContainer}>
-                      <View style={styles.stars}>{renderStars(car.rating)}</View>
-                      <Text style={styles.ratingValue}>{car.rating.toFixed(1)}/5.0</Text>
+                      <View style={styles.stars}>{renderStars(normalizedCar.rating)}</View>
+                      <Text style={styles.ratingValue}>{normalizedCar.rating.toFixed(1)}/5.0</Text>
                     </View>
                   </View>
                   <TouchableOpacity
                     style={styles.mainImageContainer}
                     onPress={() => handleImagePress(selectedImageIndex)}
                   >
-                    <Image source={{ uri: car.images[selectedImageIndex] }} style={styles.carMainImage} />
+                    <Image source={{ uri: normalizedCar.images[selectedImageIndex] }} style={styles.carMainImage} />
                     <View style={styles.imageCounter}>
                       <Text style={styles.imageCounterText}>
-                        {selectedImageIndex + 1}/{car.images.length}
+                        {selectedImageIndex + 1}/{normalizedCar.images.length}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -335,11 +436,11 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
                 <View style={styles.imageGallerySection}>
                   <Text style={styles.sectionTitle}>Car Images</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageGalleryScroll}>
-                    {car.images.map((image, index) => (
+                    {normalizedCar.images.map((image, index) => (
                       <TouchableOpacity
                         key={index}
                         style={[styles.thumbnailContainer, selectedImageIndex === index && styles.selectedThumbnail]}
-                        onPress={() => setSelectedImageIndex(index)}
+                        onPress={() => handleImagePress(index)}
                       >
                         <Image source={{ uri: image }} style={styles.thumbnailImage} />
                       </TouchableOpacity>
@@ -353,20 +454,20 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
                   <View style={styles.specsGrid}>
                     <View style={styles.specItem}>
                       <Text style={styles.specLabel}>{I18n.t("make", "Make")}</Text>
-                      <Text style={styles.specValue}>{car.make}</Text>
+                      <Text style={styles.specValue}>{normalizedCar.make}</Text>
                     </View>
                     <View style={styles.specItem}>
                       <Text style={styles.specLabel}>{I18n.t("model", "Model")}</Text>
-                      <Text style={styles.specValue}>{car.model}</Text>
+                      <Text style={styles.specValue}>{normalizedCar.model}</Text>
                     </View>
                     <View style={styles.specItem}>
                       <Icon name="settings" size={24} color="#007EFD" />
-                      <Text style={styles.specValue}>{car.transmission}</Text>
+                      <Text style={styles.specValue}>{normalizedCar.transmission}</Text>
                       <Text style={styles.specLabel}>Transmission</Text>
                     </View>
                     <View style={styles.specItem}>
                       <Icon name="people" size={24} color="#007EFD" />
-                      <Text style={styles.specValue}>{car.seatings} Seats</Text>
+                      <Text style={styles.specValue}>{normalizedCar.seatings} Seats</Text>
                       <Text style={styles.specLabel}>Places</Text>
                     </View>
                   </View>
@@ -375,28 +476,38 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
                   <View style={styles.additionalSpecs}>
                     <View style={styles.specRow}>
                       <Text style={styles.specRowLabel}>Year:</Text>
-                      <Text style={styles.specRowValue}>{car.year}</Text>
+                      <Text style={styles.specRowValue}>{normalizedCar.year}</Text>
                     </View>
                     <View style={styles.specRow}>
                       <Text style={styles.specRowLabel}>Fuel Type:</Text>
-                      <Text style={styles.specRowValue}>{car.fuel_type}</Text>
+                      <Text style={styles.specRowValue}>
+                        {normalizedCar.fuel_type === "petrol"
+                          ? "Petrol"
+                          : normalizedCar.fuel_type === "diesel"
+                            ? "Diesel"
+                            : normalizedCar.fuel_type === "electric"
+                              ? "Electric"
+                              : normalizedCar.fuel_type === "hybrid"
+                                ? "Hybrid"
+                                : normalizedCar.fuel_type}
+                      </Text>
                     </View>
                     <View style={styles.specRow}>
                       <Text style={styles.specRowLabel}>Type:</Text>
-                      <Text style={styles.specRowValue}>{car.type}</Text>
+                      <Text style={styles.specRowValue}>{normalizedCar.type}</Text>
                     </View>
                     <View style={styles.specRow}>
                       <Text style={styles.specRowLabel}>Category:</Text>
-                      <Text style={styles.specRowValue}>{getCarCategory(car)}</Text>
+                      <Text style={styles.specRowValue}>{getCarCategory(normalizedCar)}</Text>
                     </View>
                   </View>
 
                   {/* Features */}
-                  {car.features && (
+                  {normalizedCar.features && normalizedCar.features.length > 0 && (
                     <View style={styles.featuresSection}>
                       <Text style={styles.sectionTitle}>{I18n.t("features")}</Text>
                       <View style={styles.featuresGrid}>
-                        {car.features.map((feature, index) => (
+                        {normalizedCar.features.map((feature, index) => (
                           <View key={index} style={styles.featureItem}>
                             <Icon name="checkmark-circle" size={16} color="#00A651" />
                             <Text style={styles.featureText}>{feature}</Text>
@@ -405,19 +516,52 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
                       </View>
                     </View>
                   )}
+
+                  {/* Description */}
+                  {normalizedCar.description && (
+                    <View style={styles.descriptionSection}>
+                      <Text style={styles.sectionTitle}>Description</Text>
+                      <Text style={styles.descriptionText}>{normalizedCar.description}</Text>
+                    </View>
+                  )}
+
+                  {/* Pricing Details */}
+                  <View style={styles.pricingSection}>
+                    <Text style={styles.sectionTitle}>Pricing</Text>
+                    <View style={styles.pricingGrid}>
+                      <View style={styles.pricingItem}>
+                        <Text style={styles.pricingLabel}>Daily Rate</Text>
+                        <Text style={styles.pricingValue}>
+                          {normalizedCar.dailyRate} {normalizedCar.currency}
+                        </Text>
+                      </View>
+                      {normalizedCar.weeklyDiscount > 0 && (
+                        <View style={styles.pricingItem}>
+                          <Text style={styles.pricingLabel}>Weekly Discount</Text>
+                          <Text style={styles.pricingValue}>{normalizedCar.weeklyDiscount}%</Text>
+                        </View>
+                      )}
+                      {normalizedCar.monthlyDiscount > 0 && (
+                        <View style={styles.pricingItem}>
+                          <Text style={styles.pricingLabel}>Monthly Discount</Text>
+                          <Text style={styles.pricingValue}>{normalizedCar.monthlyDiscount}%</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
                 </View>
 
                 {/* Owner Information */}
                 <View style={styles.ownerSection}>
                   <View style={styles.ownerInfo}>
                     <View style={styles.ownerAvatar}>
-                      <Text style={styles.ownerInitial}>{car.ownerName?.charAt(0) || "O"}</Text>
+                      <Text style={styles.ownerInitial}>{normalizedCar.ownerName?.charAt(0) || "O"}</Text>
                     </View>
                     <View style={styles.ownerDetails}>
-                      <Text style={styles.ownerName}>{car.ownerName}</Text>
-                      <Text style={styles.ownerLocation}>{car.address}</Text>
+                      <Text style={styles.ownerName}>{normalizedCar.ownerName}</Text>
+                      <Text style={styles.ownerLocation}>{normalizedCar.address}</Text>
                       <Text style={styles.ownerType}>
-                        {car.ownerType === "individual"
+                        {normalizedCar.ownerType === "individual"
                           ? I18n.t("individual", "Individual")
                           : I18n.t("company", "Company")}
                       </Text>
@@ -431,7 +575,7 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
             <View style={styles.bottomSection}>
               <View style={styles.priceContainer}>
                 <Text style={styles.totalPrice}>
-                  {car.base_price} {car.currency}
+                  {normalizedCar.base_price} {normalizedCar.currency}
                 </Text>
                 <Text style={styles.priceLabel}>Per Day</Text>
               </View>
@@ -451,33 +595,13 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
             </View>
           </View>
 
-          {/* Image Gallery Modal */}
-          <Modal visible={showImageGallery} transparent={true} animationType="fade">
-            <View style={styles.galleryModalOverlay}>
-              <View style={styles.galleryHeader}>
-                <TouchableOpacity onPress={() => setShowImageGallery(false)}>
-                  <Icon name="close" size={24} color="white" />
-                </TouchableOpacity>
-                <Text style={styles.galleryTitle}>Car Images</Text>
-                <View style={{ width: 24 }} />
-              </View>
-              <FlatList
-                data={car.images}
-                renderItem={renderImageItem}
-                keyExtractor={(item, index) => index.toString()}
-                numColumns={2}
-                contentContainerStyle={styles.galleryContent}
-              />
-            </View>
-          </Modal>
-
           {/* Review Modal */}
           <Modal visible={showReviewModal} transparent={true} animationType="slide">
             <View style={styles.reviewModalOverlay}>
               <View style={styles.reviewModal}>
                 <Text style={styles.reviewTitle}>{I18n.t("rateExperience")}</Text>
                 <Text style={styles.reviewSubtitle}>
-                  How was your experience with {car.make} {car.model}?
+                  How was your experience with {normalizedCar.make} {normalizedCar.model}?
                 </Text>
                 <View style={styles.starsContainer}>
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -505,25 +629,13 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
         </View>
       </Modal>
 
-      {/* Image Viewer Modal */}
-      <Modal visible={showImageViewer} transparent={true} onRequestClose={() => setShowImageViewer(false)}>
-        <ImageViewer
-          imageUrls={carImages}
-          index={selectedImageIndex}
-          onSwipeDown={() => setShowImageViewer(false)}
-          enableSwipeDown={true}
-          backgroundColor="rgba(0,0,0,0.9)"
-          saveToLocalByLongPress={false}
-          enablePreload={true}
-          renderHeader={() => (
-            <View style={styles.imageViewerHeader}>
-              <TouchableOpacity onPress={() => setShowImageViewer(false)} style={styles.imageViewerClose}>
-                <Text style={styles.imageViewerCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        />
-      </Modal>
+      {/* Image Gallery Modal */}
+      <ImageGallery
+        visible={showImageGallery}
+        onClose={() => setShowImageGallery(false)}
+        images={normalizedCar.images}
+        initialIndex={selectedImageIndex}
+      />
     </>
   )
 }
@@ -608,6 +720,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
   },
   distanceIndicator: {
     backgroundColor: "white",
@@ -619,6 +732,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+    marginBottom: 8,
   },
   distanceText: {
     fontSize: 14,
@@ -632,11 +746,65 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 8,
   },
   directionsButtonText: {
     color: "white",
     fontSize: 12,
     fontWeight: "bold",
+    marginLeft: 5,
+  },
+  menyainziraButton: {
+    backgroundColor: "#FF6B35",
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  menyainziraButtonText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+    marginLeft: 5,
+  },
+  internalRouteSection: {
+    backgroundColor: "#f8f9fa",
+    margin: 20,
+    borderRadius: 15,
+    padding: 15,
+  },
+  internalRouteHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  clearRouteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e9ecef",
+    borderRadius: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  clearRouteText: {
+    fontSize: 12,
+    color: "#666",
+    marginLeft: 4,
+  },
+  routeInfo: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  routeInfoItem: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  routeInfoText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
     marginLeft: 5,
   },
   carInfoSection: {
@@ -799,6 +967,38 @@ const styles = StyleSheet.create({
     color: "#333",
     marginLeft: 8,
   },
+  descriptionSection: {
+    marginBottom: 20,
+  },
+  descriptionText: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 20,
+  },
+  pricingSection: {
+    marginBottom: 20,
+  },
+  pricingGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  pricingItem: {
+    alignItems: "center",
+    width: "30%",
+    marginBottom: 15,
+  },
+  pricingLabel: {
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "500",
+  },
+  pricingValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#007EFD",
+    marginTop: 5,
+  },
   ownerSection: {
     marginBottom: 20,
   },
@@ -875,37 +1075,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  // Gallery Modal Styles
-  galleryModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.9)",
-  },
-  galleryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-  },
-  galleryTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "white",
-  },
-  galleryContent: {
-    padding: 10,
-  },
-  galleryImageContainer: {
-    flex: 1,
-    margin: 5,
-    aspectRatio: 1,
-  },
-  galleryImage: {
-    flex: 1,
-    borderRadius: 10,
-    backgroundColor: "#333",
-  },
   // Review Modal Styles
   reviewModalOverlay: {
     flex: 1,
@@ -963,25 +1132,6 @@ const styles = StyleSheet.create({
   reviewSubmitText: {
     fontSize: 16,
     color: "white",
-    fontWeight: "bold",
-  },
-  imageViewerHeader: {
-    position: "absolute",
-    top: 50,
-    right: 20,
-    zIndex: 1000,
-  },
-  imageViewerClose: {
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  imageViewerCloseText: {
-    color: "white",
-    fontSize: 18,
     fontWeight: "bold",
   },
 })

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Dimensions } from "react-native"
-import Slider from '@react-native-community/slider'
+import Slider from "@react-native-community/slider"
 import Icon from "react-native-vector-icons/Ionicons"
 
 const { width, height } = Dimensions.get("window")
@@ -20,12 +20,12 @@ const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
     seatings: "all",
   })
 
-  // Extract unique values from cars data
-  const uniqueMakes = [...new Set(cars.map((car) => car.make))]
-  const uniqueModels = [...new Set(cars.map((car) => car.model))]
-  const uniqueTypes = [...new Set(cars.map((car) => car.type))]
-  const uniqueYears = [...new Set(cars.map((car) => car.year))]
-  const uniqueSeatings = [...new Set(cars.map((car) => car.seatings))]
+  // Extract unique values from cars data with proper keys
+  const uniqueMakes = [...new Set(cars.map((car) => car.brand || car.make).filter(Boolean))]
+  const uniqueModels = [...new Set(cars.map((car) => car.model).filter(Boolean))]
+  const uniqueTypes = [...new Set(cars.map((car) => car.type).filter(Boolean))]
+  const uniqueYears = [...new Set(cars.map((car) => car.year).filter(Boolean))]
+  const uniqueSeatings = [...new Set(cars.map((car) => car.seatings).filter(Boolean))]
   const allFeatures = [...new Set(cars.flatMap((car) => car.features || []))]
 
   const handleFeatureToggle = (feature) => {
@@ -65,9 +65,9 @@ const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
         >
           <Text style={[styles.optionText, selectedValue === "all" && styles.selectedOptionText]}>All</Text>
         </TouchableOpacity>
-        {options.map((option) => (
+        {options.map((option, index) => (
           <TouchableOpacity
-            key={option}
+            key={`${title}-${option}-${index}`}
             style={[styles.filterOption, selectedValue === option && styles.selectedOption]}
             onPress={() => onSelect(option)}
           >
@@ -88,7 +88,7 @@ const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Filters</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Icon name="close" size={24} color="#333" />
+              <Icon name="close" size={24} color="white" />
             </TouchableOpacity>
           </View>
 
@@ -147,9 +147,9 @@ const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
             <View style={styles.filterSection}>
               <Text style={styles.sectionTitle}>Features</Text>
               <View style={styles.featuresGrid}>
-                {allFeatures.map((feature) => (
+                {allFeatures.map((feature, index) => (
                   <TouchableOpacity
-                    key={feature}
+                    key={`feature-${feature}-${index}`}
                     style={[styles.featureOption, filters.features.includes(feature) && styles.selectedFeature]}
                     onPress={() => handleFeatureToggle(feature)}
                   >
@@ -189,19 +189,25 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingTop: 50, // Account for status bar
   },
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   sidebar: {
-    width: width * 0.85,
+    width: width * 0.75, // Reduced width for better fit
     backgroundColor: "white",
     shadowColor: "#000",
     shadowOffset: { width: -2, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    marginTop: 20, // Add top margin for better positioning
+    marginBottom: 20, // Add bottom margin
+    borderTopLeftRadius: 20,
+    borderBottomLeftRadius: 20,
   },
   header: {
     flexDirection: "row",
@@ -212,6 +218,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
     backgroundColor: "#007EFD",
+    borderTopLeftRadius: 20,
   },
   headerTitle: {
     fontSize: 20,
@@ -220,6 +227,8 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 5,
+    borderRadius: 15,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
   content: {
     flex: 1,

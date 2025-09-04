@@ -1,16 +1,33 @@
 import axios from "axios"
 import * as SecureStore from "expo-secure-store"
 
-// Create axios instance with base URL
+// Function to get base URL automatically
+const getBaseURL = async () => {
+  try {
+    const ip = "127.0.0.1"; // Fallback to localhost IP
+    console.log("🌐 Using fallback IP:", ip)
+    return `http://${ip}:5000` // replace 5000 with your backend port
+  } catch (error) {
+    console.error("Error getting LAN IP, falling back to localhost:", error)
+  }
+  return "http://localhost:5000" // fallback
+}
+
+// Create axios instance with dynamic baseURL
 const axiosInstance = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL,
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
   },
 })
 
-// ✅ FIXED: Request interceptor to add auth token
+// Dynamically set baseURL
+getBaseURL().then((baseURL) => {
+  axiosInstance.defaults.baseURL = baseURL
+  console.log("✅ Axios baseURL set to:", baseURL)
+})
+
+// Request interceptor to add auth token
 axiosInstance.interceptors.request.use(
   async (config) => {
     try {
@@ -24,35 +41,25 @@ axiosInstance.interceptors.request.use(
     }
     return config
   },
-  (error) => {
-    return Promise.reject(error)
-  },
+  (error) => Promise.reject(error)
 )
 
-// ✅ FIXED: Response interceptor to handle auth errors
+// Response interceptor to handle auth errors
 axiosInstance.interceptors.response.use(
-  (response) => {
-    return response
-  },
+  (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
       try {
         await SecureStore.deleteItemAsync("token")
         await SecureStore.deleteItemAsync("user")
         console.log("🔐 Token expired, cleared storage")
-
-        // Clear axios default headers
         delete axios.defaults.headers.common["Authorization"]
-
-        // You might want to dispatch a logout action here
-        // store.dispatch(logout())
       } catch (clearError) {
         console.error("Error clearing auth storage:", clearError)
       }
     }
     return Promise.reject(error)
-  },
+  }
 )
 
 export default axiosInstance

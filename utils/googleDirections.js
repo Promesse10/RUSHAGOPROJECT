@@ -1,70 +1,189 @@
-// Google Directions API utility
-const GOOGLE_MAPS_API_KEY = "your_google_maps_api_key_here" // In production, use process.env.GOOGLE_MAPS_API_KEY
+import polyline from "@mapbox/polyline"
 
-// Decode polyline points from Google Directions API
-const decodePolyline = (encoded) => {
-  const points = []
-  let index = 0
-  const len = encoded.length
-  let lat = 0
-  let lng = 0
+// Your actual Mapbox access token (keep as-is if this works for you)
+const MAPBOX_ACCESS_TOKEN =
+  "pk.eyJ1IjoicHJvbWVzc2VpcmFrb3plMTAiLCJhIjoiY21lNDV1emR5MDgyejJtc2V1M3lnNmU4MiJ9.7_-kgFOI4v1gav56atsBcQ"
 
-  while (index < len) {
-    let b
-    let shift = 0
-    let result = 0
-    do {
-      b = encoded.charAt(index++).charCodeAt(0) - 63
-      result |= (b & 0x1f) << shift
-      shift += 5
-    } while (b >= 0x20)
-    const dlat = (result & 1) !== 0 ? ~(result >> 1) : result >> 1
-    lat += dlat
-
-    shift = 0
-    result = 0
-    do {
-      b = encoded.charAt(index++).charCodeAt(0) - 63
-      result |= (b & 0x1f) << shift
-      shift += 5
-    } while (b >= 0x20)
-    const dlng = (result & 1) !== 0 ? ~(result >> 1) : result >> 1
-    lng += dlng
-
-    points.push({
-      latitude: lat / 1e5,
-      longitude: lng / 1e5,
-    })
-  }
-
-  return points
+// ✅ Calculate straight-line distance between two points (km)
+export function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371 // km
+  const dLat = (lat2 - lat1) * (Math.PI / 180)
+  const dLon = (lon2 - lon1) * (Math.PI / 180)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return (R * c).toFixed(1)
 }
 
-export const getDirections = async (origin, destination) => {
+// Internal: normalize the requested mode and traffic preference into a valid Mapbox profile
+function normalizeProfile(options = {}) {
+  const raw = (options.mode || "driving").toLowerCase()
+  const wantsTraffic = options.traffic === true
+
+  // Accept common synonyms without requiring UI changes
+  const synonyms = {
+    drive: "driving",
+    driving: "driving",
+    "driving-traffic": "driving-traffic",
+    car: "driving",
+    auto: "driving",
+    walk: "walking",
+    walking: "walking",
+    cycle: "cycling",
+    bike: "cycling",
+    bicycle: "cycling",
+    cycling: "cycling",
+  }
+
+  const base = synonyms[raw] || "driving"
+  if (wantsTraffic) {
+    // Only driving supports traffic
+    return base === "driving" ? "driving-traffic" : base
+  }
+  return base
+}
+
+// Internal: Build a safe Mapbox Directions URL
+function buildDirectionsUrl(profile, origin, destination, token, opts = {}) {
+  const params = new URLSearchParams({
+    steps: "true",
+    alternatives: "false",
+    overview: "full",
+    geometries: "polyline", // keep 5-precision to match @mapbox/polyline default
+    access_token: token,
+  })
+
+  // Optional toggles
+  if (opts.avoidHighways) params.append("exclude", "motorway")
+  if (opts.avoidTolls) {
+    const existing = params.get("exclude")
+    params.set("exclude", existing ? `${existing},toll` : "toll")
+  }
+  if (opts.language) params.append("language", opts.language)
+
+  const oLng = Number(origin.longitude)
+  const oLat = Number(origin.latitude)
+  const dLng = Number(destination.longitude)
+  const dLat = Number(destination.latitude)
+
+  // Basic guards against invalid numbers
+  if (
+    !isFinite(oLat) ||
+    !isFinite(oLng) ||
+    !isFinite(dLat) ||
+    !isFinite(dLng) ||
+    oLat > 90 ||
+    oLat < -90 ||
+    dLat > 90 ||
+    dLat < -90 ||
+    oLng > 180 ||
+    oLng < -180 ||
+    dLng > 180 ||
+    dLng < -180
+  ) {
+    throw new Error("Invalid origin/destination coordinates")
+  }
+
+  // lng,lat;lng,lat is required by Mapbox
+  const coords = `${oLng},${oLat};${dLng},${dLat}`
+  return `https://api.mapbox.com/directions/v5/mapbox/${profile}/${coords}?${params.toString()}`
+}
+
+// Internal: Extract a friendlier maneuver label so your icons match
+function toFriendlyManeuver(step) {
+  const type = step?.maneuver?.type
+  const mod = step?.maneuver?.modifier
+
+  if (type === "turn" && mod) {
+    if (mod === "left") return "turn-left"
+    if (mod === "right") return "turn-right"
+    if (mod === "straight") return "straight"
+  }
+
+  // Cover common Mapbox types with a best-effort mapping
+  if (type === "merge" && mod === "left") return "turn-left"
+  if (type === "merge" && mod === "right") return "turn-right"
+  if (type === "fork" && mod === "left") return "turn-left"
+  if (type === "fork" && mod === "right") return "turn-right"
+  if (type === "roundabout" && mod === "right") return "turn-right"
+  if (type === "roundabout" && mod === "left") return "turn-left"
+  if (type === "new name" && mod === "straight") return "straight"
+
+  return "straight"
+}
+
+// Internal: Actually call Mapbox once with a chosen profile
+async function fetchRouteWithProfile(profile, origin, destination, opts, token) {
+  const url = buildDirectionsUrl(profile, origin, destination, token, opts)
+  const res = await fetch(url)
+  const data = await res.json()
+
+  if (!data || !Array.isArray(data.routes) || data.routes.length === 0) {
+    throw new Error("No routes found from Mapbox Directions API")
+  }
+
+  const route = data.routes[0]
+  const points = polyline.decode(route.geometry) // precision=5
+  const coordinates = points.map(([lat, lng]) => ({ latitude: lat, longitude: lng }))
+
+  const leg = route.legs?.[0]
+  const steps = Array.isArray(leg?.steps)
+    ? leg.steps.map((step) => ({
+        distance: `${(step.distance / 1000).toFixed(1)} km`,
+        duration: `${Math.round(step.duration / 60)} min`,
+        instruction: step.maneuver?.instruction || "",
+        maneuver: toFriendlyManeuver(step),
+      }))
+    : []
+
+  return {
+    coordinates,
+    totalDistance: `${(leg?.distance / 1000).toFixed(1)} km`,
+    totalDuration: `${Math.round(leg?.duration / 60)} min`,
+    steps,
+  }
+}
+
+// ✅ Get turn-by-turn route from Mapbox with robust profile handling and fallbacks
+export async function getTurnByTurnDirections(origin, destination, options = {}) {
   try {
-    const originStr = `${origin.latitude},${origin.longitude}`
-    const destinationStr = `${destination.latitude},${destination.longitude}`
+    const token = MAPBOX_ACCESS_TOKEN
+    if (!token) throw new Error("MAPBOX_ACCESS_TOKEN is missing. Add it to your code.")
 
-    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${originStr}&destination=${destinationStr}&key=${GOOGLE_MAPS_API_KEY}`
+    // 1) Normalize requested profile
+    const primaryProfile = normalizeProfile(options)
 
-    const response = await fetch(url)
-    const data = await response.json()
-
-    if (data.status === "OK" && data.routes.length > 0) {
-      const route = data.routes[0]
-      const points = decodePolyline(route.overview_polyline.points)
-
-      return {
-        coordinates: points,
-        distance: route.legs[0].distance.text,
-        duration: route.legs[0].duration.text,
-        steps: route.legs[0].steps,
-      }
+    // 2) Prepare a small fallback chain that keeps behavior "car-first"
+    const fallbacks = []
+    if (primaryProfile === "driving-traffic") {
+      fallbacks.push("driving", "walking")
+    } else if (primaryProfile === "driving") {
+      fallbacks.push("driving-traffic", "walking")
     } else {
-      throw new Error("No route found")
+      fallbacks.push("driving-traffic", "driving", "walking")
     }
-  } catch (error) {
-    console.error("Error getting directions:", error)
-    throw error
+
+    // Try primary, then fallbacks
+    const profilesToTry = [primaryProfile, ...fallbacks]
+
+    let lastError = null
+    for (const profile of profilesToTry) {
+      try {
+        const result = await fetchRouteWithProfile(profile, origin, destination, options, token)
+        return result
+      } catch (e) {
+        lastError = e
+        // Continue to next profile
+      }
+    }
+
+    // If we get here, all attempts failed
+    throw lastError || new Error("No routes found from Mapbox Directions API")
+  } catch (err) {
+    console.error("❌ Error in getTurnByTurnDirections:", err)
+    return { coordinates: [], totalDistance: "0 km", totalDuration: "0 min", steps: [] }
   }
 }

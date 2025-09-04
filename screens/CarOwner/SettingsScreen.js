@@ -12,50 +12,145 @@ import {
   Image,
   SafeAreaView,
   Vibration,
+  Alert,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
+import { useDispatch, useSelector } from "react-redux"
+import {
+  logoutAction,
+  updateUserProfileAction,
+  loadAuthFromStorage,
+} from "../../redux/action/LoginActions"
+import { updateUserSettings, fetchUserSettings } from "../../redux/action/settingAction"
 import * as ImagePicker from "expo-image-picker"
 
 const SettingsScreen = () => {
   const navigation = useNavigation()
+  const dispatch = useDispatch()
   const { t } = useTranslation()
-  const [loading, setLoading] = useState(true)
-  const [profile, setProfile] = useState(null)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  // Get authenticated user data from auth slice
+  const { user, isAuthenticated, isLoading } = useSelector((state) => state.auth || {})
+
+  // Get settings data from settings slice
+  const general = useSelector((state) => state.settings?.general || {})
+const notifications = useSelector((state) => state.settings?.notifications || {})
+const settingsLoading = useSelector((state) => state.settings?.loading || false)
+const settingsError = useSelector((state) => state.settings?.error || null)
+
+  
+
+  const [loading, setLoading] = useState(false)
+  const [profile, setProfile] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    businessName: "",
+    businessType: "Individual",
+    address: "",
+    profileImage: "https://via.placeholder.com/100x100",
+    isPremium: false,
+    memberSince: "Jan 2024",
+  })
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true)
 
-  const handleDarkModeToggle = (value) => {
-    setIsDarkMode(value)
-    // Apply dark mode theme here
-    if (value) {
-      // Enable dark mode
-      console.log("Dark mode enabled")
-    } else {
-      // Disable dark mode
-      console.log("Dark mode disabled")
+  // Load user data and settings on mount
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      console.log("👤 Loading user profile:", user.name)
+
+      // Populate profile with real user data
+      setProfile({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        businessName: user.businessName || "",
+        businessType: user.businessType || "Individual",
+        address: user.address || "",
+        profileImage: user.profileImage || "https://via.placeholder.com/100x100",
+        isPremium: user.isPremium || false,
+        memberSince: user.createdAt
+          ? new Date(user.createdAt).toLocaleDateString("en-US", {
+              month: "short",
+              year: "numeric",
+            })
+          : "Jan 2024",
+      })
+
+      // Fetch user settings
+      dispatch(updateUserSettings({}))
+    }
+  }, [user, isAuthenticated, dispatch])
+
+  // Update notification state when settings are loaded
+  useEffect(() => {
+    if (notifications) {
+      setIsNotificationsEnabled(notifications.pushNotifications || true)
+    }
+  }, [notifications])
+
+  const handleNotificationToggle = async (value) => {
+    setIsNotificationsEnabled(value)
+    // Add haptic feedback
+    Vibration.vibrate(50)
+
+    // Update settings in Redux and backend
+    try {
+      await dispatch(
+        updateUserSettings({
+          notifications: {
+            ...notifications,
+            pushNotifications: value,
+          },
+        }),
+      ).unwrap()
+      console.log("✅ Notification setting updated")
+    } catch (error) {
+      console.error("❌ Failed to update notification setting:", error)
+      // Revert the toggle if update failed
+      setIsNotificationsEnabled(!value)
+      Alert.alert(t("error", "Error"), t("settingsUpdateError", "Failed to update notification settings"))
     }
   }
 
-  const handleNotificationToggle = (value) => {
-    setIsNotificationsEnabled(value)
-    // Add haptic feedback
-    Vibration.vibrate(50) // Short vibration
-  }
-
-  const handleLogout = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "AuthScreen" }],
-    })
+  // Proper logout with Redux action
+  const handleLogout = async () => {
+    Alert.alert(t("logout", "Logout"), t("logoutConfirm", "Are you sure you want to logout?"), [
+      {
+        text: t("cancel", "Cancel"),
+        style: "cancel",
+      },
+      {
+        text: t("logout", "Logout"),
+        style: "destructive",
+        onPress: async () => {
+          try {
+            console.log("🚪 Logging out user...")
+            await dispatch(logoutAction()).unwrap()
+            console.log("✅ Logout successful")
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "AuthScreen" }],
+            })
+          } catch (error) {
+            console.error("❌ Logout error:", error)
+            Alert.alert(t("error", "Error"), t("logoutError", "Failed to logout properly"))
+          }
+        },
+      },
+    ])
   }
 
   const handleProfileImageUpload = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
 
     if (status !== "granted") {
-      alert("Sorry, we need camera roll permissions to make this work!")
+      Alert.alert(
+        t("permissionNeeded", "Permission Needed"),
+        t("cameraPermission", "We need camera roll permissions to upload photos"),
+      )
       return
     }
 
@@ -71,28 +166,40 @@ const SettingsScreen = () => {
     }
   }
 
-  useEffect(() => {
-    setTimeout(() => {
-      setProfile({
-        name: "John Smith",
-        email: "john.smith@example.com",
-        phone: "+250 788 123 456",
-        businessName: "Smith Car Rentals",
-        businessType: "Individual",
-        address: "KK 15 Ave, Kigali",
-        profileImage: "https://via.placeholder.com/100x100",
-        isPremium: true,
-        memberSince: "Jan 2024",
-      })
+  // Save profile changes to Redux and backend via settings API
+  const handleSaveProfile = async () => {
+    setLoading(true)
+    try {
+      console.log("💾 Saving profile changes...")
+      const profileData = {
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        businessName: profile.businessName,
+        businessType: profile.businessType,
+        address: profile.address,
+        profileImage: profile.profileImage,
+      }
+  
+      // ✅ Update the user profile
+      await dispatch(updateUserProfileAction(profileData)).unwrap()
+  
+      // ✅ Refresh Redux auth state from SecureStore
+      await dispatch(loadAuthFromStorage()).unwrap()
+  
+      console.log("✅ Profile saved successfully")
+      Alert.alert(t("success", "Success"), t("profileSaved", "Profile saved successfully!"))
+    } catch (error) {
+      console.error("❌ Save profile error:", error)
+      Alert.alert(t("error", "Error"), error?.message || "Failed to save profile")
+    } finally {
       setLoading(false)
-    }, 1200)
-  }, [])
-
-  const handleSaveProfile = () => {
-    alert(t("profileSaved", "Profile saved successfully!"))
+    }
   }
+  
 
-  if (loading) {
+  // Show loading if not authenticated
+  if (!isAuthenticated || !user) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -162,6 +269,7 @@ const SettingsScreen = () => {
                 style={styles.input}
                 value={profile.name}
                 onChangeText={(text) => setProfile({ ...profile, name: text })}
+                placeholder={t("enterFullName", "Enter your full name")}
               />
             </View>
             <View style={styles.inputContainer}>
@@ -171,6 +279,7 @@ const SettingsScreen = () => {
                 value={profile.email}
                 onChangeText={(text) => setProfile({ ...profile, email: text })}
                 keyboardType="email-address"
+                placeholder={t("enterEmail", "Enter your email")}
               />
             </View>
             <View style={styles.inputContainer}>
@@ -180,6 +289,16 @@ const SettingsScreen = () => {
                 value={profile.phone}
                 onChangeText={(text) => setProfile({ ...profile, phone: text })}
                 keyboardType="phone-pad"
+                placeholder={t("enterPhone", "Enter your phone number")}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>{t("address", "Address")}</Text>
+              <TextInput
+                style={styles.input}
+                value={profile.address}
+                onChangeText={(text) => setProfile({ ...profile, address: text })}
+                placeholder={t("enterAddress", "Enter your address")}
               />
             </View>
           </View>
@@ -202,22 +321,7 @@ const SettingsScreen = () => {
                 onValueChange={handleNotificationToggle}
                 trackColor={{ false: "#E2E8F0", true: "#007EFD" }}
                 thumbColor={isNotificationsEnabled ? "#FFFFFF" : "#FFFFFF"}
-              />
-            </View>
-
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <Ionicons name="moon-outline" size={20} color="#64748B" />
-                <View style={styles.settingText}>
-                  <Text style={styles.settingTitle}>{t("darkMode", "Dark Mode")}</Text>
-                  <Text style={styles.settingSubtitle}>{t("enableDarkTheme", "Enable dark theme")}</Text>
-                </View>
-              </View>
-              <Switch
-                value={isDarkMode}
-                onValueChange={handleDarkModeToggle}
-                trackColor={{ false: "#E2E8F0", true: "#007EFD" }}
-                thumbColor={isDarkMode ? "#FFFFFF" : "#FFFFFF"}
+                disabled={settingsLoading}
               />
             </View>
           </View>
@@ -245,8 +349,14 @@ const SettingsScreen = () => {
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
-          <Text style={styles.saveButtonText}>{t("saveChanges", "Save Changes")}</Text>
+        <TouchableOpacity
+          style={[styles.saveButton, (loading || isLoading || settingsLoading) && styles.disabledButton]}
+          onPress={handleSaveProfile}
+          disabled={loading || isLoading || settingsLoading}
+        >
+          <Text style={styles.saveButtonText}>
+            {loading || isLoading || settingsLoading ? t("saving", "Saving...") : t("saveChanges", "Save Changes")}
+          </Text>
         </TouchableOpacity>
 
         {/* Logout Button */}
@@ -493,6 +603,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     marginBottom: 12,
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
   saveButtonText: {
     fontSize: 16,

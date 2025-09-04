@@ -1,95 +1,58 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
-import { getAuthHeaders } from "../../utils/auth"
+import axiosInstance from "../../utils/axios"
+import * as SecureStore from "expo-secure-store"
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000"
+const USER_UPDATE_URL = "/users"
 
-// Fetch user settings
-export const fetchUserSettings = createAsyncThunk("settings/fetchUserSettings", async (_, { rejectWithValue }) => {
-  try {
-    const headers = await getAuthHeaders()
-
-    const response = await fetch(`${API_BASE_URL}/api/settings`, {
-      method: "GET",
-      headers,
-    })
-
-    // If settings endpoint doesn't exist, return default settings
-    if (response.status === 404) {
-      console.log("Settings endpoint not found, returning default settings")
-      return {
-        notifications: true,
-        darkMode: false,
-        language: "en",
-      }
-    }
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error("Fetch settings error:", error)
-    // Return default settings instead of rejecting
-    return {
-      notifications: true,
-      darkMode: false,
-      language: "en",
-    }
-  }
-})
-
-// Update user settings
+// ✅ Update car owner settings (e.g., notification toggle, etc.)
 export const updateUserSettings = createAsyncThunk(
   "settings/updateUserSettings",
   async (settings, { rejectWithValue }) => {
     try {
-      const headers = await getAuthHeaders()
-
-      const response = await fetch(`${API_BASE_URL}/api/settings`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify(settings),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      return data
-    } catch (error) {
-      console.error("Update settings error:", error)
-      return rejectWithValue(error.message || "Failed to update settings")
+      console.log("💾 Updating car owner settings...", settings)
+      const response = await axiosInstance.put("/settings", settings)
+      console.log("✅ Car owner settings updated:", response.data)
+      return response.data
+    } catch (err) {
+      console.error("❌ Settings update error:", err)
+      return rejectWithValue(err.response?.data?.message || "Failed to update settings")
     }
-  },
+  }
 )
 
-// Update user profile
-export const updateUserProfile = createAsyncThunk(
+// ✅ Update car owner profile (personal info: name, phone, etc.)
+export const updateUserProfileAction = createAsyncThunk(
   "settings/updateUserProfile",
-  async (profileData, { rejectWithValue }) => {
+  async (profileData, { getState, rejectWithValue }) => {
     try {
-      const headers = await getAuthHeaders()
+      const { auth } = getState()
+      const userId = auth.user?._id || auth.user?.id
 
-      const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify(profileData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+      if (!userId) {
+        console.log("❌ No user ID found in auth state")
+        return rejectWithValue("User ID not found")
       }
 
-      const data = await response.json()
-      return data
-    } catch (error) {
-      console.error("Update profile error:", error)
-      return rejectWithValue(error.message || "Failed to update profile")
+      console.log("📝 Updating profile for user:", userId)
+
+      const response = await axiosInstance.put(`${USER_UPDATE_URL}/${userId}`, {
+        name: profileData.name,
+        email: profileData.email,
+        phone: profileData.phone,
+        businessName: profileData.businessName,
+        businessType: profileData.businessType,
+        address: profileData.address,
+        profileImage: profileData.profileImage,
+      })
+
+      const updatedUser = response.data
+      await SecureStore.setItemAsync("user", JSON.stringify(updatedUser))
+
+      console.log("✅ Profile updated successfully")
+      return updatedUser
+    } catch (err) {
+      console.error("❌ Profile update failed:", err)
+      return rejectWithValue(err.response?.data?.message || "Failed to update profile")
     }
-  },
+  }
 )
