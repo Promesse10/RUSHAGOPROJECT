@@ -12,12 +12,15 @@ export const updateUserSettings = createAsyncThunk(
       console.log("💾 Updating car owner settings...", settings)
       const response = await axiosInstance.put("/settings", settings)
       console.log("✅ Car owner settings updated:", response.data)
+
+      await SecureStore.setItemAsync("userProfile", JSON.stringify(response.data.profile))
+
       return response.data
     } catch (err) {
       console.error("❌ Settings update error:", err)
       return rejectWithValue(err.response?.data?.message || "Failed to update settings")
     }
-  }
+  },
 )
 
 // ✅ Update car owner profile (personal info: name, phone, etc.)
@@ -37,16 +40,18 @@ export const updateUserProfileAction = createAsyncThunk(
 
       const response = await axiosInstance.put(`${USER_UPDATE_URL}/${userId}`, {
         name: profileData.name,
-        email: profileData.email,
+        email: profileData.email, // Include email field
         phone: profileData.phone,
+        telephone: profileData.telephone, // Include telephone field
         businessName: profileData.businessName,
         businessType: profileData.businessType,
-        address: profileData.address,
         profileImage: profileData.profileImage,
       })
 
       const updatedUser = response.data
+
       await SecureStore.setItemAsync("user", JSON.stringify(updatedUser))
+      await SecureStore.setItemAsync("userProfile", JSON.stringify(updatedUser))
 
       console.log("✅ Profile updated successfully")
       return updatedUser
@@ -54,5 +59,30 @@ export const updateUserProfileAction = createAsyncThunk(
       console.error("❌ Profile update failed:", err)
       return rejectWithValue(err.response?.data?.message || "Failed to update profile")
     }
-  }
+  },
+)
+
+export const changePasswordAction = createAsyncThunk(
+  "settings/changePassword",
+  async (passwordData, { getState, rejectWithValue }) => {
+    try {
+      const { auth } = getState()
+      const userId = auth.user?._id || auth.user?.id
+
+      if (!userId) {
+        return rejectWithValue("User ID not found")
+      }
+
+      const response = await axiosInstance.put(`${USER_UPDATE_URL}/${userId}/password`, {
+        oldPassword: passwordData.oldPassword,
+        newPassword: passwordData.newPassword,
+      })
+
+      console.log("✅ Password changed successfully")
+      return response.data
+    } catch (err) {
+      console.error("❌ Password change failed:", err)
+      return rejectWithValue(err.response?.data?.message || "Failed to change password")
+    }
+  },
 )

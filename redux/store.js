@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit'
 import signupReducer from './slices/signupSlice'
-import loginReducer from "./slices/LoginSlice"
+import loginReducer from "./slices/loginSlice" // Ensure the filename matches exactly
 import dashboardReducer from "./slices/DashboardSlice"
 import userSlice from "./slices/userSlice"
 import settingsReducer from "./slices/settingsSlice"

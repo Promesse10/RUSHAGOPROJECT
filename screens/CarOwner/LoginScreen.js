@@ -14,7 +14,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import { loginAction } from "../../redux/action/LoginActions";
-import { clearLoginState } from "../../redux/slices/LoginSlice";
+import loginReducer from "../../redux/slices/loginSlice"; // Ensure the path and filename are correct
 
 const { width, height } = Dimensions.get("window");
 

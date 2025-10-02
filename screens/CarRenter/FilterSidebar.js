@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     justifyContent: "flex-end",
-    paddingTop: 50, // Account for status bar
+    paddingTop: 10, // Account for status bar
   },
   backdrop: {
     flex: 1,

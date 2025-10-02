@@ -25,6 +25,13 @@ import {
 } from "../../redux/action/LoginActions"
 import { updateUserSettings, fetchUserSettings } from "../../redux/action/settingAction"
 import * as ImagePicker from "expo-image-picker"
+import { createSelector } from "reselect"
+
+const selectSettingsState = (state) => state.settings || {}
+const selectGeneralSettings = createSelector(selectSettingsState, (settings) => settings.general || {})
+const selectNotificationSettings = createSelector(selectSettingsState, (settings) => settings.notifications || {})
+const selectSettingsLoading = createSelector(selectSettingsState, (settings) => settings.loading || false)
+const selectSettingsError = createSelector(selectSettingsState, (settings) => settings.error || null)
 
 const SettingsScreen = () => {
   const navigation = useNavigation()
@@ -35,12 +42,10 @@ const SettingsScreen = () => {
   const { user, isAuthenticated, isLoading } = useSelector((state) => state.auth || {})
 
   // Get settings data from settings slice
-  const general = useSelector((state) => state.settings?.general || {})
-const notifications = useSelector((state) => state.settings?.notifications || {})
-const settingsLoading = useSelector((state) => state.settings?.loading || false)
-const settingsError = useSelector((state) => state.settings?.error || null)
-
-  
+  const general = useSelector(selectGeneralSettings)
+  const notifications = useSelector(selectNotificationSettings)
+  const settingsLoading = useSelector(selectSettingsLoading)
+  const settingsError = useSelector(selectSettingsError)
 
   const [loading, setLoading] = useState(false)
   const [profile, setProfile] = useState({

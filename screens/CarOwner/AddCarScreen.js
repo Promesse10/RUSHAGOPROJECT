@@ -559,7 +559,7 @@ const AddCarScreen = () => {
 
     setValidationErrors(errors)
     if (Object.keys(errors).length > 0) {
-      Alert.alert(t("Required Fields"), t("Fill all required fields"))
+      Alert.alert(t("requiredFields"), t("fillAllRequiredFields"))
       return false
     }
     return true
@@ -866,11 +866,12 @@ const AddCarScreen = () => {
       case 1: // Basic Information
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>{t("Vehicle Information")}</Text>
+            <Text style={styles.stepTitle}>{t("vehicleInformation")}</Text>
+
 
             <View style={styles.inputRow}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t("Make")}</Text>
+                <Text style={styles.label}>{t("make")}</Text>
                 {renderDropdown(
                   carMakes,
                   formData.make,
@@ -883,7 +884,7 @@ const AddCarScreen = () => {
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t("Model")}</Text>
+                <Text style={styles.label}>{t("model")}</Text>
                 {formData.make && !isCustomModel ? (
                   renderDropdown(
                     filteredModels,
@@ -910,7 +911,7 @@ const AddCarScreen = () => {
 
             <View style={styles.inputRow}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t("Year")}</Text>
+                <Text style={styles.label}>{t("year")}</Text>
                 <TextInput
                   style={[styles.input, validationErrors.year && styles.errorBorder]}
                   value={formData.year}
@@ -924,7 +925,7 @@ const AddCarScreen = () => {
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t("Type")}</Text>
+                <Text style={styles.label}>{t("type")}</Text>
                 {renderDropdown(
                   typeOptions,
                   formData.type,
@@ -939,7 +940,7 @@ const AddCarScreen = () => {
 
             <View style={styles.inputRow}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t("Transmission")}</Text>
+                <Text style={styles.label}>{t("transmission")}</Text>
                 {renderDropdown(
                   transmissionOptions,
                   formData.transmission,
@@ -952,7 +953,7 @@ const AddCarScreen = () => {
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t("Fuel Type")}</Text>
+                <Text style={styles.label}>{t("fuelType")}</Text>
                 {renderDropdown(
                   fuelOptions,
                   formData.fuel_type,
@@ -966,7 +967,7 @@ const AddCarScreen = () => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>{t("Seating Capacity")}</Text>
+              <Text style={styles.label}>{t("seatingCapacity")}</Text>
               {renderDropdown(
                 seatsOptions,
                 formData.seatings,
@@ -979,7 +980,7 @@ const AddCarScreen = () => {
             </View>
 
             <View style={styles.featuresContainer}>
-              <Text style={styles.label}>{t("Features")}</Text>
+              <Text style={styles.label}>{t("features")}</Text>
               <View style={styles.featuresGrid}>
                 {features.map((feature) => (
                   <TouchableOpacity
@@ -1005,10 +1006,10 @@ const AddCarScreen = () => {
       case 2: // Owner Information
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>{t("Owner Information")}</Text>
+            <Text style={styles.stepTitle}>{t("ownerInformation")}</Text>
 
             <View style={styles.ownerTypeContainer}>
-              <Text style={styles.label}>{t("Owner Type")}</Text>
+              <Text style={styles.label}>{t("ownerType")}</Text>
               <View style={styles.radioContainer}>
                 <TouchableOpacity
                   style={styles.radioOption}
@@ -1018,7 +1019,7 @@ const AddCarScreen = () => {
                     {formData.ownerType === "individual" && <View style={styles.radioInner} />}
                   </View>
                   <Ionicons name="person-outline" size={20} color="#64748B" />
-                  <Text style={styles.radioText}>{t("Individual")}</Text>
+                  <Text style={styles.radioText}>{t("individual")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1029,7 +1030,7 @@ const AddCarScreen = () => {
                     {formData.ownerType === "company" && <View style={styles.radioInner} />}
                   </View>
                   <Ionicons name="business-outline" size={20} color="#64748B" />
-                  <Text style={styles.radioText}>{t("Company")}</Text>
+                  <Text style={styles.radioText}>{t("company")}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1043,13 +1044,13 @@ const AddCarScreen = () => {
                   color={isManualEntry ? "#F59E0B" : "#007EFD"}
                 />
                 <Text style={[styles.toggleButtonText, { color: isManualEntry ? "#F59E0B" : "#007EFD" }]}>
-                  {isManualEntry ? t("Manual Entry") : t("Auto-Complete")}
+                  {isManualEntry ? t("manualEntry") : t("autoComplete")}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>{formData.ownerType === "company" ? t("Company Name") : t("Full Name")}</Text>
+              <Text style={styles.label}>{formData.ownerType === "company" ? t("companyName") : t("fullName")}</Text>
               <View style={styles.ownerInputContainer}>
                 <TextInput
                   style={[styles.input, validationErrors.ownerName && styles.errorBorder]}
@@ -1093,12 +1094,12 @@ const AddCarScreen = () => {
                 </View>
               )}
 
-              {validationErrors.ownerName && <Text style={styles.errorText}>{t("Invalid Name")}</Text>}
+              {validationErrors.ownerName && <Text style={styles.errorText}>{t("invalidName")}</Text>}
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>
-                <Ionicons name="call-outline" size={16} /> {t("Phone Number")}
+                <Ionicons name="call-outline" size={16} /> {t("phoneNumber")}
               </Text>
               <View style={styles.phoneContainer}>
                 <TouchableOpacity
@@ -1134,10 +1135,10 @@ const AddCarScreen = () => {
       case 3: // Location Details
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>{t("Location Details")}</Text>
+            <Text style={styles.stepTitle}>{t("locationDetails")}</Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>{t("Province")}</Text>
+              <Text style={styles.label}>{t("province")}</Text>
               {renderDropdown(
                 provinces,
                 formData.province,
@@ -1153,7 +1154,7 @@ const AddCarScreen = () => {
                     })
                   }
                 },
-                t("Select Province"),
+                t("selectProvince"),
                 showProvinceDropdown,
                 setShowProvinceDropdown,
                 "province",
@@ -1161,7 +1162,7 @@ const AddCarScreen = () => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>{t("Address")}</Text>
+              <Text style={styles.label}>{t("address")}</Text>
               <View style={styles.addressInputContainer}>
                 <TextInput
                   style={[styles.input, validationErrors.address && styles.errorBorder]}
@@ -1199,7 +1200,7 @@ const AddCarScreen = () => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>{t("Country")}</Text>
+              <Text style={styles.label}>{t("country")}</Text>
               <TextInput style={styles.input} value={formData.country} editable={false} />
             </View>
 
@@ -1212,12 +1213,12 @@ const AddCarScreen = () => {
               <View style={styles.locationActions}>
                 <TouchableOpacity style={styles.mapButton} onPress={openMapModal}>
                   <Ionicons name="map-outline" size={20} color="#007EFD" />
-                  <Text style={styles.mapButtonText}>{t("Select on Map")}</Text>
+                  <Text style={styles.mapButtonText}>{t("selectonMap")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.currentLocationButton} onPress={getCurrentLocation}>
                   <Ionicons name="locate-outline" size={20} color="#10B981" />
-                  <Text style={styles.currentLocationButtonText}>{t("Current Location")}</Text>
+                  <Text style={styles.currentLocationButtonText}>{t("currentLocation")}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -1225,7 +1226,7 @@ const AddCarScreen = () => {
                 <View style={styles.selectedLocationContainer}>
                   <Ionicons name="checkmark-circle" size={20} color="#10B981" />
                   <Text style={styles.selectedLocationText}>
-                    {t("Location selected")}: {selectedLocation.latitude.toFixed(6)},{" "}
+                    {t("locationselected")}: {selectedLocation.latitude.toFixed(6)},{" "}
                     {selectedLocation.longitude.toFixed(6)}
                   </Text>
                 </View>
@@ -1237,15 +1238,15 @@ const AddCarScreen = () => {
       case 4: // Pricing & Category
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>{t("Pricing and Category")}</Text>
+            <Text style={styles.stepTitle}>{t("pricingandCategory")}</Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>{t("Category")}</Text>
+              <Text style={styles.label}>{t("category")}</Text>
               {renderDropdown(
                 categoryOptions,
                 formData.category,
                 (value) => setFormData({ ...formData, category: value }),
-                t("Select Category"),
+                t("selectCategory"),
                 showCategoryDropdown,
                 setShowCategoryDropdown,
                 "category",
@@ -1295,18 +1296,18 @@ const AddCarScreen = () => {
       case 5: // Media Upload
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>{t("Upload Photos")}</Text>
+            <Text style={styles.stepTitle}>{t("uploadPhotos")}</Text>
 
             <View style={styles.photosContainer}>
-              <Text style={styles.label}>{t("Car Photos")}</Text>
-              {validationErrors.images && <Text style={styles.errorText}>{t("Upload all required photos")}</Text>}
+              <Text style={styles.label}>{t("carPhotos")}</Text>
+              {validationErrors.images && <Text style={styles.errorText}>{t("uploadallrequired photos")}</Text>}
 
               <View style={styles.photosGrid}>
                 {[
-                  { key: "interior", label: t("Interior View") },
-                  { key: "exterior_front", label: t("Front Exterior") },
-                  { key: "exterior_side", label: t("Side Exterior") },
-                  { key: "exterior_rear", label: t("Rear Exterior") },
+                  { key: "interior", label: t("interiorView") },
+                  { key: "exterior_front", label: t("frontExterior") },
+                  { key: "exterior_side", label: t("sideExterior") },
+                  { key: "exterior_rear", label: t("rearExterior") },
                 ].map((photo) => (
                   <View
                     key={photo.key}
@@ -1325,7 +1326,7 @@ const AddCarScreen = () => {
                     <Text style={styles.photoLabel}>{photo.label}</Text>
                     <TouchableOpacity style={styles.chooseButton} onPress={() => pickImage(photo.key)}>
                       <Ionicons name="cloud-upload-outline" size={16} color="#007EFD" />
-                      <Text style={styles.chooseButtonText}>{t("Choose")}</Text>
+                      <Text style={styles.chooseButtonText}>{t("choose")}</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -1334,7 +1335,7 @@ const AddCarScreen = () => {
 
             <View style={styles.thumbnailContainer}>
               <Text style={styles.label}>
-                {t("Advertisement Thumbnail")} <Text style={styles.optionalText}>({t("Optional")})</Text>
+                {t("advertisementThumbnail")} <Text style={styles.optionalText}>({t("optional")})</Text>
               </Text>
 
               {!paymentCompleted && (
@@ -1366,7 +1367,7 @@ const AddCarScreen = () => {
                 >
                   <Ionicons name="cloud-upload-outline" size={16} color={paymentCompleted ? "#007EFD" : "#9CA3AF"} />
                   <Text style={[styles.chooseButtonText, !paymentCompleted && styles.disabledButtonText]}>
-                    {t("Choose Thumbnail")}
+                    {t("chooseThumbnail")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1386,7 +1387,7 @@ const AddCarScreen = () => {
           <Ionicons name="arrow-back-outline" size={24} color="#1E293B" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>{isEditing ? t("Edit Car") : t("Add New Car")}</Text>
+          <Text style={styles.title}>{isEditing ? t("editCar") : t("addNewCar")}</Text>
           <Text style={styles.subtitle}>{t("Step {{current}} of {{total}}", { current: currentStep, total: 5 })}</Text>
         </View>
         <View style={{ width: 40 }} />
@@ -1405,7 +1406,7 @@ const AddCarScreen = () => {
           disabled={currentStep === 1}
         >
           <Ionicons name="arrow-back-outline" size={16} color={currentStep === 1 ? "#9CA3AF" : "#475569"} />
-          <Text style={[styles.navButtonText, currentStep === 1 && styles.disabledButtonText]}>{t("Previous")}</Text>
+          <Text style={[styles.navButtonText, currentStep === 1 && styles.disabledButtonText]}>{t("previous")}</Text>
         </TouchableOpacity>
 
         {currentStep === 5 ? (
@@ -1415,12 +1416,12 @@ const AddCarScreen = () => {
             disabled={isCreating || isUpdating}
           >
             <Text style={styles.submitButtonText}>
-              {isCreating || isUpdating ? t("Processing...") : isEditing ? t("Save Changes") : t("Submit")}
+              {isCreating || isUpdating ? t("Processing...") : isEditing ? t("saveChanges") : t("submit")}
             </Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={[styles.navButton, styles.nextButton]} onPress={handleNext}>
-            <Text style={styles.nextButtonText}>{t("Next")}</Text>
+            <Text style={styles.nextButtonText}>{t("next")}</Text>
             <Ionicons name="arrow-forward-outline" size={16} color="#FFFFFF" />
           </TouchableOpacity>
         )}
@@ -1528,6 +1529,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   subtitle: {
+    padding: 4,
     fontSize: 14,
     color: "#64748B",
   },
@@ -1573,7 +1575,7 @@ const styles = StyleSheet.create({
   stepLine: {
     width: 40,
     height: 2,
-    marginHorizontal: 8,
+    marginHorizontal: 1,
   },
   stepLineActive: {
     backgroundColor: "#007EFD",

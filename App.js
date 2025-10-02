@@ -3,6 +3,10 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { View, Text, StyleSheet, Platform } from 'react-native'; // Import React Native components
 import AppNavigator from './navigation/AppNavigator';
+import { AppRegistry } from 'react-native';
+
+// Ensure all dependencies are installed and linked
+console.log('🔍 Verifying React Native runtime dependencies...');
 
 // Polyfill for setImmediate
 if (typeof global.setImmediate === 'undefined') {

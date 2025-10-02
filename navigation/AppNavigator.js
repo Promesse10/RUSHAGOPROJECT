@@ -5,7 +5,7 @@ import { StatusBar, Platform } from "react-native"
 import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import "../utils/i18n" // <-- Make sure this is present to initialize i18n
-
+import Ionicons from "react-native-vector-icons/Ionicons";
 // Screens
 import OnboardingScreen from "../screens/OnboardingScreen"
 import AuthScreen from "../screens/auth-screen"
@@ -48,41 +48,40 @@ const CarOwnerTabNavigator = () => {
   const { t } = useTranslation()
 
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName
-          if (route.name === "Dashboard") {
-            iconName = focused ? "home" : "home-outline"
-          } else if (route.name === "MyCars") {
-            iconName = focused ? "car" : "car-outline"
-          } else if (route.name === "AddCar") {
-            iconName = focused ? "add" : "add-outline"
-          } else if (route.name === "Settings") {
-            iconName = focused ? "settings" : "settings-outline"
-          }
-        },
-        tabBarActiveTintColor: "#007EFD",
-        tabBarInactiveTintColor: "#9CA3AF",
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          elevation: 8,
-          height: 85,
-          paddingTop: 12,
-          paddingBottom: 20,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "500",
-        },
-      })}
-    >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: t("home") }} />
-      <Tab.Screen name="MyCars" component={MyCarsScreen} options={{ tabBarLabel: t("myCars", "My Cars") }} />
-      <Tab.Screen name="AddCar" component={AddCarScreen} options={{ tabBarLabel: t("addCar", "Add Car") }} />
-      <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarLabel: t("settings") }} />
-    </Tab.Navigator>
+<Tab.Navigator
+  screenOptions={({ route }) => ({
+    tabBarIcon: ({ focused, color, size }) => {
+      let iconName;
+      if (route.name === "Dashboard") {
+        iconName = focused ? "home" : "home-outline";
+      } else if (route.name === "MyCars") {
+        iconName = focused ? "car" : "car-outline";
+      } else if (route.name === "AddCar") {
+        iconName = focused ? "add-circle" : "add-circle-outline";
+      } else if (route.name === "Settings") {
+        iconName = focused ? "settings" : "settings-outline";
+      }
+
+      return <Ionicons name={iconName} size={30} color={color} />;
+    },
+    tabBarShowLabel: false, // 👈 hides the text labels
+    tabBarActiveTintColor: "#007EFD",
+    tabBarInactiveTintColor: "#9CA3AF",
+    headerShown: false,
+    tabBarStyle: {
+      backgroundColor: "#FFFFFF",
+      elevation: 8,
+      height: 100,
+      paddingTop: 12,
+      paddingBottom: 30,
+    },
+  })}
+>
+  <Tab.Screen name="Dashboard" component={DashboardScreen} />
+  <Tab.Screen name="MyCars" component={MyCarsScreen} />
+  <Tab.Screen name="AddCar" component={AddCarScreen} />
+  <Tab.Screen name="Settings" component={SettingsScreen} />
+</Tab.Navigator>
   )
 }
 

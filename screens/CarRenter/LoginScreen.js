@@ -20,7 +20,7 @@ import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useDispatch, useSelector } from "react-redux"
 import { loginAction } from "../../redux/action/LoginActions"
-import { clearLoginState } from "../../redux/slices/LoginSlice"
+import { clearLoginState } from "../../redux/slices/loginSlice"
 
 const { width, height } = Dimensions.get("window")
 

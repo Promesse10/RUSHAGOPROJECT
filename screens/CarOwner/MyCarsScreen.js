@@ -207,14 +207,14 @@ const MyCarsScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>{t("myCars", "My Cars")}</Text>
-          <Text style={styles.subtitle}>{t("manageVehicles", "Manage your vehicle listings")}</Text>
+          <Text style={styles.title}>{t("myCars")}</Text>
+          <Text style={styles.subtitle}>{t("manageVehicles")}</Text>
         </View>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => dispatch(getMyCarsAction())}>
-            <Text style={styles.retryButtonText}>{t("retry", "Retry")}</Text>
+            <Text style={styles.retryButtonText}>{t("retry")}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -226,8 +226,8 @@ const MyCarsScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>{t("myCars", "My Cars")}</Text>
-          <Text style={styles.subtitle}>{t("manageVehicles", "Manage your vehicle listings")}</Text>
+          <Text style={styles.title}>{t("myCars")}</Text>
+          <Text style={styles.subtitle}>{t("manageVehicles")}</Text>
         </View>
         <View style={styles.emptyContainer}>
           <Ionicons name="car-outline" size={64} color="#9CA3AF" />

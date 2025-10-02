@@ -78,7 +78,7 @@ export const logoutAction = createAsyncThunk("auth/logout", async (_, { rejectWi
   }
 })
 
-// ✅ FIXED: Update user profile via proper user API endpoint
+// ✅ ENHANCED: Update user profile with password change support
 export const updateUserProfileAction = createAsyncThunk(
   "auth/updateProfile",
   async (profileData, { getState, rejectWithValue }) => {
@@ -91,7 +91,7 @@ export const updateUserProfileAction = createAsyncThunk(
         return rejectWithValue("User ID not found")
       }
 
-      const response = await axiosInstance.put(`/users/${userId}`, {
+      const updatePayload = {
         name: profileData.name,
         email: profileData.email,
         phone: profileData.phone,
@@ -99,7 +99,15 @@ export const updateUserProfileAction = createAsyncThunk(
         businessType: profileData.businessType,
         address: profileData.address,
         profileImage: profileData.profileImage,
-      })
+      }
+
+      // Add password fields if changing password
+      if (profileData.oldPassword && profileData.newPassword) {
+        updatePayload.oldPassword = profileData.oldPassword
+        updatePayload.newPassword = profileData.newPassword
+      }
+
+      const response = await axiosInstance.put(`/users/${userId}`, updatePayload)
 
       const updatedUser = response.data
       await SecureStore.setItemAsync("user", JSON.stringify(updatedUser))
@@ -110,23 +118,23 @@ export const updateUserProfileAction = createAsyncThunk(
       console.error("❌ Profile update error:", err)
       return rejectWithValue(err.response?.data?.message || "Failed to update profile")
     }
-  }
+  },
 )
+
 export const googleLoginAction = createAsyncThunk(
   "auth/googleLogin",
   async ({ idToken, userType }, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`${process.env.EXPO_PUBLIC_API_URL}/auth/google`, { idToken, userType });
-      const { token, user } = res.data;
+      const res = await axios.post(`${process.env.EXPO_PUBLIC_API_URL}/auth/google`, { idToken, userType })
+      const { token, user } = res.data
 
-      await SecureStore.setItemAsync("token", token);
-      await SecureStore.setItemAsync("user", JSON.stringify(user));
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      await SecureStore.setItemAsync("token", token)
+      await SecureStore.setItemAsync("user", JSON.stringify(user))
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`
 
-      return { token, user };
+      return { token, user }
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Google login failed");
+      return rejectWithValue(err.response?.data?.message || "Google login failed")
     }
-  }
-);
-
+  },
+)

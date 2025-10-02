@@ -1,18 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   StyleSheet,
   SafeAreaView,
   Image,
   Modal,
   TouchableWithoutFeedback,
   Dimensions,
+  Animated,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
@@ -42,7 +42,92 @@ const DashboardScreen = () => {
   const [stats, setStats] = useState([])
   const [activities, setActivities] = useState([])
   const socket = io(`${process.env.EXPO_PUBLIC_API_URL}`)
-  const [newCarName, setNewCarName] = useState("")
+
+  const [currentCarIndex, setCurrentCarIndex] = useState(0)
+  const fadeAnim = useRef(new Animated.Value(1)).current
+  const scaleAnim = useRef(new Animated.Value(1)).current
+  const textFadeAnim = useRef(new Animated.Value(1)).current
+
+  const carBrands = [
+    // Japanese Brands
+    { id: 1, name: "Toyota", logo: "https://www.carlogos.org/car-logos/toyota-logo.png" },
+    { id: 2, name: "Honda", logo: "https://www.carlogos.org/car-logos/honda-logo.png" },
+    { id: 3, name: "Nissan", logo: "https://www.carlogos.org/car-logos/nissan-logo.png" },
+    { id: 4, name: "Mazda", logo: "https://www.carlogos.org/car-logos/mazda-logo.png" },
+    { id: 5, name: "Subaru", logo: "https://www.carlogos.org/car-logos/subaru-logo.png" },
+    { id: 6, name: "Mitsubishi", logo: "https://www.carlogos.org/car-logos/mitsubishi-logo.png" },
+    { id: 7, name: "Suzuki", logo: "https://www.carlogos.org/car-logos/suzuki-logo.png" },
+    { id: 8, name: "Lexus", logo: "https://www.carlogos.org/car-logos/lexus-logo.png" },
+    { id: 9, name: "Infiniti", logo: "https://www.carlogos.org/car-logos/infiniti-logo.png" },
+    { id: 10, name: "Acura", logo: "https://www.carlogos.org/car-logos/acura-logo.png" },
+
+    // German Brands
+    { id: 11, name: "BMW", logo: "https://www.carlogos.org/car-logos/bmw-logo.png" },
+    { id: 12, name: "Mercedes-Benz", logo: "https://www.carlogos.org/car-logos/mercedes-benz-logo.png" },
+    { id: 13, name: "Audi", logo: "https://www.carlogos.org/car-logos/audi-logo.png" },
+    { id: 14, name: "Volkswagen", logo: "https://www.carlogos.org/car-logos/volkswagen-logo.png" },
+    { id: 15, name: "Porsche", logo: "https://www.carlogos.org/car-logos/porsche-logo.png" },
+    { id: 16, name: "Opel", logo: "https://www.carlogos.org/car-logos/opel-logo.png" },
+
+    // American Brands
+    { id: 17, name: "Ford", logo: "https://www.carlogos.org/car-logos/ford-logo.png" },
+    { id: 18, name: "Chevrolet", logo: "https://www.carlogos.org/car-logos/chevrolet-logo.png" },
+    { id: 19, name: "Tesla", logo: "https://www.carlogos.org/car-logos/tesla-logo.png" },
+    { id: 20, name: "Jeep", logo: "https://www.carlogos.org/car-logos/jeep-logo.png" },
+    { id: 21, name: "Dodge", logo: "https://www.carlogos.org/car-logos/dodge-logo.png" },
+    { id: 22, name: "Cadillac", logo: "https://www.carlogos.org/car-logos/cadillac-logo.png" },
+    { id: 23, name: "GMC", logo: "https://www.carlogos.org/car-logos/gmc-logo.png" },
+    { id: 24, name: "Buick", logo: "https://www.carlogos.org/car-logos/buick-logo.png" },
+    { id: 25, name: "Lincoln", logo: "https://www.carlogos.org/car-logos/lincoln-logo.png" },
+    { id: 26, name: "Ram", logo: "https://www.carlogos.org/car-logos/ram-logo.png" },
+
+    // Italian Brands
+    { id: 27, name: "Ferrari", logo: "https://www.carlogos.org/car-logos/ferrari-logo.png" },
+    { id: 28, name: "Lamborghini", logo: "https://www.carlogos.org/car-logos/lamborghini-logo.png" },
+    { id: 29, name: "Maserati", logo: "https://www.carlogos.org/car-logos/maserati-logo.png" },
+    { id: 30, name: "Alfa Romeo", logo: "https://www.carlogos.org/car-logos/alfa-romeo-logo.png" },
+    { id: 31, name: "Fiat", logo: "https://www.carlogos.org/car-logos/fiat-logo.png" },
+
+    // Korean Brands
+    { id: 32, name: "Hyundai", logo: "https://www.carlogos.org/car-logos/hyundai-logo.png" },
+    { id: 33, name: "Kia", logo: "https://www.carlogos.org/car-logos/kia-logo.png" },
+    { id: 34, name: "Genesis", logo: "https://www.carlogos.org/car-logos/genesis-logo.png" },
+
+    // Swedish Brands
+    { id: 35, name: "Volvo", logo: "https://www.carlogos.org/car-logos/volvo-logo.png" },
+    { id: 36, name: "Saab", logo: "https://www.carlogos.org/car-logos/saab-logo.png" },
+
+    // British Brands
+    { id: 37, name: "Jaguar", logo: "https://www.carlogos.org/car-logos/jaguar-logo.png" },
+    { id: 38, name: "Land Rover", logo: "https://www.carlogos.org/car-logos/land-rover-logo.png" },
+    { id: 39, name: "Aston Martin", logo: "https://www.carlogos.org/car-logos/aston-martin-logo.png" },
+    { id: 40, name: "Bentley", logo: "https://www.carlogos.org/car-logos/bentley-logo.png" },
+    { id: 41, name: "Rolls-Royce", logo: "https://www.carlogos.org/car-logos/rolls-royce-logo.png" },
+    { id: 42, name: "Mini", logo: "https://www.carlogos.org/car-logos/mini-logo.png" },
+
+    // French Brands
+    { id: 43, name: "Peugeot", logo: "https://www.carlogos.org/car-logos/peugeot-logo.png" },
+    { id: 44, name: "Renault", logo: "https://www.carlogos.org/car-logos/renault-logo.png" },
+    { id: 45, name: "Citroën", logo: "https://www.carlogos.org/car-logos/citroen-logo.png" },
+
+    // Other European Brands
+    { id: 46, name: "Skoda", logo: "https://www.carlogos.org/car-logos/skoda-logo.png" },
+    { id: 47, name: "Seat", logo: "https://www.carlogos.org/car-logos/seat-logo.png" },
+
+    // Luxury & Sports Brands
+    { id: 48, name: "Bugatti", logo: "https://www.carlogos.org/car-logos/bugatti-logo.png" },
+    { id: 49, name: "McLaren", logo: "https://www.carlogos.org/car-logos/mclaren-logo.png" },
+    { id: 50, name: "Lotus", logo: "https://www.carlogos.org/car-logos/lotus-logo.png" },
+
+    // Chinese Brands
+    { id: 51, name: "BYD", logo: "https://www.carlogos.org/car-logos/byd-logo.png" },
+    { id: 52, name: "Geely", logo: "https://www.carlogos.org/car-logos/geely-logo.png" },
+
+    // Indian Brands
+    { id: 53, name: "Tata", logo: "https://www.carlogos.org/car-logos/tata-logo.png" },
+    { id: 54, name: "Mahindra", logo: "https://www.carlogos.org/car-logos/mahindra-logo.png" },
+  ]
+
   const [showLanguageOptions, setShowLanguageOptions] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [expandedNotifications, setExpandedNotifications] = useState({})
@@ -84,25 +169,88 @@ const DashboardScreen = () => {
     },
   ])
 
-  // RushGo logo URL
+  const languages = [
+    {
+      code: "rw",
+      name: "Kinyarwanda",
+      flag: "https://flagcdn.com/w40/rw.png", // Rwanda
+    },
+    {
+      code: "en",
+      name: "English",
+      flag: "https://flagcdn.com/w40/us.png", // USA
+    },
+    {
+      code: "fr",
+      name: "Français",
+      flag: "https://flagcdn.com/w40/fr.png", // France
+    },
+  ];
+  
+
   const rushGoLogo = "https://res.cloudinary.com/def0cjmh2/image/upload/v1747228499/logo_jlnvdx.png"
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 0.8,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(textFadeAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(textFadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start()
+
+      setCurrentCarIndex((prevIndex) => (prevIndex + 1) % carBrands.length)
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [])
+
   useEffect(() => {
     socket.on("connect", () => {
       console.log("✅ Connected to socket.io server")
     })
-  
+
     socket.on("carUpdated", (data) => {
       console.log("📡 Real-time update received:", data)
-      dispatch(fetchDashboardStats()) // Refresh data live
+      dispatch(fetchDashboardStats())
     })
-  
+
     return () => {
       socket.off("carUpdated")
       socket.disconnect()
     }
   }, [dispatch])
-  
-  // ✅ Check authentication and load data
+
   useEffect(() => {
     if (!isAuthenticated || !user) {
       console.log("❌ User not authenticated, should redirect to login...")
@@ -114,7 +262,6 @@ const DashboardScreen = () => {
     dispatch(fetchDashboardStats())
   }, [isAuthenticated, user, dispatch])
 
-  // ✅ Refetch when screen is focused
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
       if (isAuthenticated && user) {
@@ -126,7 +273,6 @@ const DashboardScreen = () => {
     return unsubscribe
   }, [navigation, dispatch, isAuthenticated, user])
 
-  // Load saved language preference
   const loadSavedLanguage = async () => {
     try {
       const savedLanguage = await AsyncStorage.getItem("user_language")
@@ -290,39 +436,7 @@ const DashboardScreen = () => {
   }, [i18n.language, dispatch, isAuthenticated, user])
 
   const handleAddCar = () => {
-    if (newCarName.trim()) {
-      navigation.navigate("AddCar", {
-        draftData: {
-          formData: {
-            make: newCarName.trim(),
-            customMake: "",
-            year: "",
-            type: "",
-            phone: user?.phone || "+250 788 123 456",
-            ownerType: "individual",
-            companyName: "",
-            companyPhone: "",
-            transmission: "",
-            fuelType: "",
-            seats: "",
-            features: [],
-            address: "",
-            latitude: "",
-            longitude: "",
-            pricingType: "daily",
-            price: "",
-            photos: {
-              frontExterior: null,
-              sideExterior: null,
-              rearExterior: null,
-              interior: null,
-            },
-          },
-          currentStep: 1,
-        },
-      })
-      setNewCarName("")
-    }
+    navigation.navigate("AddCar")
   }
 
   const handleNotificationPress = () => {
@@ -403,35 +517,8 @@ const DashboardScreen = () => {
     }
   }
 
-  const renderCurrentFlag = () => {
-    if (currentLanguage === "rw") {
-      return (
-        <Image
-          source={{
-            uri: "https://media.istockphoto.com/id/1425795893/vector/the-national-flag-of-the-world-rwanda.jpg?s=612x612&w=0&k=20&c=t_Ax2BkNNhWWjcayvZW_JT7Wmlt8rHyRbcbNblhAzhg=",
-          }}
-          style={styles.dropdownFlag}
-        />
-      )
-    } else if (currentLanguage === "en") {
-      return (
-        <Image
-          source={{
-            uri: "https://png.pngtree.com/png-clipart/20230821/original/pngtree-american-flag-icon-template-picture-image_8142643.png",
-          }}
-          style={styles.dropdownFlag}
-        />
-      )
-    } else {
-      return (
-        <Image
-          source={{
-            uri: "https://cdn-icons-png.flaticon.com/512/197/197560.png",
-          }}
-          style={styles.dropdownFlag}
-        />
-      )
-    }
+  const getCurrentLanguage = () => {
+    return languages.find((lang) => lang.code === currentLanguage) || languages[0]
   }
 
   // ✅ Show error state
@@ -487,45 +574,28 @@ const DashboardScreen = () => {
             {hasNewNotifications && <View style={styles.notificationDot} />}
           </TouchableOpacity>
 
-          {/* Language Selector */}
           <View style={{ position: "relative", marginLeft: 16 }}>
             <TouchableOpacity
               style={styles.languageButton}
               onPress={() => setShowLanguageOptions(!showLanguageOptions)}
             >
-              {renderCurrentFlag()}
+              <Image source={{ uri: getCurrentLanguage().flag }} style={styles.currentLanguageFlag} />
               <Ionicons name="chevron-down-outline" size={16} color="#64748B" style={styles.chevron} />
             </TouchableOpacity>
 
             {showLanguageOptions && (
-              <View style={styles.dropdown}>
-                <TouchableOpacity onPress={() => changeLanguage("rw")} style={styles.dropdownItem}>
-                  <Image
-                    source={{
-                      uri: "https://media.istockphoto.com/id/1425795893/vector/the-national-flag-of-the-world-rwanda.jpg?s=612x612&w=0&k=20&c=t_Ax2BkNNhWWjcayvZW_JT7Wmlt8rHyRbcbNblhAzhg=",
-                    }}
-                    style={[styles.dropdownFlag, currentLanguage === "rw" && styles.selectedFlag]}
-                  />
-                  <Text style={styles.languageText}>Kinyarwanda</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => changeLanguage("en")} style={styles.dropdownItem}>
-                  <Image
-                    source={{
-                      uri: "https://png.pngtree.com/png-clipart/20230821/original/pngtree-american-flag-icon-template-picture-image_8142643.png",
-                    }}
-                    style={[styles.dropdownFlag, currentLanguage === "en" && styles.selectedFlag]}
-                  />
-                  <Text style={styles.languageText}>English</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => changeLanguage("fr")} style={styles.dropdownItem}>
-                  <Image
-                    source={{
-                      uri: "https://cdn-icons-png.flaticon.com/512/197/197560.png",
-                    }}
-                    style={[styles.dropdownFlag, currentLanguage === "fr" && styles.selectedFlag]}
-                  />
-                  <Text style={styles.languageText}>Français</Text>
-                </TouchableOpacity>
+              <View style={styles.languageDropdown}>
+                {languages.map((language) => (
+                  <TouchableOpacity
+                    key={`language-${language.code}`}
+                    style={[styles.languageOption, currentLanguage === language.code && styles.selectedLanguageOption]}
+                    onPress={() => changeLanguage(language.code)}
+                  >
+                    <Image source={{ uri: language.flag }} style={styles.languageFlag} />
+                    <Text style={styles.languageName}>{language.name}</Text>
+                    {currentLanguage === language.code && <Ionicons name="checkmark" size={20} color="#007EFD" />}
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
           </View>
@@ -534,24 +604,44 @@ const DashboardScreen = () => {
 
       {/* Main Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Add Car */}
-        <View style={styles.addCarContainer}>
-          <Ionicons name="add-outline" size={24} color="#007EFD" />
-          <TextInput
-            style={styles.input}
-            value={newCarName}
-            onChangeText={setNewCarName}
-            placeholder={t("enterCarName", "Andika ubwoko bw'imodoka (urugero: Toyota, BMW)...")}
-            placeholderTextColor="#9CA3AF"
-          />
-          <TouchableOpacity style={styles.addButton} onPress={handleAddCar}>
-            <Text style={styles.addButtonText}>{t("add", "Ongeraho")}</Text>
+        <View style={styles.addCarSection}>
+          <View style={styles.addCarHeader}>
+            
+          <Text style={styles.addCarTitle}>{t("rentYourCar")}</Text>
+
+          </View>
+
+          <View style={styles.carouselContainer}>
+            <Animated.View
+              style={[
+                styles.carBrandCard,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ scale: scaleAnim }],
+                },
+              ]}
+            >
+              <View style={styles.carBrandLogoContainer}>
+                <Image source={{ uri: carBrands[currentCarIndex].logo }} style={styles.carBrandLogo} />
+              </View>
+            </Animated.View>
+
+           
+          </View>
+
+          <Animated.Text style={[styles.chooseCarText, { opacity: textFadeAnim }]}>
+            {carBrands[currentCarIndex].name}
+          </Animated.Text>
+
+          <TouchableOpacity style={styles.addCarButton} onPress={handleAddCar}>
+            <Ionicons name="add-circle" size={24} color="#FFFFFF" />
+            <Text style={styles.addCarButtonText}>{t("addNewCar", " Add New Car")}</Text>
           </TouchableOpacity>
         </View>
 
         {/* ✅ UPDATED: Enhanced Stats Grid */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("quickStats", "Imibare y'ibanze")}</Text>
+          <Text style={styles.sectionTitle}>{t("quickStats", "Imibare y'imodoka ufite")}</Text>
           {dashboardLoading ? (
             <View style={styles.loadingStats}>
               <Text style={styles.loadingText}>{t("loading", "Loading...")}</Text>
@@ -573,41 +663,7 @@ const DashboardScreen = () => {
         </View>
 
         {/* ✅ UPDATED: Enhanced Activities */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("recentActivity", "Ibikorwa bya vuba")}</Text>
-          {dashboardLoading ? (
-            <View style={styles.loadingStats}>
-              <Text style={styles.loadingText}>{t("loading", "Loading...")}</Text>
-            </View>
-          ) : (
-            <View style={styles.activitiesList}>
-              {activities.map((activity) => (
-                <View key={activity.id} style={styles.activityCard}>
-                  <View style={[styles.activityIcon, { backgroundColor: `${activity.color}15` }]}>
-                    <Ionicons name={activity.icon} size={20} color={activity.color} />
-                  </View>
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityMessage}>{activity.message}</Text>
-                    <Text style={styles.activityTime}>{activity.time}</Text>
-                  </View>
-                </View>
-              ))}
-
-              {/* ✅ Quick Action Buttons */}
-              <View style={styles.quickActions}>
-                <TouchableOpacity style={styles.quickActionButton} onPress={() => navigation.navigate("MyCars")}>
-                  <Ionicons name="car-outline" size={20} color="#007EFD" />
-                  <Text style={styles.quickActionText}>{t("viewMyCars", "View My Cars")}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.quickActionButton} onPress={() => navigation.navigate("AddCar")}>
-                  <Ionicons name="add-circle-outline" size={20} color="#10B981" />
-                  <Text style={styles.quickActionText}>{t("addNewCar", "Add New Car")}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        </View>
+        
       </ScrollView>
 
       {/* Notifications Modal */}
@@ -785,49 +841,153 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 8,
   },
+  currentLanguageFlag: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 4,
+  },
   chevron: {
     marginLeft: 2,
+  },
+  languageDropdown: {
+    position: "absolute",
+    top: 44,
+    right: 0,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    paddingVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 999,
+    minWidth: 180,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  languageOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  selectedLanguageOption: {
+    backgroundColor: "#F0F9FF",
+  },
+  languageFlag: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  languageName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#1E293B",
   },
   content: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
   },
-  addCarContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  addCarSection: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 24,
+    shadowColor: "#007EFD",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
     borderWidth: 2,
     borderColor: "#007EFD",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 32,
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#007EFD",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  input: {
-    flex: 1,
-    marginLeft: 12,
-    marginRight: 12,
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 16,
-    backgroundColor: "#F8FAFC",
+  addCarHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 24,
+    justifyContent: "center",
+  },
+  addCarTitle: {
+    fontSize: 22,
+    fontWeight: "700",
     color: "#1E293B",
+    marginLeft: 12,
   },
-  addButton: {
+  carouselContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  carBrandCard: {
+    width: width * 0.6,
+    height: width * 0.6,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 12,
+    borderWidth: 3,
+    borderColor: "#007EFD",
+  },
+  carBrandLogoContainer: {
+    width: "80%",
+    height: "80%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  carBrandLogo: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain",
+  },
+  carouselIndicators: {
+    flexDirection: "row",
+    marginTop: 20,
+    gap: 8,
+  },
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#CBD5E1",
+  },
+  activeIndicator: {
     backgroundColor: "#007EFD",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
+    width: 24,
   },
-  addButtonText: {
-    color: "#FFFFFF",
+  chooseCarText: {
+    fontSize: 18,
     fontWeight: "600",
-    fontSize: 16,
+    color: "#475569",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  addCarButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#007EFD",
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: "#007EFD",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  addCarButtonText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "700",
   },
   section: {
     marginBottom: 32,
@@ -846,7 +1006,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#64748B",
   },
-  // ✅ UPDATED: Enhanced stats grid
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",

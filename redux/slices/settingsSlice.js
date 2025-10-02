@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit"
-import { updateUserSettings, updateUserProfileAction } from "../action/settingAction"
+import { updateUserSettings, updateUserProfileAction, changePasswordAction } from "../actions/settingAction"
 
 const initialState = {
   notifications: {
@@ -57,13 +57,22 @@ const settingsSlice = createSlice({
         state.loading = false
         state.error = action.payload
       })
+
+      // ✅ Change password
+      .addCase(changePasswordAction.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(changePasswordAction.fulfilled, (state) => {
+        state.loading = false
+      })
+      .addCase(changePasswordAction.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
   },
 })
 
-export const {
-  clearError,
-  resetSettings,
-  updateLocalNotificationSetting,
-} = settingsSlice.actions
+export const { clearError, resetSettings, updateLocalNotificationSetting } = settingsSlice.actions
 
 export default settingsSlice.reducer
