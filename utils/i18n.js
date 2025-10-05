@@ -5,6 +5,40 @@ const resources = {
   en: {
     translation: {
       // Greetings
+      featuredCar: "Featured Car",
+rented: "Rented",
+
+locationRequired: "Location Required",
+enableLocation: "Please enable location to get directions",
+searchPlaceholder: "Search any car ",
+trackingDisabledTitle: "Tracking Disabled",
+trackingDisabledMessage: "Showing all available cars",
+
+filters: "Filters",
+noResultsTitle: "No Results",
+noResultsMessage: "No cars match your filter criteria",
+filtersAppliedTitle: "Filters Applied",
+filtersAppliedMessage: "Found {{count}} cars matching your criteria",
+carNotAvailableTitle: "Car Not Available",
+carNotAvailableMessage: "No cars found matching \"{{query}}\". Try searching for a different brand or model.",
+close: "Close",
+trackingActivatedTitle: "Tracking Activated",
+trackingActivatedMessage: "Found {{count}} car(s) within 10km. Nearest: {{brand}} {{model}} ({{distance}}km away)",
+noNearbyCarsTitle: "No Nearby Cars",
+noNearbyCarsMessage: "No available cars found within 10km of your location",
+
+priceRange: "Price Range",
+automatic: "Automatic",
+manual: "Manual",
+gasoline: "Gasoline",
+electric: "Electric",
+hybrid: "Hybrid",
+diesel: "Diesel",
+seats: "Seats",
+clearAll: "Clear All",
+applyFilters: "Apply Filters",
+all: "All",
+
       morningGreeting: "Good Morning",
       afternoonGreeting: "Good Afternoon",
       eveningGreeting: "Good Evening",
@@ -70,7 +104,8 @@ const resources = {
       features: "Features",
       description: "Description",
       // Search and Navigation
-      searchPlaceholder: "Search location or car...",
+      searchCars: "Search cars, brands, models...",
+
       noCarsAvailable: "Car not yet available",
       carNotFound: "Car not found",
       perDay: "day",
@@ -116,7 +151,7 @@ const resources = {
  model: "Model",
  year: "Year",
  type: "Type",
- transmission: "Transmission",
+
  fuelType: "Fuel Type",
  seatingCapacity: "Seating Capacity",
  features: "Features",
@@ -227,6 +262,12 @@ const resources = {
   },
   rw: {
     translation: {
+      featuredCar: "Imodoka Yihariye",
+rented: "Yatanzwe",
+
+locationRequired: "Aho Uri Birakenewe",
+enableLocation: "Nyabuna emera aho uri kugirango tubone inzira",
+
       vehicleInformation: "Amakuru y’Imodoka",
       make: "Izina",
       model: "Modeli",
@@ -289,7 +330,7 @@ const resources = {
         carDetails: "Ibisobanuro by'Imodoka",
         edit: "Hindura",
         type: "Ubwoko",
-        transmission: "Transmission",
+    
         fuelType: "Ubwoko bwa Lisansi",
         seats: "Intebe",
         location: "Ahantu",
@@ -334,12 +375,39 @@ const resources = {
       advertisementThumbnail: "Ifoto y’Igamije kwamamaza",
       optional: "Si ngombwa",
       payNow: "Ishyura Ubu",
-
+      trackingDisabledTitle: "Reba Imodoka zose zihari",
+      trackingDisabledMessage: "imodoka zose zihari",
+      
       // Buttons
       previous: "Inyuma",
       next: "Komeza",
       submit: "Ohereza",
+      searchPlaceholder: "Andikamo imodoka ushaka",
+      searchCars: "Shakisha imodoka, amazina y’imodoka, cyangwa ubwoko...",
+      filters: "Gushakisha vuba",
+      priceRange: "Igiciro",
+      noResultsTitle: "Nta Gisubizo",
+noResultsMessage: "Nta modoka ihuye n'ibyo washyizemo",
+filtersAppliedTitle: "Filitari Zashyizweho",
+filtersAppliedMessage: "Habonetse imodoka {{count}} zihuye n'ibyo washyizemo",
+carNotAvailableTitle: "Ntabwo Iyi modoka Ihari",
+carNotAvailableMessage: "Nta modoka ihuye na \"{{query}}\" yabonetse. Gerageza gushaka ubundi bwoko bw'Imodoka.",
+close: "Gufunga",
 
+trackingActivatedTitle: "Imodoka ziri hafi yawe",
+trackingActivatedMessage: "Habonetse imodoka {{count}} muri 10km. Imodoka iri hafi: {{brand}} {{model}} (iri kuri {{distance}}kilometero)",
+noNearbyCarsTitle: "Nta Modoka Iri Hafi yawe",
+noNearbyCarsMessage: "Nta modoka iboneka iri muri kilometero 10 uvuye aho uri",
+
+      gasoline: "Lisansi",
+     
+      
+      diesel: "Mazutu",
+      seats: "Intebe",
+      clearAll: "Kubireka",
+      applyFilters: "Komeza",
+      all: "Zose",
+      
       // Messages
       success: "Byagenze Neza",
       error: "Ikosa",
@@ -374,7 +442,7 @@ const resources = {
       startListing: "Tangira gushyiraho imodoka zawe kugira ngo ubone ibikorwa hano",
       tip: "Inama",
       notifications: "Amakuru",
-      searchPlaceholder: "Shakisha ahantu cyangwa imodoka...",
+     
       noCarsAvailable: "Nta modoka ihari ubu",
       carNotFound: "Nta modoka yabonetse",
       perDay: "umunsi",
@@ -441,6 +509,36 @@ const resources = {
   },
   fr: {
     translation: {
+      trackingDisabledTitle: "Suivi Désactivé",
+trackingDisabledMessage: "Affichage de toutes les voitures disponibles",
+
+      searchPlaceholder: "Rechercher  voiture ",
+      searchCars: "Rechercher voitures, marques, modèles...",
+      filters: "Filtres",
+      priceRange: "Fourchette de prix",
+      automatic: "Automatique",
+      noResultsTitle: "Aucun Résultat",
+noResultsMessage: "Aucune voiture ne correspond à vos critères",
+filtersAppliedTitle: "Filtres Appliqués",
+filtersAppliedMessage: "{{count}} voitures correspondent à vos critères",
+carNotAvailableTitle: "Voiture Non Disponible",
+carNotAvailableMessage: "Aucune voiture trouvée correspondant à \"{{query}}\". Essayez une autre marque ou un autre modèle.",
+close: "Fermer",
+trackingActivatedTitle: "Suivi Activé",
+trackingActivatedMessage: "{{count}} voiture(s) trouvée(s) dans un rayon de 10 km. La plus proche : {{brand}} {{model}} (à {{distance}} km)",
+noNearbyCarsTitle: "Aucune Voiture à Proximité",
+noNearbyCarsMessage: "Aucune voiture disponible trouvée dans un rayon de 10 km autour de votre position",
+
+      manual: "Manuelle",
+      gasoline: "Essence",
+      electric: "Électrique",
+      hybrid: "Hybride",
+      diesel: "Diesel",
+      seats: "Sièges",
+      clearAll: "Tout effacer",
+      applyFilters: "Appliquer les filtres",
+      all: "Tous",
+      
       settings: "Paramètres",
       manageAccount: "Gérer votre compte et vos préférences",
       premium: "Premium",
@@ -527,7 +625,7 @@ const resources = {
       startListing: "Commencez à lister vos voitures pour voir les activités ici",
       tip: "Astuce",
       notifications: "Notifications",
-      searchPlaceholder: "Rechercher lieu ou voiture...",
+      
       noCarsAvailable: "Voiture pas encore disponible",
       carNotFound: "Voiture non trouvée",
       perDay: "jour",
@@ -652,6 +750,12 @@ const resources = {
       loading: "Chargement...",
       update: "Mettre à jour",
       done: "Terminé",
+      featuredCar: "Voiture en vedette",
+rented: "Louée",
+
+locationRequired: "Localisation requise",
+enableLocation: "Veuillez activer la localisation pour obtenir l’itinéraire",
+
     },
   },
 }

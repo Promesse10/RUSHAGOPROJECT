@@ -25,7 +25,9 @@ import Icon from "react-native-vector-icons/Ionicons"
 import * as Location from "expo-location"
 import { useDispatch, useSelector } from "react-redux"
 import { getApprovedCarsAction, updateCarViewsAction } from "../../redux/action/CarActions"
-import I18n from "../../utils/i18n"
+import { useTranslation } from 'react-i18next';
+
+
 import NotificationChatBot from "../../screens/CarRenter/NotificationsScreen"
 import SettingsModal from "../../screens/CarRenter/SettingsModal"
 import CarDetailsModal from "../../screens/CarRenter/CarDetailsScreen"
@@ -118,6 +120,7 @@ const HomeScreen = ({ navigation }) => {
   const [currentAdIndex, setCurrentAdIndex] = useState(0)
   const [showNoResultsModal, setShowNoResultsModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const { t, i18n } = useTranslation();
 
   // Refs
   const slideAnim = useRef(new Animated.Value(height * 0.65)).current
@@ -203,7 +206,7 @@ const HomeScreen = ({ navigation }) => {
   }, [])
 
   useEffect(() => {
-    I18n.locale = currentLanguage
+    i18n.changeLanguage(currentLanguage);
   }, [currentLanguage])
 
   useEffect(() => {
@@ -319,7 +322,7 @@ const HomeScreen = ({ navigation }) => {
       try {
         const url = getCloudinaryImage ? getCloudinaryImage(key) : null
         if (url) return url
-      } catch (_) {}
+      } catch (_) { }
     }
     return null
   }, [])
@@ -394,9 +397,9 @@ const HomeScreen = ({ navigation }) => {
 
       const { status } = await Location.requestForegroundPermissionsAsync()
       if (status !== "granted") {
-        Alert.alert(I18n.t("enableLocation"), I18n.t("locationPermission"), [
-          { text: I18n.t("cancel"), style: "cancel" },
-          { text: I18n.t("yes"), onPress: getCurrentLocation },
+        Alert.alert(t("enableLocation"), t("locationPermission"), [
+          { text: t("cancel"), style: "cancel" },
+          { text: t("yes"), onPress: getCurrentLocation },
         ])
         return
       }
@@ -636,64 +639,104 @@ const HomeScreen = ({ navigation }) => {
   const getTimeBasedGreeting = useCallback(() => {
     const hour = new Date().getHours()
     const name = user?.name || user?.firstName || user?.fullName || "User"
-    if (hour < 12) return `${I18n.t("morningGreeting")} ${name}!`
-    if (hour < 17) return `${I18n.t("afternoonGreeting")} ${name}!`
-    return `${I18n.t("eveningGreeting")} ${name}!`
+    if (hour < 12) return `${t("morningGreeting")} ${name}!`
+    if (hour < 17) return `${t("afternoonGreeting")} ${name}!`
+    return `${t("eveningGreeting")} ${name}!`
   }, [user])
+// AUTO FILTER WHILE TYPING
+const handleSearch = useCallback(
+  (text) => {
+    setSearchText(text)
+    setSearchQuery(text)
 
-  // Search: already filters map via carsToShowOnMap when searchText.length > 0
-  const handleSearch = useCallback(
-    (text) => {
-      setSearchText(text)
-      setSearchQuery(text)
+    if (text.trim().length === 0) {
+      setFilteredCars(actualApprovedCars)
+      setShowNoResultsModal(false)
+      return
+    }
 
-      if (searchTimeout) clearTimeout(searchTimeout)
+    // auto filter instantly (no waiting)
+    const query = text.toLowerCase().trim()
+    const results = actualApprovedCars.filter((car) =>
+      [
+        car.brand,
+        car.make,
+        car.model,
+        car.type,
+        car.district,
+        car.sector,
+        car.location,
+        car.address,
+        `${car.brand || car.make} ${car.model}`,
+      ]
+        .filter(Boolean)
+        .some((val) => val.toLowerCase().includes(query)),
+    )
 
-      if (text.length > 0) {
-        const timeout = setTimeout(() => {
-          const carResults = actualApprovedCars.filter((car) => {
-            const q = text.toLowerCase()
-            return (
-              car.brand?.toLowerCase().includes(q) ||
-              car.make?.toLowerCase().includes(q) ||
-              car.model?.toLowerCase().includes(q) ||
-              car.type?.toLowerCase().includes(q) ||
-              car.district?.toLowerCase().includes(q) ||
-              car.sector?.toLowerCase().includes(q) ||
-              car.location?.toLowerCase().includes(q) ||
-              car.address?.toLowerCase().includes(q) ||
-              `${car.brand || car.make} ${car.model}`.toLowerCase().includes(q)
-            )
-          })
+    setFilteredCars(results)
 
-          setFilteredCars(carResults)
+    if (results.length > 0 && mapRef.current) {
+      const coords = results
+        .filter((c) => typeof (c.coordinates?.latitude || c.latitude) === "number")
+        .map((c) => ({
+          latitude: c.coordinates?.latitude || c.latitude,
+          longitude: c.coordinates?.longitude || c.longitude,
+        }))
+      if (userLocation) coords.push(userLocation)
+      fitMapToAllCars(coords)
+    }
 
-          // Fit map to only searched cars
-          if (mapRef.current && carResults.length > 0) {
-            const list = carResults
-              .filter((c) => typeof (c.coordinates?.latitude || c.latitude) === "number")
-              .map((c) => ({
-                latitude: c.coordinates?.latitude || c.latitude,
-                longitude: c.coordinates?.longitude || c.longitude,
-              }))
-            if (userLocation) list.push(userLocation)
-            fitMapToAllCars(list)
-          }
+    // Don't trigger modal here (only on submit)
+    setShowNoResultsModal(false)
+  },
+  [actualApprovedCars, fitMapToAllCars, userLocation],
+)
 
-          if (carResults.length === 0 && text.length > 2) {
-            setShowNoResultsModal(true)
-          }
-        }, 800)
-        setSearchTimeout(timeout)
-      } else {
-        setFilteredCars(actualApprovedCars)
-        setSelectedRegion(null)
-      }
+// TRIGGER WHEN PRESS RETURN / ENTER
+const handleSearchSubmit = useCallback(
+  (text) => {
+    const q = text.toLowerCase().trim()
+    if (!q || q.length < 2) return
 
-      setShowSuggestions(false)
-    },
-    [actualApprovedCars, searchTimeout, fitMapToAllCars, userLocation],
-  )
+    const results = actualApprovedCars.filter((car) =>
+      [
+        car.brand,
+        car.make,
+        car.model,
+        car.type,
+        car.district,
+        car.sector,
+        car.location,
+        car.address,
+        `${car.brand || car.make} ${car.model}`,
+      ]
+        .filter(Boolean)
+        .some((val) => val.toLowerCase().includes(q)),
+    )
+
+    setFilteredCars(results)
+
+    if (results.length > 0 && mapRef.current) {
+      const coords = results
+        .filter((c) => typeof (c.coordinates?.latitude || c.latitude) === "number")
+        .map((c) => ({
+          latitude: c.coordinates?.latitude || c.latitude,
+          longitude: c.coordinates?.longitude || c.longitude,
+        }))
+      if (userLocation) coords.push(userLocation)
+      fitMapToAllCars(coords)
+    }
+
+    // 👇 Show modal only on Return
+    if (results.length === 0) {
+      setShowNoResultsModal(true)
+    } else {
+      setShowNoResultsModal(false)
+    }
+  },
+  [actualApprovedCars, fitMapToAllCars, userLocation],
+)
+
 
   // Select car from card
   const handleCarSelect = useCallback(
@@ -747,7 +790,7 @@ const HomeScreen = ({ navigation }) => {
 
   const handleLanguageChange = useCallback((language) => {
     setCurrentLanguage(language)
-    I18n.locale = language
+    i18n.changeLanguage(currentLanguage);
     setShowLanguageDropdown(false)
   }, [])
 
@@ -797,7 +840,7 @@ const HomeScreen = ({ navigation }) => {
   // FAB: track nearest or zoom out to all cars; ensure user is in Rwanda before tracking
   const handleTrackNearestCar = useCallback(() => {
     if (!userLocation) {
-      Alert.alert(I18n.t("enableLocation"), I18n.t("locationPermission"))
+      Alert.alert(t("enableLocation"), t("locationPermission"))
       return
     }
 
@@ -814,7 +857,11 @@ const HomeScreen = ({ navigation }) => {
           longitude: c.coordinates?.longitude || c.longitude,
         })),
       )
-      Alert.alert("Tracking Disabled", "Showing all available cars")
+     
+Alert.alert(
+  t("trackingDisabledTitle"),
+  t("trackingDisabledMessage")
+)
       return
     }
 
@@ -850,11 +897,19 @@ const HomeScreen = ({ navigation }) => {
       }
 
       Alert.alert(
-        "Tracking Activated",
-        `Found ${nearby.length} car(s) within 10km. Nearest: ${nearest.brand || nearest.make} ${nearest.model} (${nearest.distance}km away)`,
-      )
+        t("trackingActivatedTitle"),
+        t("trackingActivatedMessage", {
+          count: nearby.length,
+          brand: nearest.brand || nearest.make,
+          model: nearest.model,
+          distance: nearest.distance,
+        })
+      );
     } else {
-      Alert.alert("No Nearby Cars", "No available cars found within 10km of your location")
+      Alert.alert(
+        t("noNearbyCarsTitle"),
+        t("noNearbyCarsMessage")
+      );
       setIsTracking(false)
     }
   }, [
@@ -905,10 +960,40 @@ const HomeScreen = ({ navigation }) => {
       setFilteredCars(filtered)
 
       if (filtered.length === 0) {
-        Alert.alert("No Results", "No cars match your filter criteria")
+        Alert.alert(
+          t("noResultsTitle"),
+          t("noResultsMessage"),
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                setSearchText("")                // 🔹 clear search bar
+                setSearchQuery("")               // 🔹 clear query
+                setFilteredCars(actualApprovedCars) // 🔹 restore all cars
+              // 🔹 zoom map to normal
+              },
+            },
+          ],
+          { cancelable: true },
+        )
       } else {
-        Alert.alert("Filters Applied", `Found ${filtered.length} cars matching your criteria`)
+        Alert.alert(
+          t("filtersAppliedTitle"),
+          t("filtersAppliedMessage", { count: filtered.length }),
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                // optional: you can also refocus map to filtered cars here if you want
+                fitMapToAllCars(filtered)
+              },
+            },
+          ],
+          { cancelable: true },
+        )
       }
+      
+      
     },
     [actualApprovedCars, navigation],
   )
@@ -1004,7 +1089,7 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.headerContent}>
             <View style={styles.leftSection}>
               <Text style={styles.greeting}>{getTimeBasedGreeting()}</Text>
-              <Text style={styles.subtitle}>{I18n.t("welcomeMessage")}</Text>
+              <Text style={styles.subtitle}>{t("welcomeMessage")}</Text>
             </View>
 
             <View style={styles.rightSection}>
@@ -1031,12 +1116,14 @@ const HomeScreen = ({ navigation }) => {
             <View style={styles.searchBar}>
               <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
               <TextInput
-                style={styles.searchInput}
-                value={searchText}
-                onChangeText={handleSearch}
-                placeholder="Shakisha ahantu cyangwa imodoka..."
-                onFocus={() => setShowSuggestions(true)}
-              />
+  style={styles.searchInput}
+  value={searchText}
+  onChangeText={handleSearch}
+  placeholder={t("searchPlaceholder")}
+  returnKeyType="search"
+  onSubmitEditing={() => handleSearchSubmit(searchText)}
+/>
+
             </View>
 
             <TouchableOpacity style={styles.filterButton} onPress={() => setShowFilterSidebar(true)}>
@@ -1160,13 +1247,22 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.modalOverlay}>
             <View style={styles.noResultsModalContent}>
               <Icon name="car-outline" size={60} color="#ccc" style={{ marginBottom: 20 }} />
-              <Text style={styles.noResultsModalTitle}>Car Not Available</Text>
+              <Text style={styles.noResultsModalTitle}>{t("carNotAvailableTitle")}</Text>
               <Text style={styles.noResultsModalMessage}>
-                No cars found matching "{searchQuery}". Try searching for a different brand or model.
+              {t("carNotAvailableMessage", { query: searchQuery })}
               </Text>
-              <TouchableOpacity style={styles.noResultsModalButton} onPress={() => setShowNoResultsModal(false)}>
-                <Text style={styles.noResultsModalButtonText}>Close</Text>
-              </TouchableOpacity>
+              <TouchableOpacity
+  style={styles.noResultsModalButton}
+  onPress={() => {
+    setShowNoResultsModal(false)
+    setSearchText("")              // 🔹 clear search bar text
+    setSearchQuery("")             // 🔹 clear search query
+    setFilteredCars(actualApprovedCars) // 🔹 show all cars again
+  }}
+>
+  <Text style={styles.noResultsModalButtonText}>{t("close")}</Text>
+</TouchableOpacity>
+
             </View>
           </View>
         </Modal>
@@ -1249,48 +1345,41 @@ const HomeScreen = ({ navigation }) => {
               style={styles.carCardsScroll}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
-              {sortedCars.length === 0 ? (
-                <View style={styles.noResultsContainer}>
-                  <Text style={styles.noResultsText}>
-                    {isTracking && nearestCars.length === 0 ? "No cars found within 10km" : I18n.t("noCarsAvailable")}
-                  </Text>
-                </View>
-              ) : (
-                sortedCars.map((car) => {
-                  const cardKey = `car-card-${getStableCarKey(car)}`
-                  return (
-                    <TouchableOpacity key={cardKey} style={styles.carCard} onPress={() => handleCarSelect(car)}>
-                      <View style={styles.carImageContainer}>
-                        <Image source={{ uri: car.images?.[0] || car.image }} style={styles.carImage} />
-                        <View style={styles.brandBadge}>
-                          <Text style={styles.brandText}>{car.brand || car.make}</Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.availabilityBadge,
-                            car.available ? styles.availableBadge : styles.unavailableBadge,
-                          ]}
-                        >
-                          <Text style={styles.availabilityText}>{car.available ? "Available" : "Rented"}</Text>
-                        </View>
-                        {car.distance && (
-                          <View style={styles.cardDistanceBadge}>
-                            <Text style={styles.cardDistanceText}>{car.distance}km</Text>
-                          </View>
-                        )}
-                      </View>
-                      <View style={styles.carInfo}>
-                        <Text style={styles.carName}>
-                          {car.brand || car.make} {car.model}
-                        </Text>
-                        <Text style={styles.carPrice}>
-                          {car.price || car.base_price || car.dailyRate} {car.currency}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  )
-                })
-              )}
+              {sortedCars.map((car) => {
+  const cardKey = `car-card-${getStableCarKey(car)}`
+  return (
+    <TouchableOpacity key={cardKey} style={styles.carCard} onPress={() => handleCarSelect(car)}>
+      <View style={styles.carImageContainer}>
+        <Image source={{ uri: car.images?.[0] || car.image }} style={styles.carImage} />
+        <View style={styles.brandBadge}>
+          <Text style={styles.brandText}>{car.brand || car.make}</Text>
+        </View>
+        <View
+          style={[
+            styles.availabilityBadge,
+            car.available ? styles.availableBadge : styles.unavailableBadge,
+          ]}
+        >
+          <Text style={styles.availabilityText}>{car.available ? "Available" : "Rented"}</Text>
+        </View>
+        {car.distance && (
+          <View style={styles.cardDistanceBadge}>
+            <Text style={styles.cardDistanceText}>{car.distance}km</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.carInfo}>
+        <Text style={styles.carName}>
+          {car.brand || car.make} {car.model}
+        </Text>
+        <Text style={styles.carPrice}>
+          {car.price || car.base_price || car.dailyRate} {car.currency}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  )
+})}
+
             </ScrollView>
           )}
         </Animated.View>
@@ -1712,14 +1801,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   noResultsContainer: {
-    width: width - 40,
-    height: 120,
+    width: width - 10,
+    height: 100,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "white",
+    borderRadius: 55,
+    marginRight: 55,
   },
   noResultsText: {
     fontSize: 16,
-    color: "#666",
+    color: "rgba(244, 67, 54, 0.9)",
     textAlign: "center",
   },
   carCard: {
@@ -1859,8 +1951,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingBottom: 25,
+    paddingVertical: 1,
+    paddingBottom: 50,
     position: "absolute",
     bottom: 0,
     left: 0,
@@ -1876,9 +1968,9 @@ const styles = StyleSheet.create({
   },
   fabButton: {
     backgroundColor: "#007EFD",
-    borderRadius: 30,
-    width: 60,
-    height: 60,
+    borderRadius: 40,
+    width: 70,
+    height: 70,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",

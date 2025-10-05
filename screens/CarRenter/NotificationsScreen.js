@@ -29,7 +29,8 @@ const NotificationChatBot = () => {
   const unreadCount = useSelector((state) => state.notifications?.unreadCount) || 0
   const isLoading = useSelector((state) => state.notifications?.isLoading) || false
   const error = useSelector((state) => state.notifications?.error) || null
-  
+  const [initialLoad, setInitialLoad] = useState(true);
+
   
   // Local state
   const [showModal, setShowModal] = useState(false)
@@ -69,8 +70,11 @@ const NotificationChatBot = () => {
 
     // Mark all notifications as read when modal is opened
     if (unreadCount > 0) {
-      dispatch(markAllNotificationsAsRead())
+      notifications
+        .filter((n) => !n.isRead)
+        .forEach((n) => dispatch(markNotificationAsRead(n._id)))
     }
+    
   }, [dispatch, unreadCount])
 
   // Handle refresh
@@ -80,16 +84,22 @@ const NotificationChatBot = () => {
       setRefreshing(false)
     })
   }, [dispatch])
+// 🔁 Polling for new notifications every 5 seconds
+useEffect(() => {
+  const fetchData = async () => {
+    await dispatch(fetchNotifications());
+    if (initialLoad) setInitialLoad(false);
+  };
 
-  // Handle individual notification press
-  const handleNotificationItemPress = useCallback(
-    (notification) => {
-      if (!notification.isRead) {
-        dispatch(markNotificationAsRead(notification._id))
-      }
-    },
-    [dispatch],
-  )
+  fetchData(); // fetch once immediately
+
+  const interval = setInterval(() => {
+    dispatch(fetchNotifications());
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, [dispatch]);
+
 
   // Handle delete notification
   const handleDeleteNotification = useCallback(
@@ -105,6 +115,27 @@ const NotificationChatBot = () => {
     },
     [dispatch],
   )
+// ✅ Handle tapping a single notification
+const handleNotificationItemPress = useCallback(
+  (notification) => {
+    // Toggle expansion (optional if you want to show full message)
+    Alert.alert(
+      notification.title,
+      notification.message,
+      [
+        {
+          text: "Mark as Read",
+          onPress: () => {
+            if (!notification.isRead) dispatch(markNotificationAsRead(notification._id))
+          },
+        },
+        { text: "Close", style: "cancel" },
+      ],
+      { cancelable: true },
+    )
+  },
+  [dispatch],
+)
 
   // Format time helper
   const formatTime = useCallback((timestamp) => {
@@ -201,12 +232,13 @@ const NotificationChatBot = () => {
             >
          
 
-              {/* Loading State */}
-              {isLoading && notifications.length === 0 && (
-                <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>Loading notifications...</Text>
-                </View>
-              )}
+           {/* Loading State */}
+{initialLoad && isLoading && notifications.length === 0 && (
+  <View style={styles.loadingContainer}>
+    <Text style={styles.loadingText}>Loading notifications...</Text>
+  </View>
+)}
+
 
               {/* Error State */}
               {error && (

@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next"
 import { useDispatch, useSelector } from "react-redux"
 import { getApprovedCarsAction, updateCarViewsAction } from "../../redux/action/CarActions"
 import CarDetailsModal from "./CarDetailsScreen"
+import * as Location from "expo-location";
 
 const { width, height } = Dimensions.get("window")
 
@@ -132,7 +133,44 @@ const CarListing = ({ navigation, route }) => {
       category: "Economy",
     },
   ]
-
+  useEffect(() => {
+    const getUserLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          console.warn("Permission to access location was denied");
+          return;
+        }
+  
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Highest,
+        });
+  
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      } catch (error) {
+        console.log("Error fetching user location:", error);
+      }
+    };
+  
+    getUserLocation();
+  }, []);
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return (R * c).toFixed(1);
+  };
+  
   // Get cars from route params, Redux, or fallback
   const allCars =
     route?.params?.cars || route?.params?.filteredCars || (reduxCars && reduxCars.length > 0 ? reduxCars : fallbackCars)
@@ -251,7 +289,16 @@ const CarListing = ({ navigation, route }) => {
   const renderCarCard = ({ item: car }) => {
     const normalizedCar = normalizeCar(car)
     if (!normalizedCar) return null
-
+    const distance =
+    userLocation && normalizedCar.latitude && normalizedCar.longitude
+      ? calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          normalizedCar.latitude,
+          normalizedCar.longitude
+        )
+      : null;
+  
     return (
       <TouchableOpacity style={styles.carCard} onPress={() => handleCarSelect(normalizedCar)}>
         <View style={styles.carImageContainer}>

@@ -21,7 +21,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useDispatch, useSelector } from "react-redux"
 import { fetchDashboardStats } from "../../redux/action/DashboardActions"
 import { io } from "socket.io-client"
-import { fetchNotifications } from "../../redux/action/notificationActions";
+import {
+  fetchNotifications,
+  markNotificationAsRead,
+  deleteNotification,
+} from "../../redux/action/notificationActions";
+
 
 
 const { width, height } = Dimensions.get("window")
@@ -158,7 +163,7 @@ const DashboardScreen = () => {
   
 
   const rushGoLogo = "https://res.cloudinary.com/def0cjmh2/image/upload/v1747228499/logo_jlnvdx.png"
-
+  
   useEffect(() => {
     const interval = setInterval(() => {
       Animated.sequence([
@@ -224,7 +229,16 @@ const DashboardScreen = () => {
       dispatch(fetchNotifications());
     }
   }, [dispatch, isAuthenticated, user]);
-  
+  // 🔁 Poll for new notifications every 30 seconds
+useEffect(() => {
+  if (!isAuthenticated || !user) return;
+  const interval = setInterval(() => {
+    dispatch(fetchNotifications());
+  }, 30000); // every 30 seconds
+
+  return () => clearInterval(interval);
+}, [dispatch, isAuthenticated, user]);
+
   useEffect(() => {
     if (!isAuthenticated || !user) {
       console.log("❌ User not authenticated, should redirect to login...")
@@ -413,12 +427,35 @@ const DashboardScreen = () => {
     navigation.navigate("AddCar")
   }
 
-  const handleNotificationPress = () => {
-    setShowNotifications(true)
-    if (hasNewNotifications) {
-      setHasNewNotifications(false)
-    }
+// Handle mark as read & expand
+const handleNotificationPress = (notificationId, isRead) => {
+  setExpandedNotifications((prev) => ({
+    ...prev,
+    [notificationId]: !prev[notificationId],
+  }));
+
+  // Mark as read if it was unread
+  if (!isRead) {
+    dispatch(markNotificationAsRead(notificationId));
   }
+};
+
+// Handle delete notification (long press)
+const handleNotificationDelete = (notificationId) => {
+  Alert.alert(
+    "Delete Notification",
+    "Are you sure you want to delete this notification?",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => dispatch(deleteNotification(notificationId)),
+      },
+    ]
+  );
+};
+
 
   const toggleNotificationExpansion = (notificationId) => {
     setExpandedNotifications((prev) => ({
@@ -660,65 +697,75 @@ const DashboardScreen = () => {
                 </View>
 
                 <ScrollView style={styles.notificationsList} showsVerticalScrollIndicator={false}>
-                  {notifications.map((notification) => (
-                    <View key={notification.id} style={styles.notificationItemContainer}>
-                      <TouchableOpacity
-                        style={styles.notificationItem}
-                        onPress={() => toggleNotificationExpansion(notification.id)}
-                      >
-                        <View style={styles.notificationMainContent}>
-                          {notification.hasRushGoIcon ? (
-                            <Image source={{ uri: rushGoLogo }} style={styles.rushGoIcon} />
-                          ) : (
-                            <View
-                              style={[
-                                styles.notificationIconContainer,
-                                { backgroundColor: `${getNotificationColor(notification.type)}15` },
-                              ]}
-                            >
-                              <Ionicons
-                                name={getNotificationIcon(notification.type)}
-                                size={20}
-                                color={getNotificationColor(notification.type)}
-                              />
-                            </View>
-                          )}
-                          <View style={styles.notificationContent}>
-                            <Text
-                              style={[
-                                styles.notificationTitle,
-                                { color: notification.isRead ? "#64748B" : "#1E293B" },
-                                !notification.isRead && styles.unreadNotificationTitle,
-                              ]}
-                            >
-                              {notification.title}
-                            </Text>
-                            <Text style={styles.notificationMessage} numberOfLines={2}>
-                              {notification.message}
-                            </Text>
-                            <Text style={styles.notificationTime}>{notification.time}</Text>
-                          </View>
-                          <View style={styles.notificationActions}>
-                            {!notification.isRead && <View style={styles.unreadIndicator} />}
-                            <Ionicons
-                              name={
-                                expandedNotifications[notification.id] ? "chevron-up-outline" : "chevron-down-outline"
-                              }
-                              size={16}
-                              color="#9CA3AF"
-                            />
-                          </View>
-                        </View>
-                      </TouchableOpacity>
+                {notifications.map((notification) => (
+  <View key={notification._id || notification.id} style={styles.notificationItemContainer}>
+    <TouchableOpacity
+      style={styles.notificationItem}
+      onPress={() => handleNotificationPress(notification._id, notification.isRead)}
+      onLongPress={() => handleNotificationDelete(notification._id)}
+    >
+      <View style={styles.notificationMainContent}>
+        {/* ✅ Show custom icon if provided */}
+        {notification.icon ? (
+          <Image
+            source={{ uri: notification.icon }}
+            style={styles.rushGoIcon}
+            resizeMode="cover"
+          />
+        ) : (
+          <View
+            style={[
+              styles.notificationIconContainer,
+              { backgroundColor: `${getNotificationColor(notification.type)}15` },
+            ]}
+          >
+            <Ionicons
+              name={getNotificationIcon(notification.type)}
+              size={20}
+              color={getNotificationColor(notification.type)}
+            />
+          </View>
+        )}
 
-                      {/* Expanded Content */}
-                      {expandedNotifications[notification.id] && (
-                        <View style={styles.expandedContent}>
-                          <Text style={styles.expandedMessage}>{notification.fullMessage}</Text>
-                        </View>
-                      )}
-                    </View>
-                  ))}
+        <View style={styles.notificationContent}>
+          <Text
+            style={[
+              styles.notificationTitle,
+              { color: notification.isRead ? "#64748B" : "#1E293B" },
+              !notification.isRead && styles.unreadNotificationTitle,
+            ]}
+          >
+            {notification.title}
+          </Text>
+
+          <Text
+            style={styles.notificationMessage}
+            numberOfLines={expandedNotifications[notification._id] ? undefined : 2}
+          >
+            {notification.message}
+          </Text>
+
+          <Text style={styles.notificationTime}>
+            {new Date(notification.createdAt).toLocaleString()}
+          </Text>
+        </View>
+
+        <View style={styles.notificationActions}>
+          {!notification.isRead && <View style={styles.unreadIndicator} />}
+          <Ionicons
+            name={
+              expandedNotifications[notification._id]
+                ? "chevron-up-outline"
+                : "chevron-down-outline"
+            }
+            size={16}
+            color="#9CA3AF"
+          />
+        </View>
+      </View>
+    </TouchableOpacity>
+  </View>
+))}
                 </ScrollView>
               </View>
             </TouchableWithoutFeedback>

@@ -4,10 +4,13 @@ import { useState } from "react"
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Dimensions } from "react-native"
 import Slider from "@react-native-community/slider"
 import Icon from "react-native-vector-icons/Ionicons"
+import { useTranslation } from "react-i18next" // ✅ added
 
 const { width, height } = Dimensions.get("window")
 
 const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
+  const { t } = useTranslation() // ✅ added
+
   const [filters, setFilters] = useState({
     priceRange: [0, 10000],
     make: "all",
@@ -27,7 +30,10 @@ const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
   const uniqueYears = [...new Set(cars.map((car) => car.year).filter(Boolean))]
   const uniqueSeatings = [...new Set(cars.map((car) => car.seatings).filter(Boolean))]
   const allFeatures = [...new Set(cars.flatMap((car) => car.features || []))]
-
+  const carPrices = cars.map((car) => car.price || 0);
+  const minPrice = Math.min(...carPrices);
+  const maxPrice = Math.max(...carPrices);
+  
   const handleFeatureToggle = (feature) => {
     const updatedFeatures = filters.features.includes(feature)
       ? filters.features.filter((f) => f !== feature)
@@ -43,7 +49,8 @@ const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
 
   const clearFilters = () => {
     setFilters({
-      priceRange: [0, 10000],
+      priceRange: [minPrice, maxPrice],
+
       make: "all",
       model: "all",
       type: "all",
@@ -63,7 +70,9 @@ const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
           style={[styles.filterOption, selectedValue === "all" && styles.selectedOption]}
           onPress={() => onSelect("all")}
         >
-          <Text style={[styles.optionText, selectedValue === "all" && styles.selectedOptionText]}>All</Text>
+          <Text style={[styles.optionText, selectedValue === "all" && styles.selectedOptionText]}>
+            {t("all")}
+          </Text>
         </TouchableOpacity>
         {options.map((option, index) => (
           <TouchableOpacity
@@ -71,7 +80,9 @@ const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
             style={[styles.filterOption, selectedValue === option && styles.selectedOption]}
             onPress={() => onSelect(option)}
           >
-            <Text style={[styles.optionText, selectedValue === option && styles.selectedOptionText]}>{option}</Text>
+            <Text style={[styles.optionText, selectedValue === option && styles.selectedOptionText]}>
+              {option}
+            </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -86,7 +97,7 @@ const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
         <View style={styles.sidebar}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Filters</Text>
+            <Text style={styles.headerTitle}>{t("filters")}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Icon name="close" size={24} color="white" />
             </TouchableOpacity>
@@ -95,57 +106,63 @@ const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {/* Price Range */}
             <View style={styles.filterSection}>
-              <Text style={styles.sectionTitle}>Price Range (FRW)</Text>
+              <Text style={styles.sectionTitle}>{t("priceRange")} (FRW)</Text>
               <View style={styles.priceRangeContainer}>
                 <Text style={styles.priceText}>
                   {filters.priceRange[0]} - {filters.priceRange[1]}
                 </Text>
                 <Slider
-                  style={styles.slider}
-                  minimumValue={0}
-                  maximumValue={10000}
-                  value={filters.priceRange[1]}
-                  onValueChange={(value) => setFilters({ ...filters, priceRange: [0, Math.round(value)] })}
-                  minimumTrackTintColor="#007EFD"
-                  maximumTrackTintColor="#ddd"
-                  thumbStyle={styles.sliderThumb}
-                />
+  style={styles.slider}
+  minimumValue={minPrice}
+  maximumValue={maxPrice}
+  value={filters.priceRange[1]}
+  onValueChange={(value) =>
+    setFilters({ ...filters, priceRange: [minPrice, Math.round(value)] })
+  }
+  minimumTrackTintColor="#007EFD"
+  maximumTrackTintColor="#ddd"
+  thumbStyle={styles.sliderThumb}
+/>
+
               </View>
             </View>
 
             {/* Make */}
-            {renderFilterSection("Make", uniqueMakes, filters.make, (make) => setFilters({ ...filters, make }))}
+            {renderFilterSection(t("make"), uniqueMakes, filters.make, (make) => setFilters({ ...filters, make }))}
 
             {/* Model */}
-            {renderFilterSection("Model", uniqueModels, filters.model, (model) => setFilters({ ...filters, model }))}
+            {renderFilterSection(t("model"), uniqueModels, filters.model, (model) => setFilters({ ...filters, model }))}
 
             {/* Type */}
-            {renderFilterSection("Type", uniqueTypes, filters.type, (type) => setFilters({ ...filters, type }))}
+            {renderFilterSection(t("type"), uniqueTypes, filters.type, (type) => setFilters({ ...filters, type }))}
 
             {/* Year */}
-            {renderFilterSection("Year", uniqueYears, filters.year, (year) => setFilters({ ...filters, year }))}
+            {renderFilterSection(t("year"), uniqueYears, filters.year, (year) => setFilters({ ...filters, year }))}
 
             {/* Transmission */}
-            {renderFilterSection("Transmission", ["Automatic", "Manual"], filters.transmission, (transmission) =>
-              setFilters({ ...filters, transmission }),
+            {renderFilterSection(
+              t("transmission"),
+              [t("automatic"), t("manual")],
+              filters.transmission,
+              (transmission) => setFilters({ ...filters, transmission }),
             )}
 
             {/* Fuel Type */}
             {renderFilterSection(
-              "Fuel Type",
-              ["Gasoline", "Electric", "Hybrid", "Diesel"],
+              t("fuelType"),
+              [t("gasoline"), t("electric"), t("hybrid"), t("diesel")],
               filters.fuelType,
               (fuelType) => setFilters({ ...filters, fuelType }),
             )}
 
             {/* Seatings */}
-            {renderFilterSection("Seats", uniqueSeatings, filters.seatings, (seatings) =>
+            {renderFilterSection(t("seats"), uniqueSeatings, filters.seatings, (seatings) =>
               setFilters({ ...filters, seatings }),
             )}
 
             {/* Features */}
             <View style={styles.filterSection}>
-              <Text style={styles.sectionTitle}>Features</Text>
+              <Text style={styles.sectionTitle}>{t("features")}</Text>
               <View style={styles.featuresGrid}>
                 {allFeatures.map((feature, index) => (
                   <TouchableOpacity
@@ -172,11 +189,11 @@ const FilterSidebar = ({ visible, onClose, onApplyFilters, cars }) => {
           {/* Footer Actions */}
           <View style={styles.footer}>
             <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
-              <Text style={styles.clearButtonText}>Clear All</Text>
+              <Text style={styles.clearButtonText}>{t("clearAll")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
+              <Text style={styles.applyButtonText}>{t("applyFilters")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -190,22 +207,22 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     justifyContent: "flex-end",
-    paddingTop: 10, // Account for status bar
+    paddingTop: 10,
   },
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   sidebar: {
-    width: width * 0.75, // Reduced width for better fit
+    width: width * 0.75,
     backgroundColor: "white",
     shadowColor: "#000",
     shadowOffset: { width: -2, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-    marginTop: 20, // Add top margin for better positioning
-    marginBottom: 20, // Add bottom margin
+    marginTop: 20,
+    marginBottom: 20,
     borderTopLeftRadius: 20,
     borderBottomLeftRadius: 20,
   },
