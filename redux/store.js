@@ -4,9 +4,10 @@ import loginReducer from "./slices/loginSlice" // Ensure the filename matches ex
 import dashboardReducer from "./slices/DashboardSlice"
 import userSlice from "./slices/userSlice"
 import settingsReducer from "./slices/settingsSlice"
-import notificationReducer from './slices/notificationSlice'
+import notificationsReducer from "./slices/notificationSlice";
 import  verification from "./slices/verificationSlice"    
 import carReducer from "./slices/carSlice"
+
 export const store = configureStore({
   reducer: {
     signup: signupReducer,
@@ -15,7 +16,7 @@ export const store = configureStore({
     cars: carReducer,
     user: userSlice,
     dashboard: dashboardReducer,
-    notificationChatBot: notificationReducer,
+    notifications: notificationsReducer,
     verification: verification,
   },
 })

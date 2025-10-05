@@ -199,20 +199,7 @@ const NotificationChatBot = () => {
               showsVerticalScrollIndicator={false}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
-              {/* Bot Welcome Message */}
-              <View style={styles.botMessage}>
-                <View style={[styles.botAvatar, { backgroundColor: "#007EFD" }]}>
-                <Icon name="hardware-chip" size={20} color="white" />
-
-                </View>
-                <View style={styles.messageContent}>
-                  <Text style={styles.botName}>Rushago Assistant</Text>
-                  <Text style={styles.messageText}>
-                    Hi! I'm here to keep you updated with the latest news and offers from Rushago.
-                  </Text>
-                  <Text style={styles.messageTime}>Now</Text>
-                </View>
-              </View>
+         
 
               {/* Loading State */}
               {isLoading && notifications.length === 0 && (

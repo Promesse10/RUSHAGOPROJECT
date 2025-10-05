@@ -21,6 +21,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useDispatch, useSelector } from "react-redux"
 import { fetchDashboardStats } from "../../redux/action/DashboardActions"
 import { io } from "socket.io-client"
+import { fetchNotifications } from "../../redux/action/notificationActions";
+
+
 const { width, height } = Dimensions.get("window")
 
 const DashboardScreen = () => {
@@ -133,41 +136,7 @@ const DashboardScreen = () => {
   const [expandedNotifications, setExpandedNotifications] = useState({})
   const [currentLanguage, setCurrentLanguage] = useState("rw")
   const [hasNewNotifications, setHasNewNotifications] = useState(true)
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: "Welcome to RushGo!",
-      message: "Your account has been successfully created. Start listing your cars to earn money.",
-      fullMessage:
-        "Welcome to RushGo! Your account has been successfully created and verified. You can now start listing your cars and earning money from rentals. Make sure to complete your profile and add high-quality photos of your vehicles.",
-      time: "2 hours ago",
-      type: "welcome",
-      isRead: false,
-      hasRushGoIcon: true,
-    },
-    {
-      id: 2,
-      title: "Car Listing Pending",
-      message: "Your Toyota Camry listing is under review by our team.",
-      fullMessage:
-        "Your Toyota Camry listing has been submitted and is currently under review by our verification team. This process usually takes 24-48 hours. We'll notify you once it's approved and live on the platform.",
-      time: "1 day ago",
-      type: "approval",
-      isRead: false,
-      hasRushGoIcon: false,
-    },
-    {
-      id: 3,
-      title: "Profile Incomplete",
-      message: "Complete your profile to increase booking chances.",
-      fullMessage:
-        "Your profile is missing some important information. Complete your profile by adding a profile photo, business details, and verification documents to increase your chances of getting bookings.",
-      time: "3 days ago",
-      type: "reminder",
-      isRead: true,
-      hasRushGoIcon: false,
-    },
-  ])
+  const { notifications, unreadCount, isLoading, error } = useSelector((state) => state.notifications);
 
   const languages = [
     {
@@ -250,7 +219,12 @@ const DashboardScreen = () => {
       socket.disconnect()
     }
   }, [dispatch])
-
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      dispatch(fetchNotifications());
+    }
+  }, [dispatch, isAuthenticated, user]);
+  
   useEffect(() => {
     if (!isAuthenticated || !user) {
       console.log("❌ User not authenticated, should redirect to login...")
@@ -451,8 +425,9 @@ const DashboardScreen = () => {
       ...prev,
       [notificationId]: !prev[notificationId],
     }))
+ 
     // Mark as read when expanded
-    setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)))
+  
   }
 
   const closeNotificationModal = () => {
