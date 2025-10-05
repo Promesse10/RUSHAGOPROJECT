@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import * as ScreenCapture from "expo-screen-capture";
+
 import {
   View,
   Text,
@@ -18,8 +20,9 @@ import {
 import MapView, { Marker, Polyline } from "react-native-maps"
 import Icon from "react-native-vector-icons/Ionicons"
 import I18n from "../../utils/i18n"
-import ImageGallery from "../../screens/CarRenter/ImageGallery"
+
 import { getTurnByTurnDirections } from "../../utils/googleDirections"
+import ImageViewing from "react-native-image-viewing";
 
 const { width, height } = Dimensions.get("window")
 
@@ -33,6 +36,42 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
   const [internalRouteCoordinates, setInternalRouteCoordinates] = useState([])
   const [internalRouteInfo, setInternalRouteInfo] = useState(null)
   const [showInternalRoute, setShowInternalRoute] = useState(false)
+  const [showBlockedNotice, setShowBlockedNotice] = useState(false);
+
+  useEffect(() => {
+    let subscription;
+  
+    const handleScreenshotAttempt = () => {
+      console.log("📸 Screenshot attempt detected!");
+      setShowBlockedNotice(true);
+      setTimeout(() => setShowBlockedNotice(false), 2500);
+    };
+  
+    const enableSecurity = async () => {
+      try {
+        if (visible) {
+          // Prevent actual screenshot saving
+          await ScreenCapture.preventScreenCaptureAsync();
+  
+          // Listen for screenshot attempts
+          subscription = ScreenCapture.addScreenshotListener(handleScreenshotAttempt);
+        } else {
+          await ScreenCapture.allowScreenCaptureAsync();
+        }
+      } catch (err) {
+        console.log("❌ Screen capture error:", err);
+      }
+    };
+  
+    enableSecurity();
+  
+    return () => {
+      if (subscription) subscription.remove();
+      ScreenCapture.allowScreenCaptureAsync();
+    };
+  }, [visible]);
+  
+  
 
   if (!car) return null
 
@@ -52,7 +91,7 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
     ownerName: car.owner?.name || car.ownerName || "Owner",
     ownerPhone: car.owner?.phone || car.ownerPhone || "",
     ownerType: car.owner?.type || car.ownerType || "individual",
-    countryCode: car.countryCode || "+250",
+    countryCode: car.countryCode || "",
     district: car.district || "Unknown",
     sector: car.sector || "Unknown",
     location: car.location || car.address || "Unknown Location",
@@ -121,40 +160,35 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
 
   const handleShare = async () => {
     try {
+      // Replace these with your actual store URLs
+      const playStoreLink = "https://play.google.com/store/apps/details?id=com.rushago.app";
+      const appStoreLink = "https://apps.apple.com/app/rushago/id1234567890";
+  
+      const appDownloadMessage = `
+  🚗 ${normalizedCar.make} is now available for rent!
+  You can now rent cars easily using the RushaGo app.
+  
+  👉 Download now:
+  • Android: ${playStoreLink}
+  • iOS: ${appStoreLink}
+      `;
+  
       const shareContent = {
-        message: `Check out this amazing ${normalizedCar.make} ${normalizedCar.model} (${normalizedCar.year}) available for rent!
-
-Price: ${normalizedCar.base_price} ${normalizedCar.currency}/day
-Location: ${normalizedCar.address}
-Features: ${normalizedCar.features.join(", ")}
-
-Contact: ${normalizedCar.countryCode}${normalizedCar.ownerPhone}`,
-        title: `${normalizedCar.make} ${normalizedCar.model} - Car Rental`,
-      }
-
-      const result = await Share.share(shareContent)
-
+        title: `Rent with RushaGo`,
+        message: appDownloadMessage,
+        url: "https://res.cloudinary.com/def0cjmh2/image/upload/v1723728395/logo_1_tj9guu.jpg", // Thumbnail URL
+      };
+  
+      const result = await Share.share(shareContent);
+  
       if (result.action === Share.sharedAction) {
-        const isLoggedIn = false // Replace with actual auth check
-
-        if (!isLoggedIn) {
-          Alert.alert(
-            I18n.t("signupRequired", "Sign Up Required"),
-            I18n.t("signupMessage", "To share car details, please sign up for an account."),
-            [
-              { text: I18n.t("cancel", "Cancel"), style: "cancel" },
-              {
-                text: I18n.t("signup", "Sign Up"),
-                onPress: () => navigation?.navigate("CarRentalSignup"),
-              },
-            ],
-          )
-        }
+        console.log("Shared successfully");
       }
     } catch (error) {
-      console.log("Error sharing:", error)
+      console.log("Error sharing:", error);
     }
-  }
+  };
+  
 
   const handleGetDirections = () => {
     if (!userLocation) {
@@ -196,7 +230,7 @@ Contact: ${normalizedCar.countryCode}${normalizedCar.ownerPhone}`,
         break
     }
 
-    Alert.alert(I18n.t("contactOwner"), alertMessage, [
+    Alert.alert(I18n.t("caution"), alertMessage, [
       { text: I18n.t("cancel"), style: "cancel" },
       {
         text: I18n.t("yes"),
@@ -226,9 +260,11 @@ Contact: ${normalizedCar.countryCode}${normalizedCar.ownerPhone}`,
   }
 
   const handleImagePress = (index) => {
-    setSelectedImageIndex(index)
-    setShowImageGallery(true)
-  }
+    console.log("Opening image viewer for index:", index);
+    setSelectedImageIndex(index);
+    setShowImageGallery(true);
+  };
+  
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371
@@ -434,7 +470,7 @@ Contact: ${normalizedCar.countryCode}${normalizedCar.ownerPhone}`,
 
                 {/* Image Gallery Section */}
                 <View style={styles.imageGallerySection}>
-                  <Text style={styles.sectionTitle}>Car Images</Text>
+                  <Text style={styles.sectionTitle}>{I18n.t("carImages")}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageGalleryScroll}>
                     {normalizedCar.images.map((image, index) => (
                       <TouchableOpacity
@@ -450,56 +486,59 @@ Contact: ${normalizedCar.countryCode}${normalizedCar.ownerPhone}`,
 
                 {/* Specifications */}
                 <View style={styles.specificationsSection}>
-                  <Text style={styles.sectionTitle}>{I18n.t("specifications")}</Text>
-                  <View style={styles.specsGrid}>
-                    <View style={styles.specItem}>
-                      <Text style={styles.specLabel}>{I18n.t("make", "Make")}</Text>
-                      <Text style={styles.specValue}>{normalizedCar.make}</Text>
-                    </View>
-                    <View style={styles.specItem}>
-                      <Text style={styles.specLabel}>{I18n.t("model", "Model")}</Text>
-                      <Text style={styles.specValue}>{normalizedCar.model}</Text>
-                    </View>
-                    <View style={styles.specItem}>
-                      <Icon name="settings" size={24} color="#007EFD" />
-                      <Text style={styles.specValue}>{normalizedCar.transmission}</Text>
-                      <Text style={styles.specLabel}>Transmission</Text>
-                    </View>
-                    <View style={styles.specItem}>
-                      <Icon name="people" size={24} color="#007EFD" />
-                      <Text style={styles.specValue}>{normalizedCar.seatings} Seats</Text>
-                      <Text style={styles.specLabel}>Places</Text>
-                    </View>
-                  </View>
+  <Text style={styles.sectionTitle}>{I18n.t("specifications")}</Text>
+  <View style={styles.specsGrid}>
+    <View style={styles.specItem}>
+      <Text style={styles.specLabel}>{I18n.t("make")}</Text>
+      <Text style={styles.specValue}>{normalizedCar.make}</Text>
+    </View>
+    <View style={styles.specItem}>
+      <Text style={styles.specLabel}>{I18n.t("model")}</Text>
+      <Text style={styles.specValue}>{normalizedCar.model}</Text>
+    </View>
+    <View style={styles.specItem}>
+      <Icon name="settings" size={24} color="#007EFD" />
+      <Text style={styles.specValue}>{normalizedCar.transmission}</Text>
+      <Text style={styles.specLabel}>{I18n.t("transmission")}</Text>
+    </View>
+    <View style={styles.specItem}>
+      <Icon name="people" size={24} color="#007EFD" />
+      <Text style={styles.specValue}>
+        {normalizedCar.seatings} {I18n.t("seats")}
+      </Text>
+      <Text style={styles.specLabel}>{I18n.t("places")}</Text>
+    </View>
+  </View>
 
                   {/* Additional Specs */}
                   <View style={styles.additionalSpecs}>
-                    <View style={styles.specRow}>
-                      <Text style={styles.specRowLabel}>Year:</Text>
-                      <Text style={styles.specRowValue}>{normalizedCar.year}</Text>
-                    </View>
-                    <View style={styles.specRow}>
-                      <Text style={styles.specRowLabel}>Fuel Type:</Text>
-                      <Text style={styles.specRowValue}>
-                        {normalizedCar.fuel_type === "petrol"
-                          ? "Petrol"
-                          : normalizedCar.fuel_type === "diesel"
-                            ? "Diesel"
-                            : normalizedCar.fuel_type === "electric"
-                              ? "Electric"
-                              : normalizedCar.fuel_type === "hybrid"
-                                ? "Hybrid"
-                                : normalizedCar.fuel_type}
-                      </Text>
-                    </View>
-                    <View style={styles.specRow}>
-                      <Text style={styles.specRowLabel}>Type:</Text>
-                      <Text style={styles.specRowValue}>{normalizedCar.type}</Text>
-                    </View>
-                    <View style={styles.specRow}>
-                      <Text style={styles.specRowLabel}>Category:</Text>
-                      <Text style={styles.specRowValue}>{getCarCategory(normalizedCar)}</Text>
-                    </View>
+    <View style={styles.specRow}>
+      <Text style={styles.specRowLabel}>{I18n.t("year")}:</Text>
+      <Text style={styles.specRowValue}>{normalizedCar.year}</Text>
+    </View>
+    <View style={styles.specRow}>
+      <Text style={styles.specRowLabel}>{I18n.t("fuelType")}:</Text>
+      <Text style={styles.specRowValue}>
+        {normalizedCar.fuel_type === "petrol"
+          ? I18n.t("petrol")
+          : normalizedCar.fuel_type === "diesel"
+          ? I18n.t("diesel")
+          : normalizedCar.fuel_type === "electric"
+          ? I18n.t("electric")
+          : normalizedCar.fuel_type === "hybrid"
+          ? I18n.t("hybrid")
+          : normalizedCar.fuel_type}
+      </Text>
+    </View>
+    <View style={styles.specRow}>
+      <Text style={styles.specRowLabel}>{I18n.t("type")}:</Text>
+      <Text style={styles.specRowValue}>{normalizedCar.type}</Text>
+    </View>
+    <View style={styles.specRow}>
+      <Text style={styles.specRowLabel}>{I18n.t("category")}:</Text>
+      <Text style={styles.specRowValue}>{getCarCategory(normalizedCar)}</Text>
+    </View>
+
                   </View>
 
                   {/* Features */}
@@ -520,14 +559,14 @@ Contact: ${normalizedCar.countryCode}${normalizedCar.ownerPhone}`,
                   {/* Description */}
                   {normalizedCar.description && (
                     <View style={styles.descriptionSection}>
-                      <Text style={styles.sectionTitle}>Description</Text>
+                      <Text style={styles.sectionTitle}>{I18n.t("description")}</Text>
                       <Text style={styles.descriptionText}>{normalizedCar.description}</Text>
                     </View>
                   )}
 
                   {/* Pricing Details */}
                   <View style={styles.pricingSection}>
-                    <Text style={styles.sectionTitle}>Pricing</Text>
+                    <Text style={styles.sectionTitle}>{I18n.t("pricing")}</Text>
                     <View style={styles.pricingGrid}>
                       <View style={styles.pricingItem}>
                         <Text style={styles.pricingLabel}>Daily Rate</Text>
@@ -577,7 +616,7 @@ Contact: ${normalizedCar.countryCode}${normalizedCar.ownerPhone}`,
                 <Text style={styles.totalPrice}>
                   {normalizedCar.base_price} {normalizedCar.currency}
                 </Text>
-                <Text style={styles.priceLabel}>Per Day</Text>
+                <Text style={styles.priceLabel}>{I18n.t("Perday")}</Text>
               </View>
               <TouchableOpacity
                 style={styles.contactButton}
@@ -601,7 +640,7 @@ Contact: ${normalizedCar.countryCode}${normalizedCar.ownerPhone}`,
               <View style={styles.reviewModal}>
                 <Text style={styles.reviewTitle}>{I18n.t("rateExperience")}</Text>
                 <Text style={styles.reviewSubtitle}>
-                  How was your experience with {normalizedCar.make} {normalizedCar.model}?
+                  How was your experience with {normalizedCar.ownerName}?
                 </Text>
                 <View style={styles.starsContainer}>
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -625,17 +664,36 @@ Contact: ${normalizedCar.countryCode}${normalizedCar.ownerPhone}`,
                 </View>
               </View>
             </View>
+            
           </Modal>
+          <ImageViewing
+  images={normalizedCar.images.map((uri) => ({ uri }))}
+  imageIndex={selectedImageIndex}
+  visible={showImageGallery}
+  onRequestClose={() => setShowImageGallery(false)}
+/>
+<Modal visible={showBlockedNotice} transparent animationType="fade">
+  <View style={styles.blockedOverlay}>
+    <View style={styles.blockedCard}>
+      <Icon name="camera-off-outline" size={50} color="#007EFD" style={styles.blockedIcon} />
+      <Text style={styles.blockedTitle}>Screenshot Blocked</Text>
+      <Text style={styles.blockedSubtitle}>This screenshot was blocked for added privacy.</Text>
+      <Image
+        source={{ uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1723728395/logo_1_tj9guu.jpg" }}
+        style={styles.blockedLogo}
+        resizeMode="contain"
+      />
+    </View>
+  </View>
+</Modal>
+
         </View>
+        
       </Modal>
 
       {/* Image Gallery Modal */}
-      <ImageGallery
-        visible={showImageGallery}
-        onClose={() => setShowImageGallery(false)}
-        images={normalizedCar.images}
-        initialIndex={selectedImageIndex}
-      />
+
+
     </>
   )
 }
@@ -754,6 +812,44 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginLeft: 5,
   },
+  blockedOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  blockedCard: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    alignItems: "center",
+    padding: 30,
+    width: "80%",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  blockedIcon: {
+    marginBottom: 15,
+  },
+  blockedTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#007EFD",
+    marginBottom: 5,
+  },
+  blockedSubtitle: {
+    fontSize: 14,
+    color: "#555",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  blockedLogo: {
+    width: 100,
+    height: 40,
+    marginTop: 10,
+  },
+  
   menyainziraButton: {
     backgroundColor: "#FF6B35",
     borderRadius: 20,
@@ -1047,6 +1143,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 20,
+    paddingBottom: 70,
     backgroundColor: "white",
     borderTopWidth: 1,
     borderTopColor: "#f0f0f0",
