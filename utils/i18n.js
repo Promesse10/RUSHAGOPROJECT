@@ -62,7 +62,7 @@ seats: "Seats",
 clearAll: "Clear All",
 applyFilters: "Apply Filters",
 all: "All",
-
+confirmNewPassword:"Confirm NewPassword",
       morningGreeting: "Good Morning",
       afternoonGreeting: "Good Afternoon",
       eveningGreeting: "Good Evening",
@@ -336,7 +336,7 @@ enableLocation: "Nyabuna emera aho uri kugirango tubone inzira",
         cameraPermission: "Dukeneye uburenganzira bwo gufata amafoto",
         cancel: "Kureka",
         loading: "Birimo gupakirwa...",
-
+        confirmNewPassword:"Emeza Ijambo Ry'Ibanga",
         // 🔹 MyCarsScreen
         myCars: "Imodoka Zanjye",
         manageVehicles: "Tegura imodoka zawe",

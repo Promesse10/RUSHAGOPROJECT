@@ -26,6 +26,9 @@ import * as Location from "expo-location"
 import { useDispatch, useSelector } from "react-redux"
 import { getApprovedCarsAction, updateCarViewsAction } from "../../redux/action/CarActions"
 import { useTranslation } from 'react-i18next';
+// add near other redux/action imports
+import { getCurrentUserAction } from "../../redux/action/UserActions"
+
 
 
 import NotificationChatBot from "../../screens/CarRenter/NotificationsScreen"
@@ -61,7 +64,11 @@ function isLocationInRwanda(loc) {
 
 const HomeScreen = ({ navigation }) => {
   const dispatch = useDispatch()
-
+ 
+  const user = useSelector((state) => state.user.currentUser);
+  useEffect(() => {
+    dispatch(getCurrentUserAction());
+  }, [dispatch]);
   const carsState = useSelector((state) => {
     if (!state || !state.cars) {
       return {
@@ -76,7 +83,7 @@ const HomeScreen = ({ navigation }) => {
     return state.cars
   })
 
-  const { user } = useSelector((state) => state.auth || {})
+
 
   const {
     cars = [],
@@ -1096,19 +1103,21 @@ Alert.alert(
               <TouchableOpacity style={styles.flagButton} onPress={() => setShowLanguageDropdown(true)}>
                 <Image source={{ uri: getCurrentLanguageFlag() }} style={styles.flagImage} />
               </TouchableOpacity>
-
               <TouchableOpacity style={styles.profileButton}>
-                <Image
-                  source={{
-                    uri:
-                      user?.profileImage ||
-                      user?.avatar ||
-                      user?.photo ||
-                      "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
-                  }}
-                  style={styles.profileImage}
-                />
-              </TouchableOpacity>
+  <Image
+    source={{
+      uri:
+        user?.profileImage
+          ? user.profileImage.startsWith("http")
+            ? user.profileImage
+            : `https://your-api-domain.com/${user.profileImage.replace(/^\/+/, "")}` // 👈 update this to your actual API domain
+          : "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
+    }}
+    style={styles.profileImage}
+    resizeMode="cover"
+  />
+</TouchableOpacity>
+
             </View>
           </View>
 
@@ -1527,12 +1536,17 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 2,
     borderColor: "white",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f0f0f0",
   },
   profileImage: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#ddd",
+    borderRadius: 22.5,
+    resizeMode: "cover",
   },
+  
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",

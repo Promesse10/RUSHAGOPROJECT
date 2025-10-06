@@ -1,5 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 import axiosInstance from "../../utils/axios"
+import * as SecureStore from "expo-secure-store"
 
 const API_URL = "/users"
 
@@ -23,14 +24,33 @@ export const searchUsersAction = createAsyncThunk("user/search", async (query, {
   }
 })
 export const updateUserAction = createAsyncThunk(
-    "user/update",
-    async (userData, { rejectWithValue }) => {
+  "user/update",
+  async (userData, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.put(`${API_URL}/${userData._id}`, userData)
+      const updatedUser = response.data
+
+      // ✅ Save updated user profile locally in SecureStore
+      await SecureStore.setItemAsync("user", JSON.stringify(updatedUser))
+
+      return updatedUser
+    } catch (err) {
+      console.error("❌ Update user failed:", err.response?.data || err.message)
+      return rejectWithValue(err.response?.data?.message || "Failed to update user")
+    }
+  }
+)
+  
+  export const rateUserAction = createAsyncThunk(
+    "user/rateUser",
+    async ({ ownerId, stars }, { rejectWithValue }) => {
       try {
-        const response = await axiosInstance.put(`${API_URL}/${userData._id}`, userData)
-        return response.data
+        const response = await axiosInstance.post(`${API_URL}/rate`, { ownerId, stars });
+        return response.data;
       } catch (err) {
-        return rejectWithValue(err.response?.data?.message || "Failed to update user")
+        return rejectWithValue(err.response?.data?.message || "Failed to submit rating");
       }
     }
-  )
+  );
+  
   

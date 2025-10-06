@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import * as ScreenCapture from "expo-screen-capture";
+import { useDispatch } from "react-redux"
 
 import {
   View,
@@ -20,18 +21,20 @@ import {
 import MapView, { Marker, Polyline } from "react-native-maps"
 import Icon from "react-native-vector-icons/Ionicons"
 import I18n from "../../utils/i18n"
-
+import { rateUserAction } from "../../redux/action/UserActions"
 import { getTurnByTurnDirections } from "../../utils/googleDirections"
 import ImageViewing from "react-native-image-viewing";
 
 const { width, height } = Dimensions.get("window")
 
 const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage, navigation }) => {
+  const dispatch = useDispatch() 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [showImageGallery, setShowImageGallery] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [userRating, setUserRating] = useState(0)
-
+  const [rating, setRating] = useState(0)
+  const [submitted, setSubmitted] = useState(false)
   // Internal route state for "Menyainzira" button
   const [internalRouteCoordinates, setInternalRouteCoordinates] = useState([])
   const [internalRouteInfo, setInternalRouteInfo] = useState(null)
@@ -70,7 +73,25 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
       ScreenCapture.allowScreenCaptureAsync();
     };
   }, [visible]);
+  // ✅ Send rating to backend (renter -> owner)
+  const submitRating = async (stars) => {
+    try {
+      setSubmitted(true);
+      
+      console.log("🚀 Sending rating payload:", { ownerId: car?.owner?._id, stars });
   
+      await dispatch(rateUserAction({ ownerId: car?.owner?._id, stars })).unwrap();
+  
+      Alert.alert(I18n.t("thankYouReview"), I18n.t("ratingSubmitted"));
+      setShowReviewModal(false);
+      setUserRating(stars);
+    } catch (error) {
+      console.log("❌ Rating error:", error);
+      Alert.alert(I18n.t("error"), I18n.t("ratingFailed"));
+    } finally {
+      setSubmitted(false);
+    }
+  };
   
 
   if (!car) return null
@@ -313,16 +334,15 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
     ? calculateDistance(userLocation.latitude, userLocation.longitude, normalizedCar.latitude, normalizedCar.longitude)
     : null
 
-  const handleSubmitReview = () => {
-    if (userRating === 0) {
-      Alert.alert("Error", "Please select a rating")
-      return
+    const handleSubmitReview = async () => {
+      if (userRating === 0) {
+        Alert.alert(I18n.t("error"), I18n.t("selectRating"))
+        return
+      }
+      await submitRating(userRating)
+      setUserRating(0)
     }
-    Alert.alert(I18n.t("thankYouReview"), `You rated this car ${userRating} stars`, [
-      { text: "OK", onPress: () => setShowReviewModal(false) },
-    ])
-    setUserRating(0)
-  }
+    
 
   return (
     <>

@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit"
-import { getCurrentUserAction, searchUsersAction, updateUserAction } from "../action/UserActions"
+import { getCurrentUserAction, searchUsersAction, updateUserAction,rateUserAction } from "../action/UserActions"
 
 const initialState = {
   currentUser: null,
@@ -64,6 +64,25 @@ const userSlice = createSlice({
         state.isUpdating = false
         state.error = action.payload
       })
+      // ⭐ Rate user
+.addCase(rateUserAction.pending, (state) => {
+  state.isUpdating = true
+  state.error = null
+})
+.addCase(rateUserAction.fulfilled, (state, action) => {
+  state.isUpdating = false
+
+  // If the current user is the owner who was rated, update their rating data
+  if (state.currentUser && state.currentUser._id === action.meta.arg.ownerId) {
+    state.currentUser.ratingAverage = action.payload.ratingAverage
+    state.currentUser.ratingPercent = action.payload.ratingPercent
+  }
+})
+.addCase(rateUserAction.rejected, (state, action) => {
+  state.isUpdating = false
+  state.error = action.payload
+})
+
   },
 })
 

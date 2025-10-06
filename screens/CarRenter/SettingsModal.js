@@ -13,123 +13,147 @@ import {
   Alert,
   Dimensions,
   Linking,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Platform,
 } from "react-native"
 import Icon from "react-native-vector-icons/Ionicons"
 import * as ImagePicker from "expo-image-picker"
 import I18n from "../../utils/i18n"
-import * as SecureStore from "expo-secure-store"
+import { useDispatch, useSelector } from "react-redux"
+import { getCurrentUserAction, updateUserAction } from "../../redux/action/UserActions"
 
 const { width, height } = Dimensions.get("window")
 
-const SettingsModal = ({ visible, onClose, userProfile, onProfileUpdate, navigation }) => {
+const SettingsModal = ({ visible, onClose, navigation }) => {
+  const dispatch = useDispatch()
+  const { currentUser, isLoading, isUpdating } = useSelector((state) => state.user)
+
   const [showPersonalInfo, setShowPersonalInfo] = useState(false)
   const [showChangePassword, setShowChangePassword] = useState(false)
-  const [showHelpModal, setShowHelpModal] = useState(false) // Added help modal state
-  const [editingProfile, setEditingProfile] = useState(false)
-  const [tempProfile, setTempProfile] = useState(userProfile)
+  const [showHelpModal, setShowHelpModal] = useState(false)
+  const [showNumber, setShowNumber] = useState(false)
+  const phoneNumber = "+250780114522"
+
+  const handleWhatsAppContact = () => {
+    setShowNumber(true)
+    const url = `https://wa.me/${phoneNumber.replace("+", "")}`
+    Linking.openURL(url).catch(() => Alert.alert("Error", "Unable to open WhatsApp"))
+  }
+
+  const handlePhoneContact = () => {
+    setShowNumber(true)
+    Linking.openURL(`tel:${phoneNumber}`).catch(() => Alert.alert("Error", "Unable to start a call"))
+  }
+
+  const handleMessageContact = () => {
+    setShowNumber(true)
+    Linking.openURL(`sms:${phoneNumber}`).catch(() => Alert.alert("Error", "Unable to open messaging app"))
+  }
+
+  const [tempProfile, setTempProfile] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  })
+
   const [passwords, setPasswords] = useState({
     oldPassword: "",
     newPassword: "",
     confirmPassword: "",
   })
 
+  // ✅ Fetch user data when modal opens
   useEffect(() => {
-    loadSavedProfile()
-  }, [])
-
-  const loadSavedProfile = async () => {
-    try {
-      const savedProfile = await SecureStore.getItemAsync("userProfile")
-      if (savedProfile) {
-        const parsedProfile = JSON.parse(savedProfile)
-        setTempProfile(parsedProfile)
-      }
-    } catch (error) {
-      console.log("Error loading saved profile:", error)
+    if (visible) {
+      dispatch(getCurrentUserAction())
     }
-  }
+  }, [visible])
 
-  const saveProfileToStorage = async (profile) => {
-    try {
-      await SecureStore.setItemAsync("userProfile", JSON.stringify(profile))
-    } catch (error) {
-      console.log("Error saving profile:", error)
-    }
-  }
-
-  const handleImagePicker = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-      if (status !== "granted") {
-        Alert.alert("Permission Required", "Please allow access to your photo library")
-        return
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
+  // ✅ Update temporary state when Redux store updates
+  useEffect(() => {
+    if (currentUser) {
+      setTempProfile({
+        _id: currentUser._id,
+        name: currentUser.name || "",
+        email: currentUser.email || "",
+        phone: currentUser.phone || currentUser.telephone || "",
       })
-
-      if (!result.canceled) {
-        const updatedProfile = { ...tempProfile, profileImage: result.assets[0].uri }
-        setTempProfile(updatedProfile)
-        await saveProfileToStorage(updatedProfile)
-        onProfileUpdate(updatedProfile)
-        Alert.alert("Success", "Profile picture updated successfully")
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to pick image")
     }
-  }
+  }, [currentUser])
 
+  // ✅ Update profile info (name, email, phone)
   const handleSaveProfile = async () => {
-    await saveProfileToStorage(tempProfile)
-    onProfileUpdate(tempProfile)
-    setEditingProfile(false)
-    Alert.alert("Success", "Profile updated successfully")
+    if (!tempProfile.name || !tempProfile.email || !tempProfile.phone) {
+      return Alert.alert("Error", "Please fill all required fields")
+    }
+
+    try {
+      await dispatch(updateUserAction(tempProfile)).unwrap()
+      Alert.alert("Success", "Profile updated successfully")
+      setShowPersonalInfo(false)
+      dispatch(getCurrentUserAction()) // Refresh after save
+    } catch (error) {
+      Alert.alert("Error", error || "Failed to update profile")
+    }
   }
 
-  const handleChangePassword = () => {
-    if (!passwords.oldPassword || !passwords.newPassword || !passwords.confirmPassword) {
-      Alert.alert("Error", "Please fill all password fields")
-      return
+  // ✅ Change password
+  const handleChangePassword = async () => {
+    const { oldPassword, newPassword, confirmPassword } = passwords
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      return Alert.alert("Error", "Please fill all password fields")
+    }
+    if (newPassword !== confirmPassword) {
+      return Alert.alert("Error", "New passwords do not match")
+    }
+    if (newPassword.length < 6) {
+      return Alert.alert("Error", "Password must be at least 6 characters")
     }
 
-    if (passwords.newPassword !== passwords.confirmPassword) {
-      Alert.alert("Error", "New passwords don't match")
-      return
-    }
+    try {
+      await dispatch(
+        updateUserAction({
+          _id: tempProfile._id,
+          oldPassword,
+          newPassword,
+        })
+      ).unwrap()
 
-    if (passwords.newPassword.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters")
-      return
+      Alert.alert("Success", "Password changed successfully")
+      setPasswords({ oldPassword: "", newPassword: "", confirmPassword: "" })
+      setShowChangePassword(false)
+    } catch (error) {
+      Alert.alert("Error", error || "Failed to update password")
     }
-
-    Alert.alert("Success", "Password changed successfully")
-    setPasswords({ oldPassword: "", newPassword: "", confirmPassword: "" })
-    setShowChangePassword(false)
   }
 
-  const handleWhatsAppContact = () => {
-    const phoneNumber = "+250780114522"
-    const url = `whatsapp://send?phone=${phoneNumber}`
-    Linking.openURL(url).catch(() => {
-      Alert.alert("Error", "WhatsApp is not installed on this device")
+  // ✅ Pick and update profile image (optional)
+  const handleImagePicker = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== "granted") {
+      Alert.alert("Permission Required", "Please allow photo library access")
+      return
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
     })
-  }
 
-  const handlePhoneContact = () => {
-    const phoneNumber = "+250780114522"
-    const url = `tel:${phoneNumber}`
-    Linking.openURL(url)
-  }
-
-  const handleMessageContact = () => {
-    const phoneNumber = "+250780114522"
-    const url = `sms:${phoneNumber}`
-    Linking.openURL(url)
+    if (!result.canceled) {
+      const imageUri = result.assets[0].uri
+      try {
+        await dispatch(updateUserAction({ _id: tempProfile._id, profileImage: imageUri })).unwrap()
+        Alert.alert("Success", "Profile picture updated successfully")
+        dispatch(getCurrentUserAction())
+      } catch (error) {
+        Alert.alert("Error", "Failed to update profile image")
+      }
+    }
   }
 
   const handleLogout = () => {
@@ -140,16 +164,17 @@ const SettingsModal = ({ visible, onClose, userProfile, onProfileUpdate, navigat
         style: "destructive",
         onPress: () => {
           onClose()
-          // Navigate to login screen
           navigation.navigate("AuthScreen")
         },
       },
     ])
   }
 
+
   return (
-    <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
+        
         <View style={styles.modalContainer}>
           {/* Header */}
           <View style={styles.modalHeader}>
@@ -166,34 +191,29 @@ const SettingsModal = ({ visible, onClose, userProfile, onProfileUpdate, navigat
             {/* Profile Section */}
             <View style={styles.section}>
               <View style={styles.profileSection}>
-                <TouchableOpacity
-                  style={styles.profileImageContainer}
-                  onPress={handleImagePicker} // Always allow image picking
-                >
-                  <Image source={{ uri: tempProfile.profileImage }} style={styles.profileImage} />
+                <TouchableOpacity onPress={handleImagePicker} style={styles.profileImageContainer}>
+                  <Image
+                    source={
+                      currentUser?.profileImage
+                        ? { uri: currentUser.profileImage }
+                        : { uri: "https://cdn-icons-png.flaticon.com/512/149/149071.png" }
+                    }
+                    style={styles.profileImage}
+                  />
                   <View style={styles.cameraOverlay}>
                     <Icon name="camera" size={20} color="white" />
                   </View>
                 </TouchableOpacity>
+
                 <View style={styles.profileInfo}>
-                  <Text style={styles.profileName}>{tempProfile.name}</Text>
-                  <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={() => {
-                      if (editingProfile) {
-                        handleSaveProfile()
-                      } else {
-                        setEditingProfile(true)
-                      }
-                    }}
-                  >
-                    <Text style={styles.editButtonText}>{editingProfile ? I18n.t("save") : I18n.t("changePhoto")}</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.profileName}>{currentUser?.name || "No Name"}</Text>
+                  <Text style={styles.profileEmail}>{currentUser?.email || "No Email"}</Text>
+                  <Text style={styles.profilePhone}>{currentUser?.phone || "No Phone"}</Text>
                 </View>
               </View>
             </View>
 
-            {/* Personal Information */}
+            {/* Personal Info */}
             <TouchableOpacity style={styles.settingItem} onPress={() => setShowPersonalInfo(true)}>
               <View style={styles.settingLeft}>
                 <Icon name="person" size={24} color="#007EFD" />
@@ -220,15 +240,6 @@ const SettingsModal = ({ visible, onClose, userProfile, onProfileUpdate, navigat
               <Icon name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
 
-            {/* Privacy Policy */}
-            <TouchableOpacity style={styles.settingItem}>
-              <View style={styles.settingLeft}>
-                <Icon name="shield-checkmark" size={24} color="#007EFD" />
-                <Text style={styles.settingText}>{I18n.t("policy")}</Text>
-              </View>
-              <Icon name="chevron-forward" size={20} color="#666" />
-            </TouchableOpacity>
-
             {/* Logout */}
             <TouchableOpacity style={[styles.settingItem, styles.logoutItem]} onPress={handleLogout}>
               <View style={styles.settingLeft}>
@@ -238,121 +249,166 @@ const SettingsModal = ({ visible, onClose, userProfile, onProfileUpdate, navigat
             </TouchableOpacity>
           </ScrollView>
         </View>
-
-        {/* Personal Info Modal */}
-        <Modal visible={showPersonalInfo} transparent={true} animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              <View style={styles.modalHeader}>
-                <View style={styles.headerIndicator} />
-                <View style={styles.headerContent}>
-                  <Text style={styles.modalTitle}>{I18n.t("personalInfo")}</Text>
-                  <TouchableOpacity onPress={() => setShowPersonalInfo(false)} style={styles.closeButton}>
-                    <Icon name="close" size={24} color="#333" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <ScrollView style={styles.scrollContent}>
-                <View style={styles.formSection}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>{I18n.t("name")}</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={tempProfile.name}
-                      onChangeText={(text) => setTempProfile({ ...tempProfile, name: text })}
-                      placeholder="Enter your name"
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Email</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={tempProfile.email || ""}
-                      onChangeText={(text) => setTempProfile({ ...tempProfile, email: text })}
-                      placeholder="Enter your email"
-                      keyboardType="email-address"
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>{I18n.t("telephone")}</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={tempProfile.telephone || ""}
-                      onChangeText={(text) => setTempProfile({ ...tempProfile, telephone: text })}
-                      placeholder="Enter your phone number"
-                      keyboardType="phone-pad"
-                    />
-                  </View>
-
-                  <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
-                    <Text style={styles.saveButtonText}>{I18n.t("save")}</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
+{/* Personal Info Modal */}
+<Modal
+  visible={showPersonalInfo}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowPersonalInfo(false)}
+>
+  <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
+  >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContainer, { maxHeight: height * 0.6 }]}>
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <View style={styles.headerIndicator} />
+            <View style={styles.headerContent}>
+              <Text style={styles.modalTitle}>{I18n.t("personalInfo")}</Text>
+              <TouchableOpacity onPress={() => setShowPersonalInfo(false)} style={styles.closeButton}>
+                <Icon name="close" size={24} color="#333" />
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
 
-        {/* Change Password Modal */}
-        <Modal visible={showChangePassword} transparent={true} animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              <View style={styles.modalHeader}>
-                <View style={styles.headerIndicator} />
-                <View style={styles.headerContent}>
-                  <Text style={styles.modalTitle}>{I18n.t("changePassword")}</Text>
-                  <TouchableOpacity onPress={() => setShowChangePassword(false)} style={styles.closeButton}>
-                    <Icon name="close" size={24} color="#333" />
-                  </TouchableOpacity>
-                </View>
+          <ScrollView
+            style={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.formSection}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>{I18n.t("name")}</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={tempProfile.name}
+                  onChangeText={(text) => setTempProfile({ ...tempProfile, name: text })}
+                  placeholder={I18n.t("enterName")}
+                  returnKeyType="next"
+                />
               </View>
 
-              <ScrollView style={styles.scrollContent}>
-                <View style={styles.formSection}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>{I18n.t("oldPassword")}</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={passwords.oldPassword}
-                      onChangeText={(text) => setPasswords({ ...passwords, oldPassword: text })}
-                      placeholder="Enter current password"
-                      secureTextEntry
-                    />
-                  </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>{I18n.t("email")}</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={tempProfile.email}
+                  onChangeText={(text) => setTempProfile({ ...tempProfile, email: text })}
+                  keyboardType="email-address"
+                  placeholder={I18n.t("enterEmail")}
+                  returnKeyType="next"
+                />
+              </View>
 
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>{I18n.t("newPassword")}</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={passwords.newPassword}
-                      onChangeText={(text) => setPasswords({ ...passwords, newPassword: text })}
-                      placeholder="Enter new password"
-                      secureTextEntry
-                    />
-                  </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>{I18n.t("phone")}</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={tempProfile.phone}
+                  onChangeText={(text) => setTempProfile({ ...tempProfile, phone: text })}
+                  keyboardType="phone-pad"
+                  placeholder={I18n.t("enterPhone")}
+                  returnKeyType="done"
+                />
+              </View>
 
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Confirm New Password</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={passwords.confirmPassword}
-                      onChangeText={(text) => setPasswords({ ...passwords, confirmPassword: text })}
-                      placeholder="Confirm new password"
-                      secureTextEntry
-                    />
-                  </View>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveProfile}
+                disabled={isUpdating}
+              >
+                <Text style={styles.saveButtonText}>
+                  {isUpdating ? I18n.t("saving") + "..." : I18n.t("save")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </TouchableWithoutFeedback>
+  </KeyboardAvoidingView>
+</Modal>
 
-                  <TouchableOpacity style={styles.saveButton} onPress={handleChangePassword}>
-                    <Text style={styles.saveButtonText}>{I18n.t("update")}</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
+{/* Change Password Modal */}
+<Modal
+  visible={showChangePassword}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowChangePassword(false)}
+>
+  <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
+  >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContainer, { maxHeight: height * 0.9 }]}>
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <View style={styles.headerIndicator} />
+            <View style={styles.headerContent}>
+              <Text style={styles.modalTitle}>{I18n.t("changePassword")}</Text>
+              <TouchableOpacity onPress={() => setShowChangePassword(false)} style={styles.closeButton}>
+                <Icon name="close" size={24} color="#333" />
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+
+          <ScrollView
+            style={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.formSection}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>{I18n.t("oldPassword")}</Text>
+                <TextInput
+                  style={styles.textInput}
+                  secureTextEntry
+                  value={passwords.oldPassword}
+                  onChangeText={(t) => setPasswords({ ...passwords, oldPassword: t })}
+                  placeholder={I18n.t("enterOldPassword")}
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>{I18n.t("newPassword")}</Text>
+                <TextInput
+                  style={styles.textInput}
+                  secureTextEntry
+                  value={passwords.newPassword}
+                  onChangeText={(t) => setPasswords({ ...passwords, newPassword: t })}
+                  placeholder={I18n.t("enterNewPassword")}
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>{I18n.t("confirmNewPassword")}</Text>
+                <TextInput
+                  style={styles.textInput}
+                  secureTextEntry
+                  value={passwords.confirmPassword}
+                  onChangeText={(t) => setPasswords({ ...passwords, confirmPassword: t })}
+                  placeholder={I18n.t("confirmNewPassword")}
+                  returnKeyType="done"
+                />
+              </View>
+
+              <TouchableOpacity style={styles.saveButton} onPress={handleChangePassword}>
+                <Text style={styles.saveButtonText}>{I18n.t("update")}</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </TouchableWithoutFeedback>
+  </KeyboardAvoidingView>
+</Modal>
 
         <Modal visible={showHelpModal} transparent={true} animationType="slide">
           <View style={styles.modalOverlay}>
@@ -376,33 +432,37 @@ const SettingsModal = ({ visible, onClose, userProfile, onProfileUpdate, navigat
 
                   <Text style={styles.helpTitle}>Contact Us</Text>
                   <Text style={styles.helpSubtitle}>We're here to help you 24/7</Text>
+{/* Contact Options */}
+<View style={styles.contactOptions}>
+        <TouchableOpacity style={styles.contactOption} onPress={handleWhatsAppContact}>
+          <Icon name="logo-whatsapp" size={30} color="#25D366" />
+          <Text style={styles.contactText}>WhatsApp</Text>
+          {showNumber && <Text style={styles.contactNumber}>{phoneNumber}</Text>}
+        </TouchableOpacity>
 
-                  {/* Contact Options */}
-                  <View style={styles.contactOptions}>
-                    <TouchableOpacity style={styles.contactOption} onPress={handleWhatsAppContact}>
-                      <Icon name="logo-whatsapp" size={30} color="#25D366" />
-                      <Text style={styles.contactText}>WhatsApp</Text>
-                      <Text style={styles.contactNumber}>+250780114522</Text>
-                    </TouchableOpacity>
+        <TouchableOpacity style={styles.contactOption} onPress={handlePhoneContact}>
+          <Icon name="call" size={30} color="#007EFD" />
+          <Text style={styles.contactText}>Phone Call</Text>
+          {showNumber && <Text style={styles.contactNumber}>{phoneNumber}</Text>}
+        </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.contactOption} onPress={handlePhoneContact}>
-                      <Icon name="call" size={30} color="#007EFD" />
-                      <Text style={styles.contactText}>Phone Call</Text>
-                      <Text style={styles.contactNumber}>+250780114522</Text>
-                    </TouchableOpacity>
+        <TouchableOpacity style={styles.contactOption} onPress={handleMessageContact}>
+          <Icon name="chatbubble" size={30} color="#007EFD" />
+          <Text style={styles.contactText}>SMS</Text>
+          {showNumber && <Text style={styles.contactNumber}>{phoneNumber}</Text>}
+        </TouchableOpacity>
+      </View>
 
-                    <TouchableOpacity style={styles.contactOption} onPress={handleMessageContact}>
-                      <Icon name="chatbubble" size={30} color="#007EFD" />
-                      <Text style={styles.contactText}>SMS</Text>
-                      <Text style={styles.contactNumber}>+250780114522</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Policy */}
-                  <View style={styles.policySection}>
-                    <Text style={styles.policyTitle}>Our Policy</Text>
-                    <Text style={styles.policyText}>rushagoltd</Text>
-                  </View>
+      <View style={styles.policySection}>
+        <Text style={styles.policyTitle}>Our Policy</Text>
+        <Text style={styles.policyText}>
+          Rushago Ltd is a trusted car rental platform connecting vehicle owners with renters.
+          We prioritize transparency, safety, and customer satisfaction in every transaction. 
+          Our mission is to make renting a car seamless, affordable, and reliable — empowering 
+          both car owners and renters with convenience and confidence.
+          {"\n\n"}© 2025 RushaGo Inc. All Rights Reserved.
+        </Text>
+      </View>
                 </View>
               </ScrollView>
             </View>
