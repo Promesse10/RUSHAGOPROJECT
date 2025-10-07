@@ -33,6 +33,7 @@ import PrivacyPolicy from "../screens/CarRenter/PrivacyPolicy"
 import NotificationsScreen from "../screens/CarRenter/NotificationsScreen"
 import PushNotifications from "../screens/CarRenter/PushNotifications"
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen"
+import ResetPasswordScreen from "../screens/ResetPasswordScreen"
 
 import { Home as HomeIcon, Car, Settings } from "lucide-react-native"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
@@ -160,6 +161,12 @@ const AppNavigator = () => {
             <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
             <Stack.Screen name="PushNotifications" component={PushNotifications} />
             <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} options={{ gestureEnabled: true }} />
+            <Stack.Screen
+  name="ResetPasswordScreen"
+  component={ResetPasswordScreen}
+  options={{ gestureEnabled: true }}
+/>
+
           </Stack.Navigator>
         </GestureHandlerRootView>
       </LocationProvider>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useDispatch, useSelector } from "react-redux"
 import {
   View,
   Text,
@@ -15,48 +16,105 @@ import {
   Dimensions,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import AsyncStorage from "@react-native-async-storage/async-storage"
+import {
+  sendForgotEmailOtpAction,
+  verifyOtpAndUpdateEmailAction,
+  sendPasswordResetEmailAction,
+  resetPasswordAction,
+} from "../redux/action/AuthRecoveryActions"
+import { clearAuthRecoveryState } from "../redux/slices/authRecoverySlice"
 
 const { width, height } = Dimensions.get("window")
 
 const ForgotPasswordScreen = ({ navigation }) => {
-  // Track the current step in the password reset flow
+  const dispatch = useDispatch()
+  const { isLoading, error, otpSent, emailUpdated, resetEmailSent, passwordReset, generatedOtp } = useSelector(
+    (state) => state.authRecovery,
+  )
+
+  // Track recovery type: 'email' or 'password'
+  const [recoveryType, setRecoveryType] = useState(null)
   const [step, setStep] = useState(1)
+
+  // Forgot Email fields
+  const [phone, setPhone] = useState("")
+  const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""])
+  const [newEmail, setNewEmail] = useState("")
+
+  // Forgot Password fields
   const [email, setEmail] = useState("")
-  const [otpCode, setOtpCode] = useState(["", "", "", ""])
+  const [resetToken, setResetToken] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [secureNewPassword, setSecureNewPassword] = useState(true)
   const [secureConfirmPassword, setSecureConfirmPassword] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
+
+  // Errors
+  const [phoneError, setPhoneError] = useState("")
   const [emailError, setEmailError] = useState("")
   const [otpError, setOtpError] = useState("")
   const [passwordError, setPasswordError] = useState("")
   const [confirmPasswordError, setConfirmPasswordError] = useState("")
-  const [timeLeft, setTimeLeft] = useState(120) // 2 minutes in seconds
-  const [timerActive, setTimerActive] = useState(false)
-  const [generatedOTP, setGeneratedOTP] = useState("")
 
-  // References for OTP input fields
+  // Timer
+  const [timeLeft, setTimeLeft] = useState(300) // Updated timer to 5 minutes (300 seconds) instead of 2 minutes
+  const [timerActive, setTimerActive] = useState(false)
+
   const otpInputRefs = useRef([])
 
-  // Timer for OTP expiration
+  // Timer countdown
   useEffect(() => {
     let timer
     if (timerActive && timeLeft > 0) {
-      timer = setTimeout(() => {
-        setTimeLeft(timeLeft - 1)
-      }, 1000)
+      timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000)
     } else if (timeLeft === 0) {
       setTimerActive(false)
     }
-
     return () => {
       if (timer) clearTimeout(timer)
     }
   }, [timerActive, timeLeft])
 
-  // Format time as MM:SS
+  // Handle OTP sent
+  useEffect(() => {
+    if (otpSent) {
+      console.log("[v0] OTP sent successfully, showing verification modal")
+      setStep(2)
+      setTimeLeft(300) // 5 minutes timer
+      setTimerActive(true)
+    }
+  }, [otpSent])
+
+  // Handle email updated
+  useEffect(() => {
+    if (emailUpdated) {
+      setStep(3)
+      Alert.alert("Success", "Your email has been updated successfully!")
+    }
+  }, [emailUpdated])
+
+  // Handle reset email sent
+  useEffect(() => {
+    if (resetEmailSent) {
+      setStep(2)
+      Alert.alert("Email Sent", "Check your email for the password reset link.")
+    }
+  }, [resetEmailSent])
+
+  // Handle password reset
+  useEffect(() => {
+    if (passwordReset) {
+      setStep(3)
+    }
+  }, [passwordReset])
+
+  // Handle errors
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Error", error)
+    }
+  }, [error])
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -68,8 +126,71 @@ const ForgotPasswordScreen = ({ navigation }) => {
     return emailRegex.test(email)
   }
 
-  const handleSendCode = async () => {
-    // Validate email
+  const validatePhone = (phone) => {
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/
+    return phoneRegex.test(phone)
+  }
+
+  // ========== FORGOT EMAIL FLOW ==========
+  const handleSendOtp = () => {
+    if (!phone.trim()) {
+      setPhoneError("Phone number is required")
+      return
+    } else if (!validatePhone(phone)) {
+      setPhoneError("Enter a valid phone number (e.g., +1234567890)")
+      return
+    } else {
+      setPhoneError("")
+    }
+
+    dispatch(sendForgotEmailOtpAction({ phone }))
+  }
+
+  const handleResendOtp = () => {
+    dispatch(sendForgotEmailOtpAction({ phone }))
+    setOtpCode(["", "", "", "", "", ""])
+    setOtpError("")
+  }
+
+  const handleOtpChange = (text, index) => {
+    const newOtpCode = [...otpCode]
+    newOtpCode[index] = text
+    setOtpCode(newOtpCode)
+    setOtpError("")
+
+    if (text && index < 5) {
+      otpInputRefs.current[index + 1].focus()
+    }
+  }
+
+  const handleVerifyOtpAndUpdateEmail = () => {
+    const enteredOtp = otpCode.join("")
+
+    if (enteredOtp.length !== 6) {
+      setOtpError("Please enter the complete 6-digit code")
+      return
+    }
+
+    if (!newEmail.trim()) {
+      setEmailError("New email is required")
+      return
+    } else if (!validateEmail(newEmail)) {
+      setEmailError("Enter a valid email address")
+      return
+    } else {
+      setEmailError("")
+    }
+
+    if (!timerActive && timeLeft === 0) {
+      setOtpError("Code expired. Please request a new code")
+      return
+    }
+
+    dispatch(verifyOtpAndUpdateEmailAction({ phone, otp: enteredOtp, newEmail }))
+  }
+
+  // ========== FORGOT PASSWORD FLOW ==========
+  const handleSendResetEmail = () => {
     if (!email.trim()) {
       setEmailError("Email is required")
       return
@@ -80,98 +201,10 @@ const ForgotPasswordScreen = ({ navigation }) => {
       setEmailError("")
     }
 
-    setIsLoading(true)
-
-    try {
-      // Check if the email exists in AsyncStorage (either as renter or owner)
-      const renterKey = `renter_${email}`
-      const ownerKey = `owner_${email}`
-      const renterData = await AsyncStorage.getItem(renterKey)
-      const ownerData = await AsyncStorage.getItem(ownerKey)
-
-      if (!renterData && !ownerData) {
-        setEmailError("No account found with this email address")
-        setIsLoading(false)
-        return
-      }
-
-      // Generate a random 4-digit OTP
-      const otp = Math.floor(1000 + Math.random() * 9000).toString()
-      setGeneratedOTP(otp)
-      console.log("Generated OTP:", otp) // For testing purposes
-
-      // Reset OTP timer
-      setTimeLeft(120)
-      setTimerActive(true)
-
-      // Move to OTP verification step
-      setTimeout(() => {
-        setIsLoading(false)
-        setStep(2)
-      }, 1000)
-    } catch (error) {
-      console.log("Error sending code:", error)
-      Alert.alert("Error", "An error occurred while sending the code. Please try again.")
-      setIsLoading(false)
-    }
+    dispatch(sendPasswordResetEmailAction({ email }))
   }
 
-  const handleResendCode = () => {
-    // Generate a new OTP
-    const otp = Math.floor(1000 + Math.random() * 9000).toString()
-    setGeneratedOTP(otp)
-    console.log("New OTP:", otp) // For testing purposes
-
-    // Reset OTP timer
-    setTimeLeft(120)
-    setTimerActive(true)
-
-    // Clear previous OTP input
-    setOtpCode(["", "", "", ""])
-    setOtpError("")
-
-    // Show confirmation
-    Alert.alert("Code Sent", "A new verification code has been sent to your email.")
-  }
-
-  const handleOtpChange = (text, index) => {
-    // Update the OTP code array
-    const newOtpCode = [...otpCode]
-    newOtpCode[index] = text
-
-    setOtpCode(newOtpCode)
-    setOtpError("")
-
-    // Auto-focus next input if current input is filled
-    if (text && index < 3) {
-      otpInputRefs.current[index + 1].focus()
-    }
-  }
-
-  const handleVerifyOtp = () => {
-    const enteredOtp = otpCode.join("")
-
-    if (enteredOtp.length !== 4) {
-      setOtpError("Please enter the complete verification code")
-      return
-    }
-
-    if (!timerActive && timeLeft === 0) {
-      setOtpError("Code expired. Please request a new code")
-      return
-    }
-
-    if (enteredOtp === generatedOTP) {
-      // OTP is correct, move to reset password step
-      setStep(3)
-      setOtpError("")
-    } else {
-      setOtpError("Wrong code, please try again")
-    }
-  }
-
-  const handleResetPassword = async () => {
-    // Validate passwords
+  const handleResetPassword = () => {
     if (!newPassword.trim()) {
       setPasswordError("New password is required")
       return
@@ -192,76 +225,55 @@ const ForgotPasswordScreen = ({ navigation }) => {
       setConfirmPasswordError("")
     }
 
-    setIsLoading(true)
-
-    try {
-      // Update password in AsyncStorage for both user types if they exist
-      const renterKey = `renter_${email}`
-      const ownerKey = `owner_${email}`
-      const renterData = await AsyncStorage.getItem(renterKey)
-      const ownerData = await AsyncStorage.getItem(ownerKey)
-
-      if (renterData) {
-        const renterUser = JSON.parse(renterData)
-        renterUser.password = newPassword
-        await AsyncStorage.setItem(renterKey, JSON.stringify(renterUser))
-      }
-
-      if (ownerData) {
-        const ownerUser = JSON.parse(ownerData)
-        ownerUser.password = newPassword
-        await AsyncStorage.setItem(ownerKey, JSON.stringify(ownerUser))
-      }
-
-      // Move to success step
-      setTimeout(() => {
-        setIsLoading(false)
-        setStep(4)
-      }, 1000)
-    } catch (error) {
-      console.log("Error resetting password:", error)
-      Alert.alert("Error", "An error occurred while resetting your password. Please try again.")
-      setIsLoading(false)
-    }
+    // In a real app, you'd extract the token from the email link
+    // For now, we'll use a placeholder
+    dispatch(resetPasswordAction({ token: resetToken, newPassword }))
   }
 
   const handleBackToLogin = () => {
+    dispatch(clearAuthRecoveryState())
     navigation.navigate("LoginScreen")
   }
 
-  // Render the email input step
-  const renderEmailStep = () => {
+  // ========== RENDER SELECTION SCREEN ==========
+  const renderSelectionScreen = () => {
     return (
       <View style={styles.stepContainer}>
-        <Text style={styles.title}>Forgot Password?</Text>
-        <Text style={styles.subtitle}>
-          Don't worry! It occurs. Please enter the email address linked with your account.
-        </Text>
+        <Text style={styles.title}>Account Recovery</Text>
+        <Text style={styles.subtitle}>Choose how you want to recover your account</Text>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Email</Text>
-          <TextInput
-            style={[styles.input, emailError && styles.inputError]}
-            placeholder="Your email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text)
-              setEmailError("")
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-        </View>
+        <TouchableOpacity
+          style={styles.optionButton}
+          onPress={() => {
+            setRecoveryType("email")
+            setStep(1)
+          }}
+        >
+          <Ionicons name="mail-outline" size={32} color="#007EFD" />
+          <View style={styles.optionTextContainer}>
+            <Text style={styles.optionTitle}>Forgot Email</Text>
+            <Text style={styles.optionSubtitle}>Use phone number to update email</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#999" />
+        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSendCode} disabled={isLoading}>
-          <Text style={styles.primaryButtonText}>{isLoading ? "Sending..." : "Send Code"}</Text>
+        <TouchableOpacity
+          style={styles.optionButton}
+          onPress={() => {
+            setRecoveryType("password")
+            setStep(1)
+          }}
+        >
+          <Ionicons name="lock-closed-outline" size={32} color="#007EFD" />
+          <View style={styles.optionTextContainer}>
+            <Text style={styles.optionTitle}>Forgot Password</Text>
+            <Text style={styles.optionSubtitle}>Reset password via email</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
 
         <View style={styles.loginLinkContainer}>
-          <Text style={styles.rememberText}>Remember Password? </Text>
+          <Text style={styles.rememberText}>Remember your credentials? </Text>
           <TouchableOpacity onPress={handleBackToLogin}>
             <Text style={styles.loginLink}>Login</Text>
           </TouchableOpacity>
@@ -270,12 +282,45 @@ const ForgotPasswordScreen = ({ navigation }) => {
     )
   }
 
-  // Render the OTP verification step
-  const renderOtpStep = () => {
+  // ========== FORGOT EMAIL SCREENS ==========
+  const renderForgotEmailPhoneStep = () => {
     return (
       <View style={styles.stepContainer}>
-        <Text style={styles.title}>OTP Verification</Text>
-        <Text style={styles.subtitle}>Enter the verification code we just sent on your email address.</Text>
+        <TouchableOpacity onPress={() => setRecoveryType(null)} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+
+        <Text style={styles.title}>Forgot Email?</Text>
+        <Text style={styles.subtitle}>Enter your phone number to receive a verification code</Text>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Phone Number</Text>
+          <TextInput
+            style={[styles.input, phoneError && styles.inputError]}
+            placeholder="+1234567890"
+            placeholderTextColor="#999"
+            value={phone}
+            onChangeText={(text) => {
+              setPhone(text)
+              setPhoneError("")
+            }}
+            keyboardType="phone-pad"
+          />
+          {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
+        </View>
+
+        <TouchableOpacity style={styles.primaryButton} onPress={handleSendOtp} disabled={isLoading}>
+          <Text style={styles.primaryButtonText}>{isLoading ? "Sending..." : "Send Code"}</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  const renderForgotEmailOtpStep = () => {
+    return (
+      <View style={styles.stepContainer}>
+        <Text style={styles.title}>Verify OTP</Text>
+        <Text style={styles.subtitle}>Enter the 6-digit code sent to your phone</Text>
 
         <View style={styles.otpContainer}>
           {otpCode.map((digit, index) => (
@@ -287,6 +332,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
               onChangeText={(text) => handleOtpChange(text.replace(/[^0-9]/g, ""), index)}
               keyboardType="number-pad"
               maxLength={1}
+              textContentType="oneTimeCode"
+              autoComplete="sms-otp"
               onKeyPress={({ nativeEvent }) => {
                 if (nativeEvent.key === "Backspace" && !digit && index > 0) {
                   otpInputRefs.current[index - 1].focus()
@@ -298,17 +345,34 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
         {otpError ? <Text style={styles.errorText}>{otpError}</Text> : null}
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleVerifyOtp} disabled={isLoading}>
-          <Text style={styles.primaryButtonText}>Verify</Text>
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>New Email</Text>
+          <TextInput
+            style={[styles.input, emailError && styles.inputError]}
+            placeholder="your-new-email@example.com"
+            placeholderTextColor="#999"
+            value={newEmail}
+            onChangeText={(text) => {
+              setNewEmail(text)
+              setEmailError("")
+            }}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+        </View>
+
+        <TouchableOpacity style={styles.primaryButton} onPress={handleVerifyOtpAndUpdateEmail} disabled={isLoading}>
+          <Text style={styles.primaryButtonText}>{isLoading ? "Verifying..." : "Update Email"}</Text>
         </TouchableOpacity>
 
         <View style={styles.resendContainer}>
           {timerActive ? (
-            <Text style={styles.timerText}>Send code again {formatTime(timeLeft)}</Text>
+            <Text style={styles.timerText}>Resend code in {formatTime(timeLeft)}</Text>
           ) : (
             <View style={styles.resendRow}>
-              <Text style={styles.resendText}>I didn't receive a code. </Text>
-              <TouchableOpacity onPress={handleResendCode}>
+              <Text style={styles.resendText}>Didn't receive code? </Text>
+              <TouchableOpacity onPress={handleResendOtp}>
                 <Text style={styles.resendLink}>Resend</Text>
               </TouchableOpacity>
             </View>
@@ -318,19 +382,53 @@ const ForgotPasswordScreen = ({ navigation }) => {
     )
   }
 
-  // Render the reset password step
+  // ========== FORGOT PASSWORD SCREENS ==========
+  const renderForgotPasswordEmailStep = () => {
+    return (
+      <View style={styles.stepContainer}>
+        <TouchableOpacity onPress={() => setRecoveryType(null)} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+
+        <Text style={styles.title}>Forgot Password?</Text>
+        <Text style={styles.subtitle}>Enter your email to receive a password reset link</Text>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Email</Text>
+          <TextInput
+            style={[styles.input, emailError && styles.inputError]}
+            placeholder="your-email@example.com"
+            placeholderTextColor="#999"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text)
+              setEmailError("")
+            }}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+        </View>
+
+        <TouchableOpacity style={styles.primaryButton} onPress={handleSendResetEmail} disabled={isLoading}>
+          <Text style={styles.primaryButtonText}>{isLoading ? "Sending..." : "Send Reset Link"}</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
   const renderResetPasswordStep = () => {
     return (
       <View style={styles.stepContainer}>
-        <Text style={styles.title}>Create new password</Text>
-        <Text style={styles.subtitle}>Your new password must be unique from those previously used.</Text>
+        <Text style={styles.title}>Create New Password</Text>
+        <Text style={styles.subtitle}>Your new password must be different from previous passwords</Text>
 
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>New Password</Text>
           <View style={[styles.passwordInputContainer, passwordError && styles.inputError]}>
             <TextInput
               style={styles.passwordInput}
-              placeholder="Enter at least 6 characters"
+              placeholder="At least 6 characters"
               placeholderTextColor="#999"
               secureTextEntry={secureNewPassword}
               value={newPassword}
@@ -368,13 +466,13 @@ const ForgotPasswordScreen = ({ navigation }) => {
         </View>
 
         <TouchableOpacity style={styles.primaryButton} onPress={handleResetPassword} disabled={isLoading}>
-          <Text style={styles.primaryButtonText}>{isLoading ? "Resetting..." : "Reset password"}</Text>
+          <Text style={styles.primaryButtonText}>{isLoading ? "Resetting..." : "Reset Password"}</Text>
         </TouchableOpacity>
       </View>
     )
   }
 
-  // Render the success step
+  // ========== SUCCESS SCREEN ==========
   const renderSuccessStep = () => {
     return (
       <View style={styles.stepContainer}>
@@ -384,11 +482,15 @@ const ForgotPasswordScreen = ({ navigation }) => {
           </View>
         </View>
 
-        <Text style={styles.title}>Password Changed!</Text>
-        <Text style={styles.subtitle}>Your password has been changed successfully.</Text>
+        <Text style={styles.title}>{recoveryType === "email" ? "Email Updated!" : "Password Changed!"}</Text>
+        <Text style={styles.subtitle}>
+          {recoveryType === "email"
+            ? "Your email has been updated successfully"
+            : "Your password has been changed successfully"}
+        </Text>
 
         <TouchableOpacity style={styles.primaryButton} onPress={handleBackToLogin}>
-          <Text style={styles.primaryButtonText}>Back to login</Text>
+          <Text style={styles.primaryButtonText}>Back to Login</Text>
         </TouchableOpacity>
       </View>
     )
@@ -399,10 +501,12 @@ const ForgotPasswordScreen = ({ navigation }) => {
       <StatusBar barStyle="dark-content" backgroundColor="transparent" />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoidingView}>
         <View style={styles.content}>
-          {step === 1 && renderEmailStep()}
-          {step === 2 && renderOtpStep()}
-          {step === 3 && renderResetPasswordStep()}
-          {step === 4 && renderSuccessStep()}
+          {!recoveryType && renderSelectionScreen()}
+          {recoveryType === "email" && step === 1 && renderForgotEmailPhoneStep()}
+          {recoveryType === "email" && step === 2 && renderForgotEmailOtpStep()}
+          {recoveryType === "password" && step === 1 && renderForgotPasswordEmailStep()}
+          {recoveryType === "password" && step === 2 && renderResetPasswordStep()}
+          {step === 3 && renderSuccessStep()}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -425,6 +529,9 @@ const styles = StyleSheet.create({
   stepContainer: {
     width: "100%",
   },
+  backButton: {
+    marginBottom: 20,
+  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
@@ -435,6 +542,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginBottom: 24,
+  },
+  optionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  optionTextContainer: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+    marginBottom: 4,
+  },
+  optionSubtitle: {
+    fontSize: 13,
+    color: "#666",
   },
   inputContainer: {
     marginBottom: 20,
@@ -495,6 +626,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: 20,
   },
   rememberText: {
     fontSize: 14,
@@ -511,7 +643,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   otpInput: {
-    width: 60,
+    width: 50,
     height: 60,
     borderRadius: 10,
     borderWidth: 1,

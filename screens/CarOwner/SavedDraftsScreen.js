@@ -17,6 +17,10 @@ import { useNavigation } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
 import { useDispatch, useSelector } from "react-redux"
 import { loadDrafts, deleteDraft } from "../../redux/action/draftsActions"
+import { createSelector } from "reselect"
+
+const selectDraftsState = (state) => state.drafts || { drafts: [], loading: false, error: null }
+const selectDrafts = createSelector(selectDraftsState, (draftsState) => draftsState)
 
 const SavedDraftsScreen = () => {
   const navigation = useNavigation()
@@ -24,14 +28,7 @@ const SavedDraftsScreen = () => {
   const dispatch = useDispatch()
 
   // Redux state
-  const { drafts, loading, error } = useSelector(
-    (state) =>
-      state.drafts || {
-        drafts: [],
-        loading: false,
-        error: null,
-      },
-  )
+  const { drafts, loading, error } = useSelector(selectDrafts)
 
   useEffect(() => {
     dispatch(loadDrafts())

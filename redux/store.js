@@ -7,7 +7,7 @@ import settingsReducer from "./slices/settingsSlice"
 import notificationsReducer from "./slices/notificationSlice";
 import  verification from "./slices/verificationSlice"    
 import carReducer from "./slices/carSlice"
-
+import authRecoveryReducer from "./slices/authRecoverySlice"
 export const store = configureStore({
   reducer: {
     signup: signupReducer,
@@ -18,5 +18,6 @@ export const store = configureStore({
     dashboard: dashboardReducer,
     notifications: notificationsReducer,
     verification: verification,
+    authRecovery: authRecoveryReducer,
   },
 })
