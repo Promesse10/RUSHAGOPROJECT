@@ -1,15 +1,16 @@
 {
   "expo": {
     "name": "RUSHAGO",
-    "slug": "your-app-slug",
+    "slug": "rushago",
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "version": "1.0.0",
     "plugins": [
       "expo-asset",
       "expo-secure-store"
     ],
-    "experiments": {
-      "newArchEnabled": true
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rushago.app",
@@ -28,17 +29,14 @@
     "web": {
       "favicon": "./assets/logo.png"
     },
-    
-    "extra": {
-      "expoClientId": "871915490009-hvipdhaumeh3b2589jhh1tf5dvv4210h.apps.googleusercontent.com",
-      "eas": {
-        "projectId": "b87efb77-1283-40d1-8f42-eabc0bb33e5e"
-      }
-      
-    },
     "updates": {
-      "url": "https://u.expo.dev/b87efb77-1283-40d1-8f42-eabc0bb33e5e"
+      "url": "https://u.expo.dev/b9e40fcf-e9ff-4dc3-ac65-54fac7fea8b3"
     },
-    "owner": "promesse10"
+    "owner": "promesse10",
+    "extra": {
+      "eas": {
+        "projectId": "b9e40fcf-e9ff-4dc3-ac65-54fac7fea8b3"
+      }
+    }
   }
 }

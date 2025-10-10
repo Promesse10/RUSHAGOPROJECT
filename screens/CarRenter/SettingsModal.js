@@ -23,6 +23,7 @@ import * as ImagePicker from "expo-image-picker"
 import I18n from "../../utils/i18n"
 import { useDispatch, useSelector } from "react-redux"
 import { getCurrentUserAction, updateUserAction } from "../../redux/action/UserActions"
+import axiosInstance from "../../utils/axios"
 
 const { width, height } = Dimensions.get("window")
 
@@ -136,26 +137,45 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
       Alert.alert("Permission Required", "Please allow photo library access")
       return
     }
-
+  
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     })
-
+  
     if (!result.canceled) {
       const imageUri = result.assets[0].uri
+  
+      const formData = new FormData()
+      formData.append("profileImage", {
+        uri: imageUri,
+        name: "profile.jpg",
+        type: "image/jpeg",
+      })
+  
       try {
-        await dispatch(updateUserAction({ _id: tempProfile._id, profileImage: imageUri })).unwrap()
+        const response = await axiosInstance.put(
+          `/users/${tempProfile._id}`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        )
+  
         Alert.alert("Success", "Profile picture updated successfully")
-        dispatch(getCurrentUserAction())
+        dispatch(getCurrentUserAction()) // ✅ Refresh Redux state
       } catch (error) {
+        console.error("❌ Upload error:", error.response?.data || error.message)
         Alert.alert("Error", "Failed to update profile image")
       }
     }
   }
-
+  
+  
   const handleLogout = () => {
     Alert.alert(I18n.t("logout"), "Are you sure you want to logout?", [
       { text: I18n.t("cancel"), style: "cancel" },

@@ -1110,7 +1110,7 @@ Alert.alert(
         user?.profileImage
           ? user.profileImage.startsWith("http")
             ? user.profileImage
-            : `https://your-api-domain.com/${user.profileImage.replace(/^\/+/, "")}` // 👈 update this to your actual API domain
+            : `http://localhost:5000/${user.profileImage.replace(/^\/+/, "")}` // 👈 update this to your actual API domain
           : "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
     }}
     style={styles.profileImage}
