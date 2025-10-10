@@ -1,60 +1,62 @@
 // redux/action/AuthRecoveryActions.js
 import { createAsyncThunk } from "@reduxjs/toolkit"
 import axiosInstance from "../../utils/axios"
+const API_URL = `${process.env.EXPO_PUBLIC_API_URL}/recovery`;
 
-// sendForgotEmailOtpAction -> sends SMS OTP to phone
 export const sendForgotEmailOtpAction = createAsyncThunk(
-  "authRecovery/sendSmsOtp",
-  async (payload, { rejectWithValue }) => {
-    try {
-      const res = await axiosInstance.post("/auth/recovery/send-sms-otp", payload)
-      // res.data.code is returned for auto-fill during dev; store if needed
-      return res.data
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || err.response?.data?.error || "Failed to send OTP")
+    "authRecovery/sendSmsOtp",
+    async (payload, { rejectWithValue }) => {
+      try {
+        const res = await axiosInstance.post(`${API_URL}/send-sms-otp`, payload, {
+          headers: { "Content-Type": "application/json" },
+        });
+        return res.data;
+      } catch (err) {
+        console.error("❌ sendSmsOtp error:", err.response?.data || err.message);
+        return rejectWithValue(err.response?.data?.message || "Failed to send OTP");
+      }
     }
-  }
-)
-
-// verifyOtpAndUpdateEmailAction -> verify OTP and update user's email
-export const verifyOtpAndUpdateEmailAction = createAsyncThunk(
-  "authRecovery/verifyOtpAndUpdateEmail",
-  async ({ phone, otp, newEmail }, { rejectWithValue }) => {
-    try {
-      const res = await axiosInstance.post("/auth/recovery/verify-otp-update-email", {
-        phone,
-        otp,
-        newEmail,
-      })
-      return res.data
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || err.response?.data?.error || "Failed to verify OTP")
+  );
+  
+  // verifyOtpAndUpdateEmailAction
+  export const verifyOtpAndUpdateEmailAction = createAsyncThunk(
+    "authRecovery/verifyOtpAndUpdateEmail",
+    async ({ phone, otp, newEmail }, { rejectWithValue }) => {
+      try {
+        const res = await axiosInstance.post(`${API_URL}/verify-otp-update-email`, { phone, otp, newEmail });
+        return res.data;
+      } catch (err) {
+        console.error("❌ verifyOtpAndUpdateEmail error:", err.response?.data || err.message);
+        return rejectWithValue(err.response?.data?.message || "Failed to verify OTP");
+      }
     }
-  }
-)
-
-// sendPasswordResetEmailAction -> send reset email to user
-export const sendPasswordResetEmailAction = createAsyncThunk(
-  "authRecovery/sendResetEmail",
-  async ({ email }, { rejectWithValue }) => {
-    try {
-      const res = await axiosInstance.post("/auth/recovery/send-reset-email", { email })
-      return res.data
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || err.response?.data?.error || "Failed to send reset email")
+  );
+  
+  // sendPasswordResetEmailAction
+  export const sendPasswordResetEmailAction = createAsyncThunk(
+    "authRecovery/sendResetEmail",
+    async ({ email }, { rejectWithValue }) => {
+      try {
+        const res = await axiosInstance.post(`${API_URL}/send-reset-email`, { email });
+        return res.data;
+      } catch (err) {
+        console.error("❌ sendPasswordResetEmail error:", err.response?.data || err.message);
+        return rejectWithValue(err.response?.data?.message || "Failed to send reset email");
+      }
     }
-  }
-)
-
-// resetPasswordAction -> call reset-password endpoint with token and newPassword
-export const resetPasswordAction = createAsyncThunk(
-  "authRecovery/resetPassword",
-  async ({ token, newPassword }, { rejectWithValue }) => {
-    try {
-      const res = await axiosInstance.post("/auth/recovery/reset-password", { token, newPassword })
-      return res.data
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || err.response?.data?.error || "Failed to reset password")
+  );
+  
+  // resetPasswordAction
+  export const resetPasswordAction = createAsyncThunk(
+    "authRecovery/resetPassword",
+    async ({ token, newPassword }, { rejectWithValue }) => {
+      try {
+        const res = await axiosInstance.post(`${API_URL}/reset-password`, { token, newPassword });
+        return res.data;
+      } catch (err) {
+        console.error("❌ resetPassword error:", err.response?.data || err.message);
+        return rejectWithValue(err.response?.data?.message || "Failed to reset password");
+      }
     }
-  }
-)
+  );
+  

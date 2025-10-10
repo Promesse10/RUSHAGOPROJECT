@@ -52,5 +52,17 @@ export const updateUserAction = createAsyncThunk(
       }
     }
   );
+  export const getOwnerRatingAction = createAsyncThunk(
+    "user/getOwnerRating",
+    async (ownerId, { rejectWithValue }) => {
+      try {
+        const response = await axiosInstance.get(`/users/${ownerId}/rating`);
+        return { ownerId, ...response.data };
+      } catch (err) {
+        return rejectWithValue(err.response?.data?.message || "Failed to fetch rating");
+      }
+    }
+  );
+  
   
   

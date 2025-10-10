@@ -80,6 +80,25 @@ export const updateCarAction = createAsyncThunk("cars/update", async ({ carId, u
     return rejectWithValue(err.response?.data?.message || "Failed to update car")
   }
 })
+// ✅ Increment Car View (for renter)
+export const incrementCarViewAction = createAsyncThunk(
+  "cars/incrementCarView",
+  async (carId, { rejectWithValue }) => {
+    try {
+      console.log("👀 Incrementing view for car:", carId)
+      const res = await axiosInstance.post(`/listings/${carId}/view`)
+      console.log("✅ View incremented successfully:", res.data.views)
+      return { carId, views: res.data.views }
+    } catch (err) {
+      console.error("❌ Increment view failed:", {
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data,
+      })
+      return rejectWithValue(err.response?.data?.message || "Failed to increment car view")
+    }
+  }
+)
 
 // Delete a car
 export const deleteCarAction = createAsyncThunk("cars/delete", async (carId, { rejectWithValue }) => {

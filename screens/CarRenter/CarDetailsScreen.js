@@ -21,10 +21,10 @@ import {
 import MapView, { Marker, Polyline } from "react-native-maps"
 import Icon from "react-native-vector-icons/Ionicons"
 import I18n from "../../utils/i18n"
-import { rateUserAction } from "../../redux/action/UserActions"
+import { rateUserAction,getOwnerRatingAction } from "../../redux/action/UserActions"
 import { getTurnByTurnDirections } from "../../utils/googleDirections"
 import ImageViewing from "react-native-image-viewing";
-
+import { incrementCarViewAction } from "../../redux/action/CarActions"
 const { width, height } = Dimensions.get("window")
 
 const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage, navigation }) => {
@@ -40,7 +40,29 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
   const [internalRouteInfo, setInternalRouteInfo] = useState(null)
   const [showInternalRoute, setShowInternalRoute] = useState(false)
   const [showBlockedNotice, setShowBlockedNotice] = useState(false);
+  useEffect(() => {
+    if (!car || !car._id) return; // ✅ Ensure `car` is valid before proceeding
 
+    dispatch(incrementCarViewAction(car._id));
+
+    const ownerId =
+    car?.owner?.userId || // ✅ This is the actual field in your schema
+    car?.owner?._id ||
+    car?.ownerId ||
+    car?.user?._id ||
+    car?.userId ||
+    car?.createdBy?._id ||
+    null;
+  
+
+    if (ownerId) {
+      dispatch(getOwnerRatingAction(ownerId))
+        .unwrap()
+        .then((data) => setRating(data.ratingAverage || 0))
+        .catch((err) => console.log("⚠️ Rating fetch failed:", err));
+    }
+  }, [car?._id]);
+  
   useEffect(() => {
     let subscription;
   
@@ -73,68 +95,89 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
       ScreenCapture.allowScreenCaptureAsync();
     };
   }, [visible]);
-  // ✅ Send rating to backend (renter -> owner)
-  const submitRating = async (stars) => {
-    try {
-      setSubmitted(true);
+   
+  const normalizedCar = car
+    ? {
+        ...car,
+        ownerId: car?.owner?.userId || car?.owner?._id || car?.userId || car?.user || null,
+
       
-      console.log("🚀 Sending rating payload:", { ownerId: car?.owner?._id, stars });
-  
-      await dispatch(rateUserAction({ ownerId: car?.owner?._id, stars })).unwrap();
-  
-      Alert.alert(I18n.t("thankYouReview"), I18n.t("ratingSubmitted"));
-      setShowReviewModal(false);
-      setUserRating(stars);
-    } catch (error) {
-      console.log("❌ Rating error:", error);
-      Alert.alert(I18n.t("error"), I18n.t("ratingFailed"));
-    } finally {
-      setSubmitted(false);
+      
+
+        make: car.brand || car.make || "Unknown",
+        brand: car.brand || car.make || "Unknown",
+        model: car.model || "Unknown",
+        year: car.year || "N/A",
+        type: car.type || "Standard",
+        transmission: car.transmission || "Manual",
+        fuel_type: car.fuelType || car.fuel_type || "petrol",
+        fuelType: car.fuelType || car.fuel_type || "petrol",
+        seatings: car.seatings || "4",
+        features: car.features || [],
+        ownerName: car.owner?.name || car.ownerName || "Owner",
+        ownerPhone: car.owner?.phone || car.ownerPhone || "",
+        ownerType: car.owner?.type || car.ownerType || "individual",
+        countryCode: car.countryCode || "",
+        district: car.district || "Unknown",
+        sector: car.sector || "Unknown",
+        location: car.location || car.address || "Unknown Location",
+        address: car.location || car.address || "Unknown Location",
+        latitude: car.coordinates?.latitude || car.latitude || -1.9441,
+        longitude: car.coordinates?.longitude || car.longitude || 30.0619,
+        price: car.price || car.base_price || car.dailyRate || "0",
+        base_price: car.price || car.base_price || car.dailyRate || "0",
+        dailyRate: car.price || car.base_price || car.dailyRate || "0",
+        currency: car.currency || "FRW",
+        available: car.available !== undefined ? car.available : true,
+        images:
+          car.images && car.images.length > 0
+            ? car.images
+            : ["https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400"],
+        rating: car.rating || 4.0,
+        views: car.views || 0,
+        description: car.description || "",
+        weeklyDiscount: car.weeklyDiscount || 0,
+        monthlyDiscount: car.monthlyDiscount || 0,
+      }
+    : null;
+
+  // ✅ Send rating to backend (renter -> owner)
+ // ✅ Place this AFTER normalizedCar is defined, not before
+const submitRating = async (stars) => {
+  try {
+    setSubmitted(true);
+
+    const ownerId = normalizedCar.ownerId;
+    console.log("🚀 Sending rating payload:", { ownerId, stars, car });
+
+
+    if (!ownerId) {
+      Alert.alert("Error", "Owner information missing for this car");
+      return;
     }
-  };
-  
+
+    await dispatch(rateUserAction({ ownerId, stars })).unwrap();
+
+    // ✅ Fetch latest owner rating to update display
+    const ratingData = await dispatch(getOwnerRatingAction(ownerId)).unwrap();
+    setRating(ratingData.ratingAverage);
+
+    Alert.alert(I18n.t("thankYouReview"), I18n.t("ratingSubmitted"));
+    setShowReviewModal(false);
+    setUserRating(stars);
+  } catch (error) {
+    console.log("❌ Rating error:", error);
+    Alert.alert(I18n.t("error"), I18n.t("ratingFailed"));
+  } finally {
+    setSubmitted(false);
+  }
+};
+
 
   if (!car) return null
 
   // Normalize car data to handle different property structures
-  const normalizedCar = {
-    ...car,
-    make: car.brand || car.make || "Unknown",
-    brand: car.brand || car.make || "Unknown",
-    model: car.model || "Unknown",
-    year: car.year || "N/A",
-    type: car.type || "Standard",
-    transmission: car.transmission || "Manual",
-    fuel_type: car.fuelType || car.fuel_type || "petrol",
-    fuelType: car.fuelType || car.fuel_type || "petrol",
-    seatings: car.seatings || "4",
-    features: car.features || [],
-    ownerName: car.owner?.name || car.ownerName || "Owner",
-    ownerPhone: car.owner?.phone || car.ownerPhone || "",
-    ownerType: car.owner?.type || car.ownerType || "individual",
-    countryCode: car.countryCode || "",
-    district: car.district || "Unknown",
-    sector: car.sector || "Unknown",
-    location: car.location || car.address || "Unknown Location",
-    address: car.location || car.address || "Unknown Location",
-    latitude: car.coordinates?.latitude || car.latitude || -1.9441,
-    longitude: car.coordinates?.longitude || car.longitude || 30.0619,
-    price: car.price || car.base_price || car.dailyRate || "0",
-    base_price: car.price || car.base_price || car.dailyRate || "0",
-    dailyRate: car.price || car.base_price || car.dailyRate || "0",
-    currency: car.currency || "FRW",
-    available: car.available !== undefined ? car.available : true,
-    images:
-      car.images && car.images.length > 0
-        ? car.images
-        : ["https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400"],
-    rating: car.rating || 4.0,
-    views: car.views || 0,
-    description: car.description || "",
-    weeklyDiscount: car.weeklyDiscount || 0,
-    monthlyDiscount: car.monthlyDiscount || 0,
-  }
-
+  
   // Handle "Menyainzira" button - show route on internal map
   const handleMenyainzira = async () => {
     if (!userLocation) {
@@ -471,9 +514,10 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
                       {normalizedCar.base_price} {normalizedCar.currency}/{I18n.t("perDay")}
                     </Text>
                     <View style={styles.ratingContainer}>
-                      <View style={styles.stars}>{renderStars(normalizedCar.rating)}</View>
-                      <Text style={styles.ratingValue}>{normalizedCar.rating.toFixed(1)}/5.0</Text>
-                    </View>
+  <View style={styles.stars}>{renderStars(rating)}</View>
+  <Text style={styles.ratingValue}>{rating.toFixed(1)}/5.0</Text>
+</View>
+
                   </View>
                   <TouchableOpacity
                     style={styles.mainImageContainer}
@@ -555,7 +599,8 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
       <Text style={styles.specRowValue}>{normalizedCar.type}</Text>
     </View>
     <View style={styles.specRow}>
-      <Text style={styles.specRowLabel}>{I18n.t("category")}:</Text>
+    <Text style={styles.carCategory}>{car.category || "Standard"}</Text>
+
       <Text style={styles.specRowValue}>{getCarCategory(normalizedCar)}</Text>
     </View>
 

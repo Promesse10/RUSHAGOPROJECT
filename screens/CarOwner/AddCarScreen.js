@@ -22,6 +22,7 @@ import { useDispatch, useSelector } from "react-redux"
 import * as ImagePicker from "expo-image-picker"
 import MapView, { Marker } from "react-native-maps"
 import * as Location from "expo-location"
+import { Platform } from 'react-native';
 import carIcon from "../../assets/car-marker.png"
 import { rwandaLocations, searchLocations, getProvinceCoordinates } from "../../utils/rwandaLocations"
 import { createCarAction, updateCarAction } from "../../redux/action/CarActions"
@@ -71,7 +72,7 @@ const AddCarScreen = () => {
   const navigation = useNavigation()
   const route = useRoute()
   const { t } = useTranslation()
-
+  const MapComponent = Platform.OS === 'web' ? null : MapView;
   // ✅ FIXED: Get user from auth state and user state
   const authUser = useSelector((state) => state.auth?.user)
   const { currentUser, searchResults, isSearching } = useSelector((state) => state.user || {})

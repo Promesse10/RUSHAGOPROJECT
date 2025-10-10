@@ -114,7 +114,7 @@ const LoginScreen = () => {
       </View>
 
       <TouchableOpacity style={styles.forgotPassword}>
-        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+        <Text style={styles.forgotPasswordText}>Forgot Email or Password?</Text>
       </TouchableOpacity>
 
       <TouchableOpacity

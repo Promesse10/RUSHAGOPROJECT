@@ -9,6 +9,7 @@ import {
   updateCarViewsAction,
   updateCarRatingAction,
   deleteCarAction,
+  incrementCarViewAction,
 } from "../action/CarActions"
 
 const initialState = {
@@ -123,6 +124,15 @@ const carSlice = createSlice({
         state.isGetFailed = true
         state.error = action.payload || "Failed to fetch cars"
       })
+// ✅ Increment Car View
+.addCase(incrementCarViewAction.fulfilled, (state, action) => {
+  const { carId, views } = action.payload
+  const index = state.cars.findIndex((car) => car._id === carId)
+  if (index !== -1) state.cars[index].views = views
+
+  const approvedIndex = state.approvedCars.findIndex((car) => car._id === carId)
+  if (approvedIndex !== -1) state.approvedCars[approvedIndex].views = views
+})
 
       // ✅ Get Approved Cars - Enhanced
       .addCase(getApprovedCarsAction.pending, (state) => {

@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit"
-import { getCurrentUserAction, searchUsersAction, updateUserAction,rateUserAction } from "../action/UserActions"
+import { getCurrentUserAction, searchUsersAction, updateUserAction,rateUserAction,getOwnerRatingAction } from "../action/UserActions"
 
 const initialState = {
   currentUser: null,
@@ -82,6 +82,13 @@ const userSlice = createSlice({
   state.isUpdating = false
   state.error = action.payload
 })
+.addCase(getOwnerRatingAction.fulfilled, (state, action) => {
+  if (state.currentUser && state.currentUser._id === action.payload.ownerId) {
+    state.currentUser.ratingAverage = action.payload.ratingAverage;
+    state.currentUser.ratingPercent = action.payload.ratingPercent;
+  }
+})
+
 
   },
 })

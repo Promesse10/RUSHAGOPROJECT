@@ -14,6 +14,7 @@ import {
   StatusBar,
   Alert,
   Dimensions,
+  Linking,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import {
@@ -97,7 +98,24 @@ const ForgotPasswordScreen = ({ navigation }) => {
   useEffect(() => {
     if (resetEmailSent) {
       setStep(2)
-      Alert.alert("Email Sent", "Check your email for the password reset link.")
+      Alert.alert(
+        "Email Sent",
+        "Check your email for the password reset link.",
+        [
+          {
+            text: "Open Mail App",
+            onPress: () => {
+              try {
+                Linking.openURL("mailto:"); // opens default mail app
+              } catch (error) {
+                console.error("Could not open mail app:", error);
+              }
+            },
+          },
+          { text: "OK" },
+        ]
+      )
+      
     }
   }, [resetEmailSent])
 
@@ -189,7 +207,6 @@ const ForgotPasswordScreen = ({ navigation }) => {
     dispatch(verifyOtpAndUpdateEmailAction({ phone, otp: enteredOtp, newEmail }))
   }
 
-  // ========== FORGOT PASSWORD FLOW ==========
   const handleSendResetEmail = () => {
     if (!email.trim()) {
       setEmailError("Email is required")
@@ -200,10 +217,36 @@ const ForgotPasswordScreen = ({ navigation }) => {
     } else {
       setEmailError("")
     }
-
+  
     dispatch(sendPasswordResetEmailAction({ email }))
+      .unwrap()
+      .then(() => {
+        Alert.alert(
+          "Check Your Email",
+          "We've sent a password reset link. Would you like to open your email app now?",
+          [
+            {
+              text: "Open Mail",
+              onPress: () => {
+                // Open the default mail app on the device
+                try {
+                  Linking.openURL("mailto:")
+                } catch (err) {
+                  console.error("Could not open mail app:", err)
+                  Alert.alert("Error", "Could not open your email app.")
+                }
+              },
+            },
+            { text: "Later", style: "cancel" },
+          ],
+        )
+      })
+      .catch((err) => {
+        console.error("sendResetEmail error:", err)
+        Alert.alert("Error", err || "Failed to send reset email")
+      })
   }
-
+  
   const handleResetPassword = () => {
     if (!newPassword.trim()) {
       setPasswordError("New password is required")

@@ -139,7 +139,11 @@ const MyCarsScreen = () => {
     console.log("🚗 Fetching my cars for user:", user.name)
     dispatch(getMyCarsAction())
   }, [dispatch, isAuthenticated, user])
-
+  useEffect(() => {
+    const interval = setInterval(() => dispatch(getMyCarsAction()), 20000)
+    return () => clearInterval(interval)
+  }, [dispatch])
+  
   // ✅ FIXED: Refetch when navigating back to this screen
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {

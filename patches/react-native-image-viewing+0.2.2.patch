@@ -1,0 +1,19 @@
+diff --git a/node_modules/react-native-image-viewing/dist/components/.DS_Store b/node_modules/react-native-image-viewing/dist/components/.DS_Store
+new file mode 100644
+index 0000000..4caa0af
+Binary files /dev/null and b/node_modules/react-native-image-viewing/dist/components/.DS_Store differ
+diff --git a/node_modules/react-native-image-viewing/dist/components/ImageItem/.DS_Store b/node_modules/react-native-image-viewing/dist/components/ImageItem/.DS_Store
+new file mode 100644
+index 0000000..02d96d7
+Binary files /dev/null and b/node_modules/react-native-image-viewing/dist/components/ImageItem/.DS_Store differ
+diff --git a/node_modules/react-native-image-viewing/dist/components/ImageItem/ImageItem.js b/node_modules/react-native-image-viewing/dist/components/ImageItem/ImageItem.js
+new file mode 100644
+index 0000000..6cf4e94
+--- /dev/null
++++ b/node_modules/react-native-image-viewing/dist/components/ImageItem/ImageItem.js
+@@ -0,0 +1,5 @@
++import { Platform } from "react-native";
++import ImageItemAndroid from "./ImageItem.android";
++import ImageItemIOS from "./ImageItem.ios";
++
++export default Platform.OS === "ios" ? ImageItemIOS : ImageItemAndroid;
