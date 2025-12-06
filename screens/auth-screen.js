@@ -80,7 +80,7 @@ const AuthScreen = ({ navigation }) => {
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      <ImageBackground source={require("../assets/background.jpeg")} style={styles.container} resizeMode="cover">
+      <ImageBackground source={require("../assets/background.jpg")} style={styles.container} resizeMode="cover">
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.contentContainer}>
             {/* Hello Text */}
@@ -91,7 +91,7 @@ const AuthScreen = ({ navigation }) => {
               }}
             >
               <Text style={styles.helloText}>HELLO</Text>
-              <Text style={styles.subtitleText}>Welcome to RUSHAGO</Text>
+              <Text style={styles.subtitleText}>Welcome to MUVCAR</Text>
             </Animated.View>
 
             {/* Buttons Container */}

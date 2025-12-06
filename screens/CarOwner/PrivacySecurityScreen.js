@@ -89,7 +89,7 @@ const PrivacySecurityScreen = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* RushaGo Logo */}
+        {/* MUVCAR Logo */}
         <View style={styles.logoContainer}>
           <Image source={{ uri: "/placeholder.svg?height=80&width=200" }} style={styles.logo} resizeMode="contain" />
           <Text style={styles.logoSubtitle}>Your security is our priority</Text>

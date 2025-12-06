@@ -24,7 +24,7 @@ const { width, height } = Dimensions.get("window")
 // Company data mapping from AllCarsScreen
 const companyData = [
   {
-    name: "Rushago Car Rentals",
+    name: "MUVCAR Car Rentals",
     type: "company",
     location: "Kigali City Center, Rwanda",
     phone: "0780114522",

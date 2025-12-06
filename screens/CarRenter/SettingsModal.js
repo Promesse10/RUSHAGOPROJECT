@@ -445,7 +445,7 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
 
               <ScrollView style={styles.scrollContent}>
                 <View style={styles.helpSection}>
-                  {/* Rushago Logo */}
+                  {/* MUVCAR Logo */}
                   <View style={styles.logoContainer}>
                     <Image source={require("../../assets/logo.png")} style={styles.helpLogo} resizeMode="contain" />
                   </View>
@@ -476,11 +476,11 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
       <View style={styles.policySection}>
         <Text style={styles.policyTitle}>Our Policy</Text>
         <Text style={styles.policyText}>
-          Rushago Ltd is a trusted car rental platform connecting vehicle owners with renters.
+          MUVCAR Ltd is a trusted car rental platform connecting vehicle owners with renters.
           We prioritize transparency, safety, and customer satisfaction in every transaction. 
           Our mission is to make renting a car seamless, affordable, and reliable — empowering 
           both car owners and renters with convenience and confidence.
-          {"\n\n"}© 2025 RushaGo Inc. All Rights Reserved.
+          {"\n\n"}© 2025 MUVCAR Inc. All Rights Reserved.
         </Text>
       </View>
                 </View>

@@ -17,7 +17,7 @@ const AboutRushGo = () => {
           <TouchableOpacity onPress={navigateBack}>
             <ChevronLeft width={24} height={24} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>About Rushago</Text>
+          <Text style={styles.headerTitle}>About MUVCAR</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -35,7 +35,7 @@ const AboutRushGo = () => {
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Our Mission</Text>
             <Text style={styles.sectionText}>
-              Rushago connects car owners and car renters through our app, enabling them to make deals 
+              MUVCAR connects car owners and car renters through our app, enabling them to make deals 
               directly for car renting. We're revolutionizing the car rental industry by creating a 
               peer-to-peer marketplace that benefits both parties.
             </Text>
@@ -53,7 +53,7 @@ const AboutRushGo = () => {
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Our Team</Text>
             <Text style={styles.sectionText}>
-              Rushago was founded in 2025 by a team of passionate entrepreneurs who saw an opportunity
+              MUVCAR was founded in 2025 by a team of passionate entrepreneurs who saw an opportunity
               to transform the car rental experience. Our team combines expertise in technology, 
               automotive industry, and customer service to deliver the best possible platform.
             </Text>
@@ -62,7 +62,7 @@ const AboutRushGo = () => {
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Contact Us</Text>
             <Text style={styles.sectionText}>
-              Email: support@rushago.com{'\n'}
+              Email: support@MUVCAR.com{'\n'}
               Phone: +250780114522{'\n'}
               Address: Masaka, Kigali, Rwanda
             </Text>

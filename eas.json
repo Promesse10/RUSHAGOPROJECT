@@ -19,7 +19,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://rushagoadmin-api.onrender.com/api"
+        "EXPO_PUBLIC_API_URL": "https://MUVCARadmin-api.onrender.com/api"
       }
     },
     "production": {

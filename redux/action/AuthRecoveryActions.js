@@ -59,4 +59,16 @@ export const sendForgotEmailOtpAction = createAsyncThunk(
       }
     }
   );
-  
+  // sendRecoveryFormAction
+export const sendRecoveryFormAction = createAsyncThunk(
+  "authRecovery/sendRecoveryForm",
+  async ({ email }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(`${API_URL}/send-recovery-form`, { email });
+      return res.data;
+    } catch (err) {
+      console.error("❌ sendRecoveryForm error:", err.response?.data || err.message);
+      return rejectWithValue(err.response?.data?.message || "Failed to send recovery form");
+    }
+  }
+);

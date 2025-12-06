@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "RUSHAGO",
-    "slug": "rushago",
+    "name": "MUVCAR",
+    "slug": "MUVCAR",
     "platforms": [
       "ios",
       "android"
@@ -13,7 +13,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rushago.app",
+      "bundleIdentifier": "com.MUVCAR.app",
       "runtimeVersion": "1.0.0"
     },
     "android": {
@@ -24,7 +24,7 @@
       "runtimeVersion": {
         "policy": "appVersion"
       },
-      "package": "com.rushago.app"
+      "package": "com.MUVCAR.app"
     },
     "web": {
       "favicon": "./assets/logo.png"

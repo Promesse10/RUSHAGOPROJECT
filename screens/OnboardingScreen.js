@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from "react-native"
-import Onboarding1 from "../assets/slideone.png";
+
 const { width, height } = Dimensions.get("window")
 
 const OnboardingScreen = ({ navigation }) => {
@@ -34,21 +34,21 @@ const OnboardingScreen = ({ navigation }) => {
       id: "group-21",
       title: "Find your perfect car",
       cta: "Next",
-      image: Onboarding1,
+       image: { uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1765010340/e2652669-ac1e-40fb-a829-13a1319f04f2_lentwk_1_coowtb.png" },
       onPress: (idx) => listRef.current?.scrollToIndex({ index: idx + 1, animated: true }),
     },
     {
       id: "group-20",
       title: "Get the keys\nstart your trip",
       cta: "Continue",
-      image: { uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1754805969/ae94073a-f8c7-4a28-a618-f810f74ccc26_xkrf6b.png" },
+      image: { uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1765010340/ae94073a-f8c7-4a28-a618-f810f74ccc26_xkrf6b_1_j0jmqi.png" },
       onPress: (idx) => listRef.current?.scrollToIndex({ index: idx + 1, animated: true }),
     },
     {
       id: "group-19",
       title: "See cars near you, rent with ease",
       cta: "Get Started",
-      image: { uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1754805970/0ca8425d-afff-4dac-93d9-c868ffdbfaf1_srpxvy.png" },
+      image: { uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1765010344/0ca8425d-afff-4dac-93d9-c868ffdbfaf1_srpxvy_1_lgjbaj.png" },
       onPress: () => navigation?.navigate("AuthScreen"),
     },
   ]

@@ -5,6 +5,7 @@ import {
   verifyOtpAndUpdateEmailAction,
   sendPasswordResetEmailAction,
   resetPasswordAction,
+  sendRecoveryFormAction, 
 } from "../action/AuthRecoveryActions"
 
 const initialState = {
@@ -15,6 +16,7 @@ const initialState = {
   emailUpdated: false,
   resetEmailSent: false,
   passwordReset: false,
+    recoveryFormSent: false,
 }
 
 const slice = createSlice({
@@ -59,6 +61,20 @@ const slice = createSlice({
         state.isLoading = false
         state.error = action.payload || action.error?.message
       })
+// sendRecoveryFormAction
+.addCase(sendRecoveryFormAction.pending, (state) => {
+  state.isLoading = true
+  state.error = null
+  state.recoveryFormSent = false
+})
+.addCase(sendRecoveryFormAction.fulfilled, (state) => {
+  state.isLoading = false
+  state.recoveryFormSent = true
+})
+.addCase(sendRecoveryFormAction.rejected, (state, action) => {
+  state.isLoading = false
+  state.error = action.payload || action.error?.message
+})
 
       // sendPasswordResetEmail
       .addCase(sendPasswordResetEmailAction.pending, (state) => {

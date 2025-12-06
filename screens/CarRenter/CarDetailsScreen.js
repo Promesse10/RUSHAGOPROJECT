@@ -225,12 +225,12 @@ const submitRating = async (stars) => {
   const handleShare = async () => {
     try {
       // Replace these with your actual store URLs
-      const playStoreLink = "https://play.google.com/store/apps/details?id=com.rushago.app";
-      const appStoreLink = "https://apps.apple.com/app/rushago/id1234567890";
+      const playStoreLink = "https://play.google.com/store/apps/details?id=com.MUVCAR.app";
+      const appStoreLink = "https://apps.apple.com/app/MUVCAR/id1234567890";
   
       const appDownloadMessage = `
   🚗 ${normalizedCar.make} is now available for rent!
-  You can now rent cars easily using the RushaGo app.
+  You can now rent cars easily using the MUVCAR app.
   
   👉 Download now:
   • Android: ${playStoreLink}
@@ -238,7 +238,7 @@ const submitRating = async (stars) => {
       `;
   
       const shareContent = {
-        title: `Rent with RushaGo`,
+        title: `Rent with MUVCAR`,
         message: appDownloadMessage,
         url: "https://res.cloudinary.com/def0cjmh2/image/upload/v1723728395/logo_1_tj9guu.jpg", // Thumbnail URL
       };

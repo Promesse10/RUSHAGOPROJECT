@@ -1,6 +1,9 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
+
+import { useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from "react-redux"
 import {
   View,
@@ -22,6 +25,7 @@ import {
   verifyOtpAndUpdateEmailAction,
   sendPasswordResetEmailAction,
   resetPasswordAction,
+  sendRecoveryFormAction,
 } from "../redux/action/AuthRecoveryActions"
 import { clearAuthRecoveryState } from "../redux/slices/authRecoverySlice"
 
@@ -75,6 +79,12 @@ const ForgotPasswordScreen = ({ navigation }) => {
       if (timer) clearTimeout(timer)
     }
   }, [timerActive, timeLeft])
+useFocusEffect(
+  useCallback(() => {
+    dispatch(clearAuthRecoveryState());
+  }, [])
+);
+
 
   // Handle OTP sent
   useEffect(() => {
@@ -314,11 +324,70 @@ const ForgotPasswordScreen = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
-
+       <TouchableOpacity
+         style={styles.optionButton}
+  onPress={() => {
+    Alert.alert(
+      "Account Recovery",
+      "You can recover your account by either calling our helpline or receiving the account recovery form via email. Follow the instructions carefully.",
+      [
+        {
+          text: "Call Us",
+          onPress: () => {
+            Linking.openURL("tel:0780114522").catch(() => {
+              Alert.alert("Error", "Could not initiate call. Please dial manually.");
+            });
+          },
+        },
+        {
+          text: "Use Email",
+          onPress: () => {
+            Alert.prompt(
+              "Enter your registered email",
+              "We will send you the account recovery form. After receiving, download it, fill it, scan it, and send it back to our email.",
+              [
+                {
+                  text: "Send",
+                  onPress: (email) => {
+                    if (!validateEmail(email)) {
+                      Alert.alert("Error", "Enter a valid email");
+                      return;
+                    }
+                    dispatch(sendRecoveryFormAction({ email }))
+                      .unwrap()
+                      .then(() => {
+                        Alert.alert(
+                          "Email Sent",
+                          "Check your email for the account recovery form. Download, fill it, scan it, and send it back to our email."
+                        );
+                      })
+                      .catch(() => {
+                        Alert.alert("Error", "Failed to send email. Try again later.");
+                      });
+                  },
+                },
+                { text: "Cancel", style: "cancel" },
+              ],
+              "plain-text"
+            );
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  }}
+      >
+        <Ionicons name="help-circle-outline" size={32} color="#007EFD" />
+        <View style={styles.optionTextContainer}>
+          <Text style={styles.optionTitle}>Contact Support</Text>
+          <Text style={styles.optionSubtitle}>Receive account recovery form via email</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={24} color="#999" />
+      </TouchableOpacity>
         <View style={styles.loginLinkContainer}>
           <Text style={styles.rememberText}>Remember your credentials? </Text>
           <TouchableOpacity onPress={handleBackToLogin}>
-            <Text style={styles.loginLink}>Login</Text>
+            <Text style={styles.loginLink}>Sign In</Text>
           </TouchableOpacity>
         </View>
       </View>

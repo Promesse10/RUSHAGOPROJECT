@@ -133,7 +133,7 @@ const AuthScreen = () => {
         <Text style={styles.backButtonText}>×</Text>
       </TouchableOpacity>
 
-      <Image source={require("../RushagoApp/assets/logo.png")} style={styles.logo} />
+      <Image source={require("../MUVCARApp/assets/logo.png")} style={styles.logo} />
 
       <Text style={styles.title}>{isSignup ? "Sign Up" : "Login"}</Text>
       <Text style={styles.subtitle}>

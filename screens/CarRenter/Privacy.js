@@ -10,7 +10,7 @@ const privacyItems = [
     id: 1,
     title: "1. What information do we collect?",
     content:
-      "We obtain information about you through the means discussed below when we provide the Services. Please note that we need certain types of information to provide the Services to you. If you do not provide us with such information, or if you ask us to delete that information, you may no longer be able to access or use certain Services.\n\nWhen you register for Rushago, we collect your name, email, phone number, and location. For car owners, we collect vehicle information including make, model, year, license plate, and photos. For renters, we collect driver's license information and payment details. We also collect usage data such as rental history, reviews, and communication between users.",
+      "We obtain information about you through the means discussed below when we provide the Services. Please note that we need certain types of information to provide the Services to you. If you do not provide us with such information, or if you ask us to delete that information, you may no longer be able to access or use certain Services.\n\nWhen you register for MUVCAR, we collect your name, email, phone number, and location. For car owners, we collect vehicle information including make, model, year, license plate, and photos. For renters, we collect driver's license information and payment details. We also collect usage data such as rental history, reviews, and communication between users.",
   },
   {
     id: 2,
@@ -22,7 +22,7 @@ const privacyItems = [
     id: 3,
     title: "3. How Do We Protect?",
     content:
-      "Rushago employs industry-standard security measures to protect your personal information. We use encryption for all data transmissions, secure payment processing, and regular security audits. Access to user data is restricted to authorized personnel only. We implement multi-factor authentication for account access and continuously monitor our systems for potential vulnerabilities. However, no method of transmission over the Internet or electronic storage is 100% secure, so we cannot guarantee absolute security.",
+      "MUVCAR employs industry-standard security measures to protect your personal information. We use encryption for all data transmissions, secure payment processing, and regular security audits. Access to user data is restricted to authorized personnel only. We implement multi-factor authentication for account access and continuously monitor our systems for potential vulnerabilities. However, no method of transmission over the Internet or electronic storage is 100% secure, so we cannot guarantee absolute security.",
   },
   {
     id: 4,
@@ -34,7 +34,7 @@ const privacyItems = [
     id: 5,
     title: "5. Children's Privacy",
     content:
-      "Rushago services are not intended for use by children under the age of 18. We do not knowingly collect personal information from children under 18. If we become aware that we have collected personal information from a child under 18 without verification of parental consent, we will take steps to remove that information from our servers. If you believe we might have any information from or about a child under 18, please contact us immediately.",
+      "MUVCAR services are not intended for use by children under the age of 18. We do not knowingly collect personal information from children under 18. If we become aware that we have collected personal information from a child under 18 without verification of parental consent, we will take steps to remove that information from our servers. If you believe we might have any information from or about a child under 18, please contact us immediately.",
   },
   {
     id: 6,
@@ -78,12 +78,12 @@ const Privacy = () => {
         </View>
 
         <View style={styles.heroSection}>
-          <Text style={styles.heroTitle}>Rushago privacy policy</Text>
+          <Text style={styles.heroTitle}>MUVCAR privacy policy</Text>
           <Text style={styles.lastUpdated}>Last updated: Mar 18, 2025</Text>
 
           <View style={styles.appInfoContainer}>
             <Text style={styles.appInfoText}>
-              Rushago is an app that connects car owners with people who want to rent cars. Our platform enables
+              MUVCAR is an app that connects car owners with people who want to rent cars. Our platform enables
               seamless and secure car rentals between individuals.
             </Text>
           </View>

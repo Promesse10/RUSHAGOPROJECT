@@ -14,8 +14,8 @@ const prefix = Linking.createURL("/") // works for Expo Go
 const linking = {
   prefixes: [
     prefix,
-    "rushago://", // your app custom scheme (use same in backend email link)
-    "https://rushago.com", // if you host a website domain
+    "MUVCAR://", // your app custom scheme (use same in backend email link)
+    "https://MUVCAR.com", // if you host a website domain
     "http://localhost:3000", // for local testing
   ],
   config: {
