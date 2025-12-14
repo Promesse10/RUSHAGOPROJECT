@@ -1,65 +1,121 @@
 // redux/action/AuthRecoveryActions.js
-import { createAsyncThunk } from "@reduxjs/toolkit"
-import axiosInstance from "../../utils/axios"
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import axiosInstance from "../../utils/axios";
 const API_URL = `${process.env.EXPO_PUBLIC_API_URL}/recovery`;
 
+// Send SMS OTP (now expects { name, phone })
 export const sendForgotEmailOtpAction = createAsyncThunk(
-    "authRecovery/sendSmsOtp",
-    async (payload, { rejectWithValue }) => {
-      try {
-        const res = await axiosInstance.post(`${API_URL}/send-sms-otp`, payload, {
-          headers: { "Content-Type": "application/json" },
-        });
-        return res.data;
-      } catch (err) {
-        console.error("❌ sendSmsOtp error:", err.response?.data || err.message);
-        return rejectWithValue(err.response?.data?.message || "Failed to send OTP");
-      }
+  "authRecovery/sendEmailRecoveryOtp",
+  async ({ phone }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        `${API_URL}/send-otp-for-email-update`,
+        { phone }
+      );
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to send OTP"
+      );
     }
-  );
-  
-  // verifyOtpAndUpdateEmailAction
-  export const verifyOtpAndUpdateEmailAction = createAsyncThunk(
-    "authRecovery/verifyOtpAndUpdateEmail",
-    async ({ phone, otp, newEmail }, { rejectWithValue }) => {
-      try {
-        const res = await axiosInstance.post(`${API_URL}/verify-otp-update-email`, { phone, otp, newEmail });
-        return res.data;
-      } catch (err) {
-        console.error("❌ verifyOtpAndUpdateEmail error:", err.response?.data || err.message);
-        return rejectWithValue(err.response?.data?.message || "Failed to verify OTP");
-      }
+  }
+);
+
+export const verifyOtpAction = createAsyncThunk(
+  "authRecovery/verifyOtp",
+  async ({ phone, otp }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        `${API_URL}/verify-otp-reveal-or-update-email`,
+        { phone, otp }
+      );
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Invalid OTP"
+      );
     }
-  );
-  
-  // sendPasswordResetEmailAction
-  export const sendPasswordResetEmailAction = createAsyncThunk(
-    "authRecovery/sendResetEmail",
-    async ({ email }, { rejectWithValue }) => {
-      try {
-        const res = await axiosInstance.post(`${API_URL}/send-reset-email`, { email });
-        return res.data;
-      } catch (err) {
-        console.error("❌ sendPasswordResetEmail error:", err.response?.data || err.message);
-        return rejectWithValue(err.response?.data?.message || "Failed to send reset email");
-      }
+  }
+);
+
+
+export const verifyPasswordResetOtpAction = createAsyncThunk(
+  "authRecovery/verifyPasswordResetOtp",
+  async ({ email, otp }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        `${API_URL}/verify-password-reset-otp`,
+        { email, otp }
+      );
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Invalid or expired code"
+      );
     }
-  );
-  
-  // resetPasswordAction
-  export const resetPasswordAction = createAsyncThunk(
-    "authRecovery/resetPassword",
-    async ({ token, newPassword }, { rejectWithValue }) => {
-      try {
-        const res = await axiosInstance.post(`${API_URL}/reset-password`, { token, newPassword });
-        return res.data;
-      } catch (err) {
-        console.error("❌ resetPassword error:", err.response?.data || err.message);
-        return rejectWithValue(err.response?.data?.message || "Failed to reset password");
-      }
+  }
+);
+
+
+export const verifyOtpAndUpdateEmailAction = createAsyncThunk(
+  "authRecovery/verifyOtpAndUpdateEmail",
+  async ({ phone, otp, newEmail }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        `${API_URL}/verify-otp-reveal-or-update-email`,
+        { phone, otp, newEmail}
+      );
+      return res.data;
+    } catch (err) {
+      console.error(
+        "❌ verifyOtpAndUpdateEmail error:",
+        err.response?.data || err.message
+      );
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to verify OTP"
+      );
     }
-  );
-  // sendRecoveryFormAction
+  }
+);
+
+
+export const sendPasswordResetEmailAction = createAsyncThunk(
+  "authRecovery/sendResetEmail",
+  async ({ email }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        `${API_URL}/send-password-reset-otp`,
+        { email }
+      );
+      return res.data;
+    } catch (err) {
+      console.error("❌ sendPasswordResetEmail error:", err.response?.data || err.message);
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to send reset code"
+      );
+    }
+  }
+);
+
+
+export const resetPasswordAction = createAsyncThunk(
+  "authRecovery/resetPassword",
+  async ({ email, otp, newPassword }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        `${API_URL}/reset-password-otp`,
+        { email, otp, newPassword }
+      );
+      return res.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to reset password"
+      );
+    }
+  }
+);
+
+// sendRecoveryFormAction (unchanged)
 export const sendRecoveryFormAction = createAsyncThunk(
   "authRecovery/sendRecoveryForm",
   async ({ email }, { rejectWithValue }) => {

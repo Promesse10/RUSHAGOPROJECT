@@ -24,7 +24,8 @@ import { clearLoginState } from "../../redux/slices/loginSlice"
 
 const { width, height } = Dimensions.get("window")
 
-const LoginScreen = ({ navigation }) => {
+const LoginScreen = ({ navigation , route  }) => {
+   const recoveredEmail = route?.params?.recoveredEmail
   const dispatch = useDispatch()
   const { isLoading, isLoginSuccess, isLoginFailed, error, user } = useSelector((state) => state.auth)
 
@@ -36,27 +37,44 @@ const LoginScreen = ({ navigation }) => {
   const [emailError, setEmailError] = useState("")
   const [passwordError, setPasswordError] = useState("")
 
-  useEffect(() => {
-    const getStoredCredentials = async () => {
-      try {
-        const storedEmail = await AsyncStorage.getItem("userEmail")
-        const storedPassword = await AsyncStorage.getItem("userPassword")
-        const storedRememberMe = await AsyncStorage.getItem("rememberMe")
-        const storedUserType = await AsyncStorage.getItem("userType")
-
-        if (storedRememberMe === "true" && storedEmail && storedPassword) {
-          setEmail(storedEmail)
-          setPassword(storedPassword)
-          setRememberMe(true)
-          if (storedUserType) setUserType(storedUserType)
-        }
-      } catch (error) {
-        console.log("Error retrieving stored credentials:", error)
+useEffect(() => {
+  const getStoredCredentials = async () => {
+    try {
+      // 🔥 1️⃣ FORCE OVERRIDE (recovery flow)
+      const forcedEmail = await AsyncStorage.getItem("FORCE_LOGIN_EMAIL");
+      if (forcedEmail) {
+        setEmail(forcedEmail);
+        await AsyncStorage.removeItem("FORCE_LOGIN_EMAIL");
+        return;
       }
-    }
 
-    getStoredCredentials()
-  }, [])
+      // 2️⃣ Navigation param fallback
+      if (recoveredEmail) {
+        setEmail(recoveredEmail);
+        return;
+      }
+
+      // 3️⃣ Remember-me normal behavior
+      const storedRememberMe = await AsyncStorage.getItem("rememberMe");
+      if (storedRememberMe === "true") {
+        const storedEmail = await AsyncStorage.getItem("userEmail");
+        const storedPassword = await AsyncStorage.getItem("userPassword");
+        const storedUserType = await AsyncStorage.getItem("userType");
+
+        if (storedEmail && storedPassword) {
+          setEmail(storedEmail);
+          setPassword(storedPassword);
+          setRememberMe(true);
+          if (storedUserType) setUserType(storedUserType);
+        }
+      }
+    } catch (err) {
+      console.log("Error retrieving stored credentials:", err);
+    }
+  };
+
+  getStoredCredentials();
+}, [recoveredEmail]);
 
   useEffect(() => {
     setEmailError("")

@@ -1,9 +1,9 @@
+// ForgotPasswordScreen.jsx
 "use client"
 
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage"
 
-import { useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from "react-redux"
 import {
   View,
@@ -18,38 +18,57 @@ import {
   Alert,
   Dimensions,
   Linking,
+  Image,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import {
+  verifyPasswordResetOtpAction,
   sendForgotEmailOtpAction,
   verifyOtpAndUpdateEmailAction,
+  verifyOtpAction,
   sendPasswordResetEmailAction,
   resetPasswordAction,
   sendRecoveryFormAction,
 } from "../redux/action/AuthRecoveryActions"
-import { clearAuthRecoveryState } from "../redux/slices/authRecoverySlice"
+import { clearAuthRecoveryState, setRecoveryContact, clearOtpVerification, clearError } from "../redux/slices/authRecoverySlice"
 
 const { width, height } = Dimensions.get("window")
 
 const ForgotPasswordScreen = ({ navigation }) => {
   const dispatch = useDispatch()
-  const { isLoading, error, otpSent, emailUpdated, resetEmailSent, passwordReset, generatedOtp } = useSelector(
-    (state) => state.authRecovery,
-  )
+  const {
+    isLoading,
+    error,
+    otpSent,
+    emailUpdated,
+    resetEmailSent,
+    passwordReset,
+    generatedOtp,
+    maskedEmail,
+    profilePic,
+    otpVerified,
+    fullName: storedname,
+    selectedPhone: storedPhone,
+  } = useSelector((state) => state.authRecovery)
 
   // Track recovery type: 'email' or 'password'
   const [recoveryType, setRecoveryType] = useState(null)
   const [step, setStep] = useState(1)
-
+  
   // Forgot Email fields
-  const [phone, setPhone] = useState("")
-  const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""])
+  const [fullName, setFullName] = useState(storedname|| "")
+  const [phone, setPhone] = useState(storedPhone || "")
+  const [otpCode, setOtpCode] = useState("") // single OTP input
   const [newEmail, setNewEmail] = useState("")
 
   // Forgot Password fields
   const [email, setEmail] = useState("")
   const [resetToken, setResetToken] = useState("")
   const [newPassword, setNewPassword] = useState("")
+  // Forgot Password OTP
+const [passwordOtp, setPasswordOtp] = useState("");
+const [passwordResetSession, setPasswordResetSession] = useState(null);
+
   const [confirmPassword, setConfirmPassword] = useState("")
   const [secureNewPassword, setSecureNewPassword] = useState(true)
   const [secureConfirmPassword, setSecureConfirmPassword] = useState(true)
@@ -57,15 +76,18 @@ const ForgotPasswordScreen = ({ navigation }) => {
   // Errors
   const [phoneError, setPhoneError] = useState("")
   const [emailError, setEmailError] = useState("")
+  const [nameError, setNameError] = useState("")
   const [otpError, setOtpError] = useState("")
   const [passwordError, setPasswordError] = useState("")
   const [confirmPasswordError, setConfirmPasswordError] = useState("")
 
   // Timer
-  const [timeLeft, setTimeLeft] = useState(300) // Updated timer to 5 minutes (300 seconds) instead of 2 minutes
+  const [timeLeft, setTimeLeft] = useState(300) // 5 minutes
   const [timerActive, setTimerActive] = useState(false)
+  const [emailOtp, setEmailOtp] = useState("");
+const [emailOtpVerified, setEmailOtpVerified] = useState(false);
 
-  const otpInputRefs = useRef([])
+  const otpInputRef = useRef(null)
 
   // Timer countdown
   useEffect(() => {
@@ -79,60 +101,92 @@ const ForgotPasswordScreen = ({ navigation }) => {
       if (timer) clearTimeout(timer)
     }
   }, [timerActive, timeLeft])
-useFocusEffect(
-  useCallback(() => {
-    dispatch(clearAuthRecoveryState());
-  }, [])
-);
 
 
-  // Handle OTP sent
+  // When OTP sent -> show OTP entry
   useEffect(() => {
     if (otpSent) {
-      console.log("[v0] OTP sent successfully, showing verification modal")
       setStep(2)
-      setTimeLeft(300) // 5 minutes timer
+      setTimeLeft(300)
       setTimerActive(true)
+      // focus OTP input
+      setTimeout(() => {
+        otpInputRef.current?.focus()
+      }, 300)
     }
   }, [otpSent])
 
-  // Handle email updated
+  // When verify-only succeeded (maskedEmail available)
+  useEffect(() => {
+    if (otpVerified && maskedEmail) {
+      // move to confirmation step where user can choose continue or update
+      setStep(2) // keep same step but show confirmed UI
+      setTimerActive(false) // stop timer for display; server still enforces TTL
+    }
+  }, [otpVerified, maskedEmail])
+
+  // When email updated
   useEffect(() => {
     if (emailUpdated) {
       setStep(3)
-      Alert.alert("Success", "Your email has been updated successfully!")
+      Alert.alert(
+        "Success",
+        "Your email has been updated successfully. Please sign in with your new email.",
+        [
+          {
+            text: "Sign In",
+            onPress: async () => {
+              try {
+                // optional: clear token storage
+              } catch (err) {
+                console.warn("Failed to clear token:", err)
+              }
+              dispatch(clearAuthRecoveryState())
+             navigation.reset({
+  index: 0,
+  routes: [
+    {
+      name: "LoginScreen",
+      params: {
+        recoveredEmail: maskedEmail.replace("XXXX", ""), // optional
+      },
+    },
+  ],
+});
+
+            },
+          },
+        ]
+      )
     }
   }, [emailUpdated])
 
-  // Handle reset email sent
-  useEffect(() => {
-    if (resetEmailSent) {
-      setStep(2)
-      Alert.alert(
-        "Email Sent",
-        "Check your email for the password reset link.",
-        [
-          {
-            text: "Open Mail App",
-            onPress: () => {
-              try {
-                Linking.openURL("mailto:"); // opens default mail app
-              } catch (error) {
-                console.error("Could not open mail app:", error);
-              }
-            },
-          },
-          { text: "OK" },
-        ]
-      )
-      
-    }
-  }, [resetEmailSent])
+  // When reset email sent
+useEffect(() => {
+  if (passwordReset) {
+    setStep(4); // ✅ SUCCESS STEP
+  }
+}, [passwordReset]);
 
-  // Handle password reset
+
+  // When password reset
   useEffect(() => {
     if (passwordReset) {
       setStep(3)
+      Alert.alert("Success", "Your password has been changed. Please sign in again.", [
+        {
+          text: "OK",
+          onPress: async () => {
+            try {
+              // clear token if needed
+            } catch (err) {
+              console.warn("Failed to clear token:", err)
+            }
+            dispatch(clearAuthRecoveryState())
+            navigation.reset({ index: 0, routes: [{ name: "LoginScreen" }] })
+          },
+        },
+      ])
     }
   }, [passwordReset])
 
@@ -153,135 +207,194 @@ useFocusEffect(
     const emailRegex = /\S+@\S+\.\S+/
     return emailRegex.test(email)
   }
-
   const validatePhone = (phone) => {
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/
-    return phoneRegex.test(phone)
+  const cleaned = phone.replace(/[\s\-()]/g, "");
+  return /^\+?[1-9]\d{7,14}$/.test(cleaned);
+};
+
+const normalizePhone = (phone) => {
+  let cleaned = (phone || "").replace(/[\s\-()]/g, "");
+  if (!cleaned.startsWith("+")) cleaned = `+${cleaned}`;
+  return cleaned;
+};
+const handleVerifyPasswordOtp = (otp) => {
+  if (otp.length !== 6) return;
+
+  dispatch(verifyPasswordResetOtpAction({ email, otp }))
+    .unwrap()
+    .then(() => {
+      setTimerActive(false);
+      setStep(3); // go to create new password
+    })
+    .catch((err) => {
+      Alert.alert("Invalid or expired code");
+      setPasswordOtp("");
+    });
+};
+
+
+// ========== FORGOT EMAIL FLOW ==========
+// send OTP (use DB field name "name")
+const handleSendOtp = () => {
+  if (!fullName.trim()) {
+    setNameError("Full name is required");
+    return;
+  } else setNameError("");
+
+  if (!phone.trim()) {
+    setPhoneError("Phone number is required");
+    return;
+  } else if (!validatePhone(phone)) {
+    setPhoneError("Enter a valid phone number (e.g., +1234567890)");
+    return;
+  } else {
+    setPhoneError("");
   }
 
-  // ========== FORGOT EMAIL FLOW ==========
-  const handleSendOtp = () => {
-    if (!phone.trim()) {
-      setPhoneError("Phone number is required")
-      return
-    } else if (!validatePhone(phone)) {
-      setPhoneError("Enter a valid phone number (e.g., +1234567890)")
-      return
-    } else {
-      setPhoneError("")
-    }
+  const payload = { name: fullName.trim(), phone: normalizePhone(phone) };
+  dispatch(setRecoveryContact({ fullName: fullName.trim(), phone: normalizePhone(phone) }));
+  dispatch(sendForgotEmailOtpAction(payload));
+};
 
-    dispatch(sendForgotEmailOtpAction({ phone }))
+const handleResendOtp = () => {
+  const payload = { name: fullName.trim(), phone: normalizePhone(phone) };
+  dispatch(sendForgotEmailOtpAction(payload));
+  setOtpCode("");
+  setOtpError("");
+  setTimeLeft(300);
+  setTimerActive(true);
+};
+
+// When OTP single-input changes (auto-verify on 6 digits)
+const handleOtpChange = (text) => {
+  const cleaned = text.replace(/[^0-9]/g, "").slice(0, 6);
+  setOtpCode(cleaned);
+  setOtpError("");
+  if (cleaned.length === 6) {
+    // auto verify to reveal masked email
+    handleVerifyOtpOnly(cleaned);
+  }
+};
+
+// Verify OTP only -> returns masked email + profile (does NOT change email)
+const handleVerifyOtpOnly = (value) => {
+  const code = value || otpCode;
+  if (code.length !== 6) {
+    setOtpError("Please enter the complete 6-digit code");
+    return;
+  }
+  if (!timerActive && timeLeft === 0) {
+    setOtpError("Code expired. Please request a new code");
+    return;
   }
 
-  const handleResendOtp = () => {
-    dispatch(sendForgotEmailOtpAction({ phone }))
-    setOtpCode(["", "", "", "", "", ""])
-    setOtpError("")
+  dispatch(verifyOtpAction({
+    phone: normalizePhone(phone),
+    otp: code,
+    
+  }))
+    .then(() => {
+      // success handled via slice: maskedEmail, profilePic, otpVerified true
+      // step remains 2 but UI will show masked card
+    })
+    .catch((err) => {
+      console.error("verifyOtpOnly error:", err);
+      setOtpError(err?.message || "Invalid OTP");
+      setOtpCode("");
+      dispatch(clearError());
+      // Allow resend immediately if OTP not found
+      if (err?.message?.includes("OTP not found")) {
+        setTimerActive(false);
+      }
+    });
+};
+
+// Update email using OTP (server will verify OTP again and update)
+const handleVerifyOtpAndUpdateEmail = () => {
+  if (otpCode.length !== 6) {
+    setOtpError("Please enter the complete 6-digit code");
+    return;
+  }
+  if (!newEmail.trim()) {
+    setEmailError("New email is required");
+    return;
+  } else if (!validateEmail(newEmail)) {
+    setEmailError("Enter a valid email address");
+    return;
+  } else {
+    setEmailError("");
   }
 
-  const handleOtpChange = (text, index) => {
-    const newOtpCode = [...otpCode]
-    newOtpCode[index] = text
-    setOtpCode(newOtpCode)
-    setOtpError("")
+  dispatch(verifyOtpAndUpdateEmailAction({
+    phone: normalizePhone(phone),
+    otp: otpCode,
+    newEmail: newEmail.trim(),
+   
+  }))
+    .then(() => {
+      // success handled by slice -> emailUpdated true -> step 3
+    })
+    .catch((err) => {
+      console.error("handleVerifyOtpAndUpdateEmail error:", err);
+      setOtpError(err?.message || "Failed to verify OTP");
+      dispatch(clearError());
+    });
 
-    if (text && index < 5) {
-      otpInputRefs.current[index + 1].focus()
-    }
+
   }
 
-  const handleVerifyOtpAndUpdateEmail = () => {
-    const enteredOtp = otpCode.join("")
-
-    if (enteredOtp.length !== 6) {
-      setOtpError("Please enter the complete 6-digit code")
-      return
-    }
-
-    if (!newEmail.trim()) {
-      setEmailError("New email is required")
-      return
-    } else if (!validateEmail(newEmail)) {
-      setEmailError("Enter a valid email address")
-      return
-    } else {
-      setEmailError("")
-    }
-
-    if (!timerActive && timeLeft === 0) {
-      setOtpError("Code expired. Please request a new code")
-      return
-    }
-
-    dispatch(verifyOtpAndUpdateEmailAction({ phone, otp: enteredOtp, newEmail }))
+  // ========== FORGOT PASSWORD FLOW ==========
+const handleSendResetEmail = () => {
+  if (!email.trim()) {
+    setEmailError("Email is required");
+    return;
+  } else if (!validateEmail(email)) {
+    setEmailError("Enter a valid email address");
+    return;
+  } else {
+    setEmailError("");
   }
 
-  const handleSendResetEmail = () => {
-    if (!email.trim()) {
-      setEmailError("Email is required")
-      return
-    } else if (!validateEmail(email)) {
-      setEmailError("Enter a valid email address")
-      return
-    } else {
-      setEmailError("")
-    }
-  
-    dispatch(sendPasswordResetEmailAction({ email }))
-      .unwrap()
-      .then(() => {
-        Alert.alert(
-          "Check Your Email",
-          "We've sent a password reset link. Would you like to open your email app now?",
-          [
-            {
-              text: "Open Mail",
-              onPress: () => {
-                // Open the default mail app on the device
-                try {
-                  Linking.openURL("mailto:")
-                } catch (err) {
-                  console.error("Could not open mail app:", err)
-                  Alert.alert("Error", "Could not open your email app.")
-                }
-              },
-            },
-            { text: "Later", style: "cancel" },
-          ],
-        )
-      })
-      .catch((err) => {
-        console.error("sendResetEmail error:", err)
-        Alert.alert("Error", err || "Failed to send reset email")
-      })
-  }
-  
-  const handleResetPassword = () => {
-    if (!newPassword.trim()) {
-      setPasswordError("New password is required")
-      return
-    } else if (newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters")
-      return
-    } else {
-      setPasswordError("")
-    }
+  dispatch(sendPasswordResetEmailAction({ email }))
+    .unwrap()
+    .then(() => {
+      // 🔥 MOVE TO OTP SCREEN
+      setStep(2);
+      setTimeLeft(300);
+      setTimerActive(true);
+    })
+    .catch((err) => {
+      Alert.alert("Error", err || "Failed to send OTP");
+    });
+};
 
-    if (!confirmPassword.trim()) {
-      setConfirmPasswordError("Confirm password is required")
-      return
-    } else if (confirmPassword !== newPassword) {
-      setConfirmPasswordError("Passwords do not match")
-      return
-    } else {
-      setConfirmPasswordError("")
-    }
-
-    // In a real app, you'd extract the token from the email link
-    // For now, we'll use a placeholder
-    dispatch(resetPasswordAction({ token: resetToken, newPassword }))
+ const handleResetPassword = () => {
+  if (!newPassword.trim()) {
+    setPasswordError("New password is required");
+    return;
+  } else if (newPassword.length < 6) {
+    setPasswordError("Password must be at least 6 characters");
+    return;
+  } else {
+    setPasswordError("");
   }
+
+  if (newPassword !== confirmPassword) {
+    setConfirmPasswordError("Passwords do not match");
+    return;
+  } else {
+    setConfirmPasswordError("");
+  }
+
+  dispatch(
+    resetPasswordAction({
+      email,
+      otp: passwordOtp,
+      newPassword,
+    })
+  );
+};
+
 
   const handleBackToLogin = () => {
     dispatch(clearAuthRecoveryState())
@@ -289,6 +402,44 @@ useFocusEffect(
   }
 
   // ========== RENDER SELECTION SCREEN ==========
+  const renderForgotPasswordOtpStep = () => {
+  return (
+    <View style={styles.stepContainer}>
+      <Text style={styles.title}>Verify Code</Text>
+      <Text style={styles.subtitle}>
+        Enter the 6-digit code sent to {email}
+      </Text>
+
+      <TextInput
+        value={passwordOtp}
+        onChangeText={(text) => {
+          const cleaned = text.replace(/\D/g, "").slice(0, 6);
+          setPasswordOtp(cleaned);
+          if (cleaned.length === 6) {
+            handleVerifyPasswordOtp(cleaned);
+          }
+        }}
+        keyboardType="number-pad"
+        maxLength={6}
+        textContentType="oneTimeCode"
+        style={styles.googleOtpInput}
+      />
+
+      <View style={styles.resendContainer}>
+        {timerActive ? (
+          <Text style={styles.timerText}>
+            Code expires in {formatTime(timeLeft)}
+          </Text>
+        ) : (
+          <TouchableOpacity onPress={handleSendResetEmail}>
+            <Text style={styles.resendLink}>Resend Code</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+};
+
   const renderSelectionScreen = () => {
     return (
       <View style={styles.stepContainer}>
@@ -324,66 +475,68 @@ useFocusEffect(
           </View>
           <Ionicons name="chevron-forward" size={24} color="#999" />
         </TouchableOpacity>
-       <TouchableOpacity
-         style={styles.optionButton}
-  onPress={() => {
-    Alert.alert(
-      "Account Recovery",
-      "You can recover your account by either calling our helpline or receiving the account recovery form via email. Follow the instructions carefully.",
-      [
-        {
-          text: "Call Us",
-          onPress: () => {
-            Linking.openURL("tel:0780114522").catch(() => {
-              Alert.alert("Error", "Could not initiate call. Please dial manually.");
-            });
-          },
-        },
-        {
-          text: "Use Email",
-          onPress: () => {
-            Alert.prompt(
-              "Enter your registered email",
-              "We will send you the account recovery form. After receiving, download it, fill it, scan it, and send it back to our email.",
+
+        <TouchableOpacity
+          style={styles.optionButton}
+          onPress={() => {
+            Alert.alert(
+              "Account Recovery",
+              "You can recover your account by either calling our helpline or receiving the account recovery form via email. Follow the instructions carefully.",
               [
                 {
-                  text: "Send",
-                  onPress: (email) => {
-                    if (!validateEmail(email)) {
-                      Alert.alert("Error", "Enter a valid email");
-                      return;
-                    }
-                    dispatch(sendRecoveryFormAction({ email }))
-                      .unwrap()
-                      .then(() => {
-                        Alert.alert(
-                          "Email Sent",
-                          "Check your email for the account recovery form. Download, fill it, scan it, and send it back to our email."
-                        );
-                      })
-                      .catch(() => {
-                        Alert.alert("Error", "Failed to send email. Try again later.");
-                      });
+                  text: "Call Us",
+                  onPress: () => {
+                    Linking.openURL("tel:0780114522").catch(() => {
+                      Alert.alert("Error", "Could not initiate call. Please dial manually.");
+                    });
+                  },
+                },
+                {
+                  text: "Use Email",
+                  onPress: () => {
+                    Alert.prompt(
+                      "Enter your registered email",
+                      "We will send you the account recovery form. After receiving, download it, fill it, scan it, and send it back to our email.",
+                      [
+                        {
+                          text: "Send",
+                          onPress: (emailAddr) => {
+                            if (!validateEmail(emailAddr)) {
+                              Alert.alert("Error", "Enter a valid email");
+                              return;
+                            }
+                            dispatch(sendRecoveryFormAction({ email: emailAddr }))
+                              .unwrap()
+                              .then(() => {
+                                Alert.alert(
+                                  "Email Sent",
+                                  "Check your email for the account recovery form. Download, fill it, scan it, and send it back to our email."
+                                );
+                              })
+                              .catch(() => {
+                                Alert.alert("Error", "Failed to send email. Try again later.");
+                              });
+                          },
+                        },
+                        { text: "Cancel", style: "cancel" },
+                      ],
+                      "plain-text"
+                    );
                   },
                 },
                 { text: "Cancel", style: "cancel" },
-              ],
-              "plain-text"
+              ]
             );
-          },
-        },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
-  }}
-      >
-        <Ionicons name="help-circle-outline" size={32} color="#007EFD" />
-        <View style={styles.optionTextContainer}>
-          <Text style={styles.optionTitle}>Contact Support</Text>
-          <Text style={styles.optionSubtitle}>Receive account recovery form via email</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={24} color="#999" />
-      </TouchableOpacity>
+          }}
+        >
+          <Ionicons name="help-circle-outline" size={32} color="#007EFD" />
+          <View style={styles.optionTextContainer}>
+            <Text style={styles.optionTitle}>Contact Support</Text>
+            <Text style={styles.optionSubtitle}>Receive account recovery form via email</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#999" />
+        </TouchableOpacity>
+
         <View style={styles.loginLinkContainer}>
           <Text style={styles.rememberText}>Remember your credentials? </Text>
           <TouchableOpacity onPress={handleBackToLogin}>
@@ -403,7 +556,23 @@ useFocusEffect(
         </TouchableOpacity>
 
         <Text style={styles.title}>Forgot Email?</Text>
-        <Text style={styles.subtitle}>Enter your phone number to receive a verification code</Text>
+        <Text style={styles.subtitle}>Enter your full name and phone number used at registration</Text>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Full Name</Text>
+          <TextInput
+            style={[styles.input, nameError && styles.inputError]}
+            placeholder="John Doe"
+            placeholderTextColor="#999"
+            value={fullName}
+            onChangeText={(text) => {
+              setFullName(text)
+              setNameError("")
+            }}
+            autoCapitalize="words"
+          />
+          {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
+        </View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Phone Number</Text>
@@ -427,55 +596,111 @@ useFocusEffect(
       </View>
     )
   }
+const handleUseMaskedEmail = async () => {
+  try {
+    /**
+     * IMPORTANT:
+     * Backend MUST return realEmail in verifyOtpAction response
+     * If it doesn't yet, add it there (not masked).
+     */
+    if (!maskedEmail) {
+      Alert.alert("Error", "Email not available");
+      return;
+    }
+
+    // 🔥 STORE ONE-TIME OVERRIDE
+    await AsyncStorage.setItem(
+      "FORCE_LOGIN_EMAIL",
+      maskedEmail.replace(/X/g, "") // only if backend masks with X
+    );
+
+    dispatch(clearAuthRecoveryState());
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "LoginScreen" }],
+    });
+  } catch (e) {
+    console.error("Failed to continue with recovered email:", e);
+  }
+};
+
 
   const renderForgotEmailOtpStep = () => {
+    // If otpVerified and maskedEmail exist, show masked info + options
+    if (otpVerified && maskedEmail) {
+      return (
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Account Found</Text>
+          <Text style={styles.subtitle}>We found an account matching your info</Text>
+
+          <View style={styles.maskedCard}>
+            {profilePic ? <Image source={{ uri: profilePic }} style={styles.avatar} /> : <View style={styles.avatarPlaceholder}><Ionicons name="person" size={28} color="#fff" /></View>}
+            <View style={{ marginLeft: 12 }}>
+              <Text style={styles.maskedLabel}>Email</Text>
+              <Text style={styles.maskedValue}>{maskedEmail}</Text>
+              <Text style={styles.maskedSmall}>If this is your account you can continue with this email or change it.</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity style={[styles.primaryButton, { marginTop: 12 }]} onPress={handleUseMaskedEmail}>
+            <Text style={styles.primaryButtonText}>Continue with this email</Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.subtitle, { marginTop: 18 }]}>Or update to a new email</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>New Email</Text>
+            <TextInput
+              style={[styles.input, emailError && styles.inputError]}
+              placeholder="email@example.com"
+              placeholderTextColor="#999"
+              value={newEmail}
+              onChangeText={(text) => {
+                setNewEmail(text)
+                setEmailError("")
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+          </View>
+
+          <TouchableOpacity style={styles.primaryButton} onPress={handleVerifyOtpAndUpdateEmail} disabled={isLoading}>
+            <Text style={styles.primaryButtonText}>{isLoading ? "Updating..." : "Update Email"}</Text>
+          </TouchableOpacity>
+
+        </View>
+      )
+    }
+
+    // Otherwise show OTP single input
     return (
       <View style={styles.stepContainer}>
         <Text style={styles.title}>Verify OTP</Text>
         <Text style={styles.subtitle}>Enter the 6-digit code sent to your phone</Text>
 
-        <View style={styles.otpContainer}>
-          {otpCode.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => (otpInputRefs.current[index] = ref)}
-              style={[styles.otpInput, otpError && styles.otpInputError]}
-              value={digit}
-              onChangeText={(text) => handleOtpChange(text.replace(/[^0-9]/g, ""), index)}
-              keyboardType="number-pad"
-              maxLength={1}
-              textContentType="oneTimeCode"
-              autoComplete="sms-otp"
-              onKeyPress={({ nativeEvent }) => {
-                if (nativeEvent.key === "Backspace" && !digit && index > 0) {
-                  otpInputRefs.current[index - 1].focus()
-                }
-              }}
-            />
-          ))}
+        <View style={{ marginBottom: 12 }}>
+       <TextInput
+  ref={otpInputRef}
+  value={otpCode}
+  onChangeText={(text) => {
+    const cleaned = text.replace(/\D/g, "").slice(0, 6);
+    setOtpCode(cleaned);
+   if (cleaned.length === 6) handleVerifyOtpOnly(cleaned);
+
+  }}
+  maxLength={6}
+  keyboardType="number-pad"
+  textContentType="oneTimeCode"
+  autoComplete="sms-otp"
+  style={styles.googleOtpInput}
+/>
+
         </View>
 
-        {otpError ? <Text style={styles.errorText}>{otpError}</Text> : null}
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>New Email</Text>
-          <TextInput
-            style={[styles.input, emailError && styles.inputError]}
-            placeholder="your-new-email@example.com"
-            placeholderTextColor="#999"
-            value={newEmail}
-            onChangeText={(text) => {
-              setNewEmail(text)
-              setEmailError("")
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-        </View>
-
-        <TouchableOpacity style={styles.primaryButton} onPress={handleVerifyOtpAndUpdateEmail} disabled={isLoading}>
-          <Text style={styles.primaryButtonText}>{isLoading ? "Verifying..." : "Update Email"}</Text>
+        <TouchableOpacity style={styles.primaryButton} onPress={handleVerifyOtpOnly} disabled={isLoading}>
+          <Text style={styles.primaryButtonText}>{isLoading ? "Verifying..." : "Verify Code"}</Text>
         </TouchableOpacity>
 
         <View style={styles.resendContainer}>
@@ -616,9 +841,11 @@ useFocusEffect(
           {!recoveryType && renderSelectionScreen()}
           {recoveryType === "email" && step === 1 && renderForgotEmailPhoneStep()}
           {recoveryType === "email" && step === 2 && renderForgotEmailOtpStep()}
-          {recoveryType === "password" && step === 1 && renderForgotPasswordEmailStep()}
-          {recoveryType === "password" && step === 2 && renderResetPasswordStep()}
-          {step === 3 && renderSuccessStep()}
+         {recoveryType === "password" && step === 1 && renderForgotPasswordEmailStep()}
+{recoveryType === "password" && step === 2 && renderForgotPasswordOtpStep()}
+{recoveryType === "password" && step === 3 && renderResetPasswordStep()}
+
+          {step === 4 && renderSuccessStep()}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -749,21 +976,17 @@ const styles = StyleSheet.create({
     color: "#007EFD",
     fontWeight: "bold",
   },
-  otpContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  otpInput: {
-    width: 50,
+  singleOtpInput: {
+    width: "100%",
     height: 60,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#e0e0e0",
     textAlign: "center",
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "600",
     backgroundColor: "#f5f5f5",
+    paddingHorizontal: 12,
   },
   otpInputError: {
     borderColor: "red",
@@ -780,6 +1003,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
   },
+  googleOtpInput: {
+  letterSpacing: 24,
+  fontSize: 28,
+  textAlign: "center",
+  paddingVertical: 12,
+  backgroundColor: "#f5f5f5",
+  borderRadius: 12,
+},
+
   resendLink: {
     fontSize: 14,
     color: "#007EFD",
@@ -801,6 +1033,42 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  maskedCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f7fbff",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#e6f0ff",
+    marginBottom: 12,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  avatarPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#007EFD",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  maskedLabel: {
+    fontSize: 12,
+    color: "#666",
+  },
+  maskedValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#000",
+  },
+  maskedSmall: {
+    fontSize: 12,
+    color: "#666",
+  }
 })
 
 export default ForgotPasswordScreen
