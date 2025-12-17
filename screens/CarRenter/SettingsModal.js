@@ -22,14 +22,19 @@ import Icon from "react-native-vector-icons/Ionicons"
 import * as ImagePicker from "expo-image-picker"
 import I18n from "../../utils/i18n"
 import { useDispatch, useSelector } from "react-redux"
-import { getCurrentUserAction, updateUserAction } from "../../redux/action/UserActions"
+import { getCurrentUserAction, updateUserAction, uploadProfileImageAction } from "../../redux/action/UserActions"
 import axiosInstance from "../../utils/axios"
 
 const { width, height } = Dimensions.get("window")
 
 const SettingsModal = ({ visible, onClose, navigation }) => {
   const dispatch = useDispatch()
-  const { currentUser, isLoading, isUpdating } = useSelector((state) => state.user)
+const { currentUser, isUpdating } = useSelector((state) => state.user)
+
+ const profileImageUrl =
+    typeof currentUser?.profileImage === "string"
+      ? currentUser.profileImage
+      : currentUser?.profileImage?.url
 
   const [showPersonalInfo, setShowPersonalInfo] = useState(false)
   const [showChangePassword, setShowChangePassword] = useState(false)
@@ -131,50 +136,38 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
   }
 
   // ✅ Pick and update profile image (optional)
-  const handleImagePicker = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== "granted") {
-      Alert.alert("Permission Required", "Please allow photo library access")
-      return
-    }
-  
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    })
-  
-    if (!result.canceled) {
-      const imageUri = result.assets[0].uri
-  
-      const formData = new FormData()
-      formData.append("profileImage", {
-        uri: imageUri,
-        name: "profile.jpg",
-        type: "image/jpeg",
-      })
-  
-      try {
-        const response = await axiosInstance.put(
-          `/users/${tempProfile._id}`,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        )
-  
-        Alert.alert("Success", "Profile picture updated successfully")
-        dispatch(getCurrentUserAction()) // ✅ Refresh Redux state
-      } catch (error) {
-        console.error("❌ Upload error:", error.response?.data || error.message)
-        Alert.alert("Error", "Failed to update profile image")
-      }
+ const handleImagePicker = async () => {
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+  if (status !== "granted") {
+    Alert.alert("Permission Required", "Please allow photo library access")
+    return
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.8,
+  })
+
+  if (!result.canceled) {
+    const imageUri = result.assets[0].uri
+
+    try {
+      await dispatch(
+        uploadProfileImageAction({ uri: imageUri })
+      ).unwrap()
+
+      Alert.alert("Success", "Profile picture updated successfully")
+      dispatch(getCurrentUserAction())
+    } catch (error) {
+      console.error("❌ Upload error:", error)
+      Alert.alert("Error", "Failed to update profile image")
     }
   }
-  
+}
+
   
   const handleLogout = () => {
     Alert.alert(I18n.t("logout"), "Are you sure you want to logout?", [
@@ -212,14 +205,14 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
             <View style={styles.section}>
               <View style={styles.profileSection}>
                 <TouchableOpacity onPress={handleImagePicker} style={styles.profileImageContainer}>
-                  <Image
-                    source={
-                      currentUser?.profileImage
-                        ? { uri: currentUser.profileImage }
-                        : { uri: "https://cdn-icons-png.flaticon.com/512/149/149071.png" }
-                    }
-                    style={styles.profileImage}
-                  />
+                <Image
+  source={{
+    uri:
+      profileImageUrl ||
+      "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+  }}
+  style={styles.profileImage}
+/>
                   <View style={styles.cameraOverlay}>
                     <Icon name="camera" size={20} color="white" />
                   </View>

@@ -1,29 +1,54 @@
-// src/redux/action/verificationAction.js
 import { createAsyncThunk } from "@reduxjs/toolkit"
 import axiosInstance from "../../utils/axios"
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL
 
 export const sendVerificationCodeAction = createAsyncThunk(
-    "verification/sendCode",
-    async ({ email, userName }, { rejectWithValue }) => {
-      try {
-        const res = await axiosInstance.post(
-          `${API_URL}/email/send-verification-code`,
-          { email, userName }
-        );
-  
-        // ✅ Success
-        if (res.data.success) {
-          return res.data.code;
+  "verification/sendCode",
+  async ({ email, userName }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        `${API_URL}/email/send-verification-code`,
+        { email, userName }
+      )
+
+      if (res.data.success) {
+        return {
+          message: res.data.message || "Verification code sent",
         }
-  
-        // ❌ API responded but without success
-        return rejectWithValue(res.data.error || "Unexpected error");
-      } catch (err) {
-        console.error("❌ Verification error:", err.response?.data || err.message);
-        return rejectWithValue(err.response?.data?.error || err.message);
       }
+
+      // Backend-controlled failure
+      return rejectWithValue({
+        error: res.data.error || "OTP_FAILED",
+        retryAfter: res.data.retryAfter || null,
+      })
+    } catch (err) {
+      const data = err.response?.data
+
+      return rejectWithValue({
+        error: data?.error || "NETWORK_ERROR",
+        retryAfter: data?.retryAfter || null,
+      })
     }
-  );
-  
+  }
+)
+export const verifyEmailOtpAction = createAsyncThunk(
+  "verification/verifyOtp",
+  async ({ email, otp }, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.post(
+        `${API_URL}recovery/verify-otp-update-email`,
+        { email, otp }
+      );
+
+      if (res.data.success) {
+        return true;
+      }
+
+      return rejectWithValue(res.data.error || "Invalid OTP");
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error || err.message);
+    }
+  }
+);

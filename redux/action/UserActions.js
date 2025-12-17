@@ -23,6 +23,43 @@ export const searchUsersAction = createAsyncThunk("user/search", async (query, {
     return rejectWithValue(err.response?.data?.message || "Failed to search users")
   }
 })
+export const uploadProfileImageAction = createAsyncThunk(
+  "user/uploadProfileImage",
+  async (imageData, { rejectWithValue }) => {
+    try {
+      const formData = new FormData()
+
+      formData.append("image", {
+        uri: imageData.uri,
+        name: "profile.jpg",
+        type: "image/jpeg",
+      })
+
+      const response = await axiosInstance.patch(
+        "/users/profile/image",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      )
+
+      const updatedUser = response.data
+
+      // ✅ Save updated user locally
+      await SecureStore.setItemAsync("user", JSON.stringify(updatedUser))
+
+      return updatedUser
+    } catch (err) {
+      console.error("❌ Upload image failed:", err.response?.data || err.message)
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to upload profile image"
+      )
+    }
+  }
+)
+
 export const updateUserAction = createAsyncThunk(
   "user/update",
   async (userData, { rejectWithValue }) => {

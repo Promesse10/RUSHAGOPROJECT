@@ -86,37 +86,37 @@ const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector(
 
   // Handle signup success
   useEffect(() => {
-    const handleSignupSuccess = async () => {
-      if (isSignupSuccess) {
-        try {
-          // Store user data in AsyncStorage
-          const userData = {
-            role: userType,
-            name: inputs.name,
-            email: inputs.email,
-            phone: inputs.phone,
-            password: inputs.password,
-          }
+    const handleSignUp = () => {
+  if (!validateForm()) return
 
-          await AsyncStorage.setItem(`${userType}_${inputs.email}`, JSON.stringify(userData))
-          await AsyncStorage.setItem("process", "signupComplete")
-          await AsyncStorage.setItem("userEmail", inputs.email)
-
-          // Show success modal
-          setShowSuccessModal(true)
-
-          // Redirect to login after a delay
-          setTimeout(() => {
-            setShowSuccessModal(false)
-            // dispatch(clearSignupState());
-            navigation.navigate("LoginScreen")
-          }, 2000)
-        } catch (storageError) {
-          console.log("Error storing user data:", storageError)
-          Alert.alert("Error", "Account created but failed to save locally. Please try logging in.")
-        }
-      }
-    }
+  dispatch(
+    signupAction({
+      role: userType,
+      name: inputs.name,
+      email: inputs.email,
+      phone: inputs.phone,
+      password: inputs.password,
+      isVerified: false,
+    })
+  )
+    .unwrap()
+    .then(() => {
+      dispatch(
+        sendVerificationCodeAction({
+          email: inputs.email,
+          userName: inputs.name,
+        })
+      )
+        .unwrap()
+        .then((code) => {
+          setGeneratedCode(code)
+          setShowVerificationModal(true)
+        })
+    })
+    .catch((err) => {
+      Alert.alert("Signup Failed", err || "Signup error")
+    })
+}
 
     handleSignupSuccess()
   }, [isSignupSuccess])

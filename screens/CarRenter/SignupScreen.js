@@ -22,7 +22,11 @@ import {
 import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { signupAction } from "../../redux/action/signupAction"
-import { sendVerificationCodeAction } from "../../redux/action/verificationAction"
+import {
+  sendVerificationCodeAction,
+ verifyEmailOtpAction,
+} from "../../redux/action/verificationAction"
+
 
 const { height } = Dimensions.get("window")
 
@@ -40,11 +44,13 @@ const SignupScreen = ({ navigation }) => {
   const [secureConfirmTextEntry, setSecureConfirmTextEntry] = useState(true)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showVerificationModal, setShowVerificationModal] = useState(false)
-  const [verificationCode, setVerificationCode] = useState(["", "", "", "", ""])
+ 
   const [isVerifying, setIsVerifying] = useState(false)
   const [timeLeft, setTimeLeft] = useState(300) // 5 minutes
   const [canResend, setCanResend] = useState(false)
-  const [generatedCode, setGeneratedCode] = useState("")
+  const [otp, setOtp] = useState("");
+  const OTP_LENGTH = 5
+
 
   const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector((state) => state.signup || {})
   const { isSending, error: verificationError } = useSelector((state) => state.verification || {})
@@ -68,41 +74,9 @@ const SignupScreen = ({ navigation }) => {
     return () => clearInterval(interval)
   }, [showVerificationModal, timeLeft])
 
-  // Auto-fill simulation after showing modal
-  useEffect(() => {
-    if (showVerificationModal && generatedCode.length === 5) {
-      const timer = setTimeout(() => {
-        setVerificationCode(generatedCode.split(""))
-      }, 1500)
-      return () => clearTimeout(timer)
-    }
-  }, [showVerificationModal, generatedCode])
 
-  useEffect(() => {
-    if (isSignupSuccess) {
-      (async () => {
-        try {
-          const userData = {
-            role: userType,
-            name: inputs.name,
-            email: inputs.email,
-            phone: inputs.phone,
-            password: inputs.password,
-          }
-          await AsyncStorage.setItem(`${userType}_${inputs.email}`, JSON.stringify(userData))
-          await AsyncStorage.setItem("process", "signupComplete")
-          await AsyncStorage.setItem("userEmail", inputs.email)
-          setShowSuccessModal(true)
-          setTimeout(() => {
-            setShowSuccessModal(false)
-            navigation.navigate("LoginScreen")
-          }, 2000)
-        } catch {
-          Alert.alert("Error", "Account created but failed to save locally.")
-        }
-      })()
-    }
-  }, [isSignupSuccess])
+
+
 
   useEffect(() => {
     if (isSignupFailed && error) {
@@ -155,84 +129,87 @@ const SignupScreen = ({ navigation }) => {
   }
 
   const handleSignUp = () => {
-    if (!validateForm()) return
+  if (!validateForm()) return
 
-    dispatch(sendVerificationCodeAction({
+  dispatch(
+    sendVerificationCodeAction({
       email: inputs.email,
       userName: inputs.name,
-    }))
-      .unwrap()
-      .then((code) => {
-        setGeneratedCode(code)
-        setVerificationCode(["", "", "", "", ""])
-        setShowVerificationModal(true)
-        setTimeLeft(300)
-        setCanResend(false)
-      })
-      .catch((err) => {
-        Alert.alert("Error", err || "Could not send verification code")
-      })
+    })
+  )
+    .unwrap()
+   .then(() => {
+  setOtp("")
+  setShowVerificationModal(true)
+  setTimeLeft(300)
+  setCanResend(false)
+})
+
+    .catch((err) => {
+      Alert.alert("Error", err || "Could not send verification code")
+    })
+}
+
+
+const handleVerifyEmail = () => {
+  if (otp.length !== OTP_LENGTH) {
+    setErrors({ ...errors, verification: "Please enter the 6-digit code" })
+    return
   }
 
-  const handleVerificationCodeChange = (index, value) => {
-    if (value.length <= 1) {
-      const newCode = [...verificationCode]
-      newCode[index] = value
-      setVerificationCode(newCode)
-    }
-  }
+  setIsVerifying(true)
 
-  const handleVerifyEmail = () => {
-    const enteredCode = verificationCode.join("")
-    if (enteredCode.length !== 5) {
-      setErrors({ ...errors, verification: "Please enter the complete verification code" })
-      return
-    }
-    setIsVerifying(true)
+  dispatch(
+    verifyEmailOtpAction({
+      email: inputs.email,
+      otp,
+    })
+  )
+    .unwrap()
+    .then(() => {
+      return dispatch(
+        signupAction({
+          role: userType,
+          name: inputs.name,
+          email: inputs.email,
+          phone: inputs.phone,
+          password: inputs.password,
+        })
+      ).unwrap()
+    })
+    .then(() => {
+      setShowVerificationModal(false)
+      navigation.replace("LoginScreen")
+    })
+    .catch((err) => {
+      setErrors({ ...errors, verification: err || "Invalid verification code" })
+    })
+    .finally(() => setIsVerifying(false))
+}
 
-    if (enteredCode === generatedCode) {
-      setTimeout(() => {
-        setIsVerifying(false)
-        setShowVerificationModal(false)
-        dispatch(
-          signupAction({
-            role: userType,
-            name: inputs.name,
-            email: inputs.email,
-            phone: inputs.phone,
-            password: inputs.password,
-            isVerified: true,
-          })
-        )
-      }, 1000)
-    } else {
-      setTimeout(() => {
-        setIsVerifying(false)
-        setErrors({ ...errors, verification: "Invalid verification code. Please try again." })
-      }, 1000)
-    }
-  }
 
   const handleResendCode = () => {
-    if (!canResend) return
+  if (!canResend) return
 
-    dispatch(sendVerificationCodeAction({
+  dispatch(
+    sendVerificationCodeAction({
       email: inputs.email,
       userName: inputs.name,
-    }))
-      .unwrap()
-      .then((code) => {
-        setGeneratedCode(code)
-        setVerificationCode(["", "", "", "", ""])
-        setErrors({ ...errors, verification: "" })
-        setTimeLeft(300)
-        setCanResend(false)
-        Alert.alert("Success", "New verification code sent!")
-      })
-      .catch(() => {
-        Alert.alert("Error", "Could not resend verification code")
-      })
-  }
+    })
+  )
+    .unwrap()
+   .then(() => {
+  setOtp("")
+  setErrors({ ...errors, verification: "" })
+  setTimeLeft(300)
+  setCanResend(false)
+  Alert.alert("Success", "New verification code sent!")
+})
+
+    .catch(() => {
+      Alert.alert("Error", "Could not resend verification code")
+    })
+}
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60)
@@ -248,6 +225,7 @@ const SignupScreen = ({ navigation }) => {
     <View style={styles.form}>
       <View style={styles.inputContainer}>
         <TextInput
+        
           style={[styles.input, errors.name && styles.inputError]}
           placeholder="Enter your full name"
           placeholderTextColor="#999"
@@ -287,6 +265,9 @@ const SignupScreen = ({ navigation }) => {
             secureTextEntry={secureTextEntry}
             value={inputs.password}
             onChangeText={(value) => setInputs({ ...inputs, password: value })}
+             textContentType="none"
+  autoComplete="off"
+  importantForAutofill="no"
           />
           <TouchableOpacity onPress={toggleSecureTextEntry} style={styles.eyeIcon}>
             <Ionicons name={secureTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
@@ -303,6 +284,9 @@ const SignupScreen = ({ navigation }) => {
             secureTextEntry={secureConfirmTextEntry}
             value={inputs.confirmPassword}
             onChangeText={(value) => setInputs({ ...inputs, confirmPassword: value })}
+            textContentType="none"
+  autoComplete="off"
+  importantForAutofill="no"
           />
           <TouchableOpacity onPress={toggleSecureConfirmTextEntry} style={styles.eyeIcon}>
             <Ionicons name={secureConfirmTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
@@ -330,19 +314,19 @@ const SignupScreen = ({ navigation }) => {
           <Text style={styles.timerText}>
             {timeLeft > 0 ? `Code expires in ${formatTime(timeLeft)}` : "Code expired"}
           </Text>
-          <View style={styles.codeInputContainer}>
-            {verificationCode.map((digit, index) => (
-              <TextInput
-                key={index}
-                style={[styles.codeInput, digit && styles.codeInputFilled]}
-                value={digit}
-                onChangeText={(value) => handleVerificationCodeChange(index, value)}
-                keyboardType="numeric"
-                maxLength={1}
-                textAlign="center"
-              />
-            ))}
-          </View>
+    <TextInput
+  value={otp}
+  onChangeText={(text) => {
+    const cleaned = text.replace(/\D/g, "").slice(0, OTP_LENGTH);
+    setOtp(cleaned);
+  }}
+  keyboardType="number-pad"
+  maxLength={OTP_LENGTH}
+  textContentType="oneTimeCode"
+  autoComplete="one-time-code"
+  style={styles.googleOtpInput}
+/>
+
           {errors.verification && <Text style={styles.verificationErrorText}>{errors.verification}</Text>}
           <TouchableOpacity
             onPress={handleResendCode}
@@ -525,6 +509,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
   },
+  googleOtpInput: {
+  width: "100%",
+  height: 55,
+  borderWidth: 1,
+  borderColor: "#ccc",
+  borderRadius: 10,
+  paddingHorizontal: 15,
+  fontSize: 20,
+  letterSpacing: 10, // Google-style spacing
+  textAlign: "center",
+  marginBottom: 15,
+  backgroundColor: "#f9f9f9",
+},
+
   signinText: {
     fontSize: 14,
     color: "#000",
