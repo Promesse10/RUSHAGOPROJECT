@@ -37,7 +37,11 @@ const { currentUser, isUpdating } = useSelector((state) => state.user)
       : currentUser?.profileImage?.url
 
   const [showPersonalInfo, setShowPersonalInfo] = useState(false)
-  const [showChangePassword, setShowChangePassword] = useState(false)
+
+const [showLegalModal, setShowLegalModal] = useState(false)
+const [legalType, setLegalType] = useState("terms") // or "privacy"
+
+
   const [showHelpModal, setShowHelpModal] = useState(false)
   const [showNumber, setShowNumber] = useState(false)
   const phoneNumber = "+250780114522"
@@ -64,11 +68,6 @@ const { currentUser, isUpdating } = useSelector((state) => state.user)
     phone: "",
   })
 
-  const [passwords, setPasswords] = useState({
-    oldPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  })
 
   // ✅ Fetch user data when modal opens
   useEffect(() => {
@@ -105,36 +104,7 @@ const { currentUser, isUpdating } = useSelector((state) => state.user)
     }
   }
 
-  // ✅ Change password
-  const handleChangePassword = async () => {
-    const { oldPassword, newPassword, confirmPassword } = passwords
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      return Alert.alert("Error", "Please fill all password fields")
-    }
-    if (newPassword !== confirmPassword) {
-      return Alert.alert("Error", "New passwords do not match")
-    }
-    if (newPassword.length < 6) {
-      return Alert.alert("Error", "Password must be at least 6 characters")
-    }
-
-    try {
-      await dispatch(
-        updateUserAction({
-          _id: tempProfile._id,
-          oldPassword,
-          newPassword,
-        })
-      ).unwrap()
-
-      Alert.alert("Success", "Password changed successfully")
-      setPasswords({ oldPassword: "", newPassword: "", confirmPassword: "" })
-      setShowChangePassword(false)
-    } catch (error) {
-      Alert.alert("Error", error || "Failed to update password")
-    }
-  }
-
+  
   // ✅ Pick and update profile image (optional)
  const handleImagePicker = async () => {
   const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -182,6 +152,73 @@ const { currentUser, isUpdating } = useSelector((state) => state.user)
       },
     ])
   }
+const TermsContent = () => (
+  <>
+    <Text style={legalStyles.title}>MUVCAR Terms of Use</Text>
+
+    <Text style={legalStyles.text}>
+      MUVCAR is a digital car rental platform designed to connect vehicle owners
+      with renters in a secure and transparent environment.
+    </Text>
+
+    <Text style={legalStyles.text}>
+      MUVCAR is a product of CarConnect Ltd. By accessing or using the MUVCAR
+      mobile application, you agree to comply with these Terms of Use.
+    </Text>
+
+    <Text style={legalStyles.subtitle}>1. User Responsibilities</Text>
+    <Text style={legalStyles.text}>
+      Users must provide accurate information and maintain the security of
+      their accounts. Any misuse of the platform may result in suspension.
+    </Text>
+
+    <Text style={legalStyles.subtitle}>2. Rentals & Payments</Text>
+    <Text style={legalStyles.text}>
+      MUVCAR facilitates car rental agreements but does not own vehicles listed
+      on the platform.
+    </Text>
+
+    <Text style={legalStyles.subtitle}>3. Liability</Text>
+    <Text style={legalStyles.text}>
+      CarConnect Ltd shall not be liable for damages arising from misuse of the
+      platform or third-party actions.
+    </Text>
+
+    <Text style={legalStyles.footer}>
+      © {new Date().getFullYear()} CarConnect Ltd. All rights reserved.
+    </Text>
+  </>
+)
+const PrivacyContent = () => (
+  <>
+    <Text style={legalStyles.title}>MUVCAR Privacy Policy</Text>
+
+    <Text style={legalStyles.text}>
+      This Privacy Policy explains how MUVCAR, a product of CarConnect Ltd,
+      collects, uses, and protects your personal information.
+    </Text>
+
+    <Text style={legalStyles.subtitle}>1. Information We Collect</Text>
+    <Text style={legalStyles.text}>
+      We collect personal data such as name, contact details, and usage data to
+      provide and improve our services.
+    </Text>
+
+    <Text style={legalStyles.subtitle}>2. Data Security</Text>
+    <Text style={legalStyles.text}>
+      We use industry-standard security measures to protect your information.
+    </Text>
+
+    <Text style={legalStyles.subtitle}>3. Third-Party Services</Text>
+    <Text style={legalStyles.text}>
+      MUVCAR may integrate with third-party services such as payment providers.
+    </Text>
+
+    <Text style={legalStyles.footer}>
+      © {new Date().getFullYear()} CarConnect Ltd. All rights reserved.
+    </Text>
+  </>
+)
 
 
   return (
@@ -200,7 +237,8 @@ const { currentUser, isUpdating } = useSelector((state) => state.user)
             </View>
           </View>
 
-          <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+<ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
             {/* Profile Section */}
             <View style={styles.section}>
               <View style={styles.profileSection}>
@@ -234,15 +272,8 @@ const { currentUser, isUpdating } = useSelector((state) => state.user)
               </View>
               <Icon name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
-
-            {/* Change Password */}
-            <TouchableOpacity style={styles.settingItem} onPress={() => setShowChangePassword(true)}>
-              <View style={styles.settingLeft}>
-                <Icon name="lock-closed" size={24} color="#007EFD" />
-                <Text style={styles.settingText}>{I18n.t("changePassword")}</Text>
-              </View>
-              <Icon name="chevron-forward" size={20} color="#666" />
-            </TouchableOpacity>
+          
+           
 
             {/* Help */}
             <TouchableOpacity style={styles.settingItem} onPress={() => setShowHelpModal(true)}>
@@ -252,6 +283,37 @@ const { currentUser, isUpdating } = useSelector((state) => state.user)
               </View>
               <Icon name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
+{/* Terms of Use */}
+<TouchableOpacity
+  style={styles.settingItem}
+  onPress={() => {
+    setLegalType("terms")
+    setShowLegalModal(true)
+  }}
+>
+
+  <View style={styles.settingLeft}>
+    <Icon name="document-text" size={24} color="#007EFD" />
+    <Text style={styles.settingText}>Terms of Use</Text>
+  </View>
+  <Icon name="chevron-forward" size={20} color="#666" />
+</TouchableOpacity>
+
+{/* Privacy Policy */}
+<TouchableOpacity
+  style={styles.settingItem}
+  onPress={() => {
+    setLegalType("privacy")
+    setShowLegalModal(true)
+  }}
+>
+
+  <View style={styles.settingLeft}>
+    <Icon name="shield-checkmark" size={24} color="#007EFD" />
+    <Text style={styles.settingText}>Privacy Policy</Text>
+  </View>
+  <Icon name="chevron-forward" size={20} color="#666" />
+</TouchableOpacity>
 
             {/* Logout */}
             <TouchableOpacity style={[styles.settingItem, styles.logoutItem]} onPress={handleLogout}>
@@ -262,6 +324,51 @@ const { currentUser, isUpdating } = useSelector((state) => state.user)
             </TouchableOpacity>
           </ScrollView>
         </View>
+
+      <Modal visible={showLegalModal} transparent animationType="slide">
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContainer}>
+
+      {/* Header */}
+      <View style={styles.modalHeader}>
+        <View style={styles.headerIndicator} />
+        <View style={styles.headerContent}>
+          <Text style={styles.modalTitle}>
+            {legalType === "terms" ? "Terms of Use" : "Privacy Policy"}
+          </Text>
+
+          <TouchableOpacity onPress={() => setShowLegalModal(false)}>
+            <Icon name="close" size={24} color="#333" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Content */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+  contentContainerStyle={{ paddingHorizontal: 20 }}
+      >
+        {/* Logo */}
+  <View style={legalStyles.legalLogoContainer}>
+  <Image
+    source={{
+      uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1766088439/logocarconect_f0dhta.png",
+    }}
+    style={legalStyles.legalLogo}
+    resizeMode="contain"
+  />
+  
+</View>
+
+
+        {/* Text */}
+        {legalType === "terms" ? <TermsContent /> : <PrivacyContent />}
+      </ScrollView>
+
+    </View>
+  </View>
+</Modal>
+
 {/* Personal Info Modal */}
 <Modal
   visible={showPersonalInfo}
@@ -344,85 +451,6 @@ const { currentUser, isUpdating } = useSelector((state) => state.user)
     </TouchableWithoutFeedback>
   </KeyboardAvoidingView>
 </Modal>
-
-{/* Change Password Modal */}
-<Modal
-  visible={showChangePassword}
-  transparent
-  animationType="slide"
-  onRequestClose={() => setShowChangePassword(false)}
->
-  <KeyboardAvoidingView
-    style={{ flex: 1 }}
-    behavior={Platform.OS === "ios" ? "padding" : "height"}
-  >
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContainer, { maxHeight: height * 0.9 }]}>
-          {/* Header */}
-          <View style={styles.modalHeader}>
-            <View style={styles.headerIndicator} />
-            <View style={styles.headerContent}>
-              <Text style={styles.modalTitle}>{I18n.t("changePassword")}</Text>
-              <TouchableOpacity onPress={() => setShowChangePassword(false)} style={styles.closeButton}>
-                <Icon name="close" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <ScrollView
-            style={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.formSection}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>{I18n.t("oldPassword")}</Text>
-                <TextInput
-                  style={styles.textInput}
-                  secureTextEntry
-                  value={passwords.oldPassword}
-                  onChangeText={(t) => setPasswords({ ...passwords, oldPassword: t })}
-                  placeholder={I18n.t("enterOldPassword")}
-                  returnKeyType="next"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>{I18n.t("newPassword")}</Text>
-                <TextInput
-                  style={styles.textInput}
-                  secureTextEntry
-                  value={passwords.newPassword}
-                  onChangeText={(t) => setPasswords({ ...passwords, newPassword: t })}
-                  placeholder={I18n.t("enterNewPassword")}
-                  returnKeyType="next"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>{I18n.t("confirmNewPassword")}</Text>
-                <TextInput
-                  style={styles.textInput}
-                  secureTextEntry
-                  value={passwords.confirmPassword}
-                  onChangeText={(t) => setPasswords({ ...passwords, confirmPassword: t })}
-                  placeholder={I18n.t("confirmNewPassword")}
-                  returnKeyType="done"
-                />
-              </View>
-
-              <TouchableOpacity style={styles.saveButton} onPress={handleChangePassword}>
-                <Text style={styles.saveButtonText}>{I18n.t("update")}</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </View>
-    </TouchableWithoutFeedback>
-  </KeyboardAvoidingView>
-</Modal>
-
         <Modal visible={showHelpModal} transparent={true} animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>
@@ -466,16 +494,6 @@ const { currentUser, isUpdating } = useSelector((state) => state.user)
         </TouchableOpacity>
       </View>
 
-      <View style={styles.policySection}>
-        <Text style={styles.policyTitle}>Our Policy</Text>
-        <Text style={styles.policyText}>
-          MUVCAR Ltd is a trusted car rental platform connecting vehicle owners with renters.
-          We prioritize transparency, safety, and customer satisfaction in every transaction. 
-          Our mission is to make renting a car seamless, affordable, and reliable — empowering 
-          both car owners and renters with convenience and confidence.
-          {"\n\n"}© 2025 MUVCAR Inc. All Rights Reserved.
-        </Text>
-      </View>
                 </View>
               </ScrollView>
             </View>
@@ -485,8 +503,58 @@ const { currentUser, isUpdating } = useSelector((state) => state.user)
     </Modal>
   )
 }
+const legalStyles = StyleSheet.create({
+legalLogoContainer: {
+  alignItems: "center",
+  marginTop: 5,
+  marginBottom: 10,   // 🔥 more space below
+},
+
+
+  legalLogo: {
+    width: 380,   // ✅ bigger width
+    height: 100,   // ✅ bigger height
+  },
+
+  legalSubtitle: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 6,
+    textAlign: "center",
+  },
+
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#222",
+    marginBottom: 16,
+  },
+
+  subtitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginTop: 20,
+    marginBottom: 8,
+  },
+
+  text: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#555",
+    marginBottom: 12,
+  },
+
+  footer: {
+    marginTop: 30,
+    fontSize: 13,
+    color: "#888",
+    textAlign: "center",
+     marginBottom: 56,
+  },
+})
 
 const styles = StyleSheet.create({
+  
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -588,7 +656,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 15,
+    paddingVertical: 13,
     paddingHorizontal: 5,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
@@ -598,10 +666,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
+  
   settingText: {
     fontSize: 16,
     color: "#333",
     marginLeft: 15,
+    
   },
   settingValue: {
     fontSize: 14,
@@ -610,7 +680,8 @@ const styles = StyleSheet.create({
   },
   logoutItem: {
     borderBottomWidth: 0,
-    marginTop: 20,
+    marginTop: 0,
+    
   },
   logoutText: {
     color: "#FF3B30",

@@ -8,6 +8,8 @@ const initialState = {
   isSearching: false,
   isUpdating: false,
   error: null,
+  ratingCheck: null,
+
 }
 
 const userSlice = createSlice({
@@ -65,6 +67,10 @@ const userSlice = createSlice({
         state.error = action.payload
       })
       // ⭐ Rate user
+      .addCase(getOwnerRatingAction.fulfilled, (state, action) => {
+  state.ratingCheck = action.payload
+})
+
 .addCase(rateUserAction.pending, (state) => {
   state.isUpdating = true
   state.error = null
@@ -82,12 +88,7 @@ const userSlice = createSlice({
   state.isUpdating = false
   state.error = action.payload
 })
-.addCase(getOwnerRatingAction.fulfilled, (state, action) => {
-  if (state.currentUser && state.currentUser._id === action.payload.ownerId) {
-    state.currentUser.ratingAverage = action.payload.ratingAverage;
-    state.currentUser.ratingPercent = action.payload.ratingPercent;
-  }
-})
+
 
 
   },

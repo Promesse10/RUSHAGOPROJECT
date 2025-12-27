@@ -13,11 +13,16 @@ const notificationSlice = createSlice({
       state.isLoading = true;
       state.error = null;
     },
-    fetchSuccess: (state, action) => {
-      state.isLoading = false;
-      state.notifications = action.payload;
-      state.unreadCount = action.payload.filter((n) => !n.isRead).length;
-    },
+ fetchSuccess: (state, action) => {
+  state.isLoading = false;
+
+  // ✅ ALWAYS force array
+  const list = Array.isArray(action.payload) ? action.payload : [];
+
+  state.notifications = list;
+  state.unreadCount = list.filter((n) => !n.isRead).length;
+},
+
     fetchFail: (state, action) => {
       state.isLoading = false;
       state.error = action.payload;

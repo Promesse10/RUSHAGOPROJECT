@@ -227,24 +227,6 @@ const carSlice = createSlice({
         }
       })
 
-      // Update Car Views
-      .addCase(updateCarViewsAction.fulfilled, (state, action) => {
-        if (action.payload) {
-          const { carId, views } = action.payload
-
-          // Update in cars array
-          const index = state.cars.findIndex((car) => car._id === carId)
-          if (index !== -1) {
-            state.cars[index].views = views
-          }
-
-          // Update in approvedCars array
-          const approvedIndex = state.approvedCars.findIndex((car) => car._id === carId)
-          if (approvedIndex !== -1) {
-            state.approvedCars[approvedIndex].views = views
-          }
-        }
-      })
 
       // Update Rating
       .addCase(updateCarRatingAction.fulfilled, (state, action) => {

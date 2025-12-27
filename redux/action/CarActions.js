@@ -95,7 +95,8 @@ export const incrementCarViewAction = createAsyncThunk(
         status: err.response?.status,
         data: err.response?.data,
       })
-      return rejectWithValue(err.response?.data?.message || "Failed to increment car view")
+    return { carId }
+
     }
   }
 )
@@ -129,18 +130,7 @@ export const updateCarAvailabilityAction = createAsyncThunk(
   },
 )
 
-// Update car views
-export const updateCarViewsAction = createAsyncThunk(
-  "cars/updateViews",
-  async ({ carId, views }, { rejectWithValue }) => {
-    try {
-      const response = await axiosInstance.patch(`${API_URL}/${carId}/views`, { views })
-      return { carId, views: response.data.views }
-    } catch (err) {
-      return rejectWithValue("Failed to update views")
-    }
-  },
-)
+
 
 // Update car rating
 export const updateCarRatingAction = createAsyncThunk(

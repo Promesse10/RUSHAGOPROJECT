@@ -1,4 +1,4 @@
-"use client"
+
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import {
@@ -14,12 +14,14 @@ import {
   Animated,
   Modal,
   Alert,
+  
   Keyboard,
   TouchableWithoutFeedback,
   RefreshControl,
   Platform,
   PermissionsAndroid,
 } from "react-native"
+import { Ionicons } from "@expo/vector-icons"
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps"
 import Icon from "react-native-vector-icons/Ionicons"
 import * as Location from "expo-location"
@@ -28,17 +30,17 @@ import { getApprovedCarsAction, updateCarViewsAction } from "../../redux/action/
 import { useTranslation } from 'react-i18next';
 // add near other redux/action imports
 import { getCurrentUserAction } from "../../redux/action/UserActions"
-
-
-
-import NotificationChatBot from "../../screens/CarRenter/NotificationsScreen"
 import SettingsModal from "../../screens/CarRenter/SettingsModal"
 import CarDetailsModal from "../../screens/CarRenter/CarDetailsScreen"
 import FilterSidebar from "../../screens/CarRenter/FilterSidebar"
 import SkeletonLoader from "../../screens/CarRenter/SkeletonLoader"
 import { getTurnByTurnDirections, calculateDistance } from "../../utils/googleDirections"
 import { cloudinaryImages, getCloudinaryImage } from "../../utils/image-loader"
-
+import {
+  fetchNotifications,
+  markNotificationAsRead,
+  deleteNotification,
+} from "../../redux/action/notificationActions";
 import { useRoute, useFocusEffect } from "@react-navigation/native"
 
 // Constants
@@ -94,7 +96,86 @@ const HomeScreen = ({ navigation }) => {
     approvedCarsError = null,
   } = carsState
 
-  // State
+ const carBrands = [
+    // Japanese Brands
+    { id: 1, name: "Toyota", logo: "https://www.carlogos.org/car-logos/toyota-logo.png" },
+    { id: 2, name: "Honda", logo: "https://www.carlogos.org/car-logos/honda-logo.png" },
+    { id: 3, name: "Nissan", logo: "https://www.carlogos.org/car-logos/nissan-logo.png" },
+    { id: 4, name: "Mazda", logo: "https://www.carlogos.org/car-logos/mazda-logo.png" },
+    { id: 5, name: "Subaru", logo: "https://www.carlogos.org/car-logos/subaru-logo.png" },
+    { id: 6, name: "Mitsubishi", logo: "https://www.carlogos.org/car-logos/mitsubishi-logo.png" },
+    { id: 7, name: "Suzuki", logo: "https://www.carlogos.org/car-logos/suzuki-logo.png" },
+    { id: 8, name: "Lexus", logo: "https://www.carlogos.org/car-logos/lexus-logo.png" },
+    { id: 9, name: "Infiniti", logo: "https://www.carlogos.org/car-logos/infiniti-logo.png" },
+    { id: 10, name: "Acura", logo: "https://www.carlogos.org/car-logos/acura-logo.png" },
+
+    // German Brands
+    { id: 11, name: "BMW", logo: "https://www.carlogos.org/car-logos/bmw-logo.png" },
+    { id: 12, name: "Mercedes-Benz", logo: "https://www.carlogos.org/car-logos/mercedes-benz-logo.png" },
+    { id: 13, name: "Audi", logo: "https://www.carlogos.org/car-logos/audi-logo.png" },
+    { id: 14, name: "Volkswagen", logo: "https://www.carlogos.org/car-logos/volkswagen-logo.png" },
+    { id: 15, name: "Porsche", logo: "https://www.carlogos.org/car-logos/porsche-logo.png" },
+    { id: 16, name: "Opel", logo: "https://www.carlogos.org/car-logos/opel-logo.png" },
+
+    // American Brands
+    { id: 17, name: "Ford", logo: "https://www.carlogos.org/car-logos/ford-logo.png" },
+    { id: 18, name: "Chevrolet", logo: "https://www.carlogos.org/car-logos/chevrolet-logo.png" },
+    { id: 19, name: "Tesla", logo: "https://www.carlogos.org/car-logos/tesla-logo.png" },
+    { id: 20, name: "Jeep", logo: "https://www.carlogos.org/car-logos/jeep-logo.png" },
+    { id: 21, name: "Dodge", logo: "https://www.carlogos.org/car-logos/dodge-logo.png" },
+    { id: 22, name: "Cadillac", logo: "https://www.carlogos.org/car-logos/cadillac-logo.png" },
+    { id: 23, name: "GMC", logo: "https://www.carlogos.org/car-logos/gmc-logo.png" },
+    { id: 24, name: "Buick", logo: "https://www.carlogos.org/car-logos/buick-logo.png" },
+    { id: 25, name: "Lincoln", logo: "https://www.carlogos.org/car-logos/lincoln-logo.png" },
+    { id: 26, name: "Ram", logo: "https://www.carlogos.org/car-logos/ram-logo.png" },
+
+    // Italian Brands
+    { id: 27, name: "Ferrari", logo: "https://www.carlogos.org/car-logos/ferrari-logo.png" },
+    { id: 28, name: "Lamborghini", logo: "https://www.carlogos.org/car-logos/lamborghini-logo.png" },
+    { id: 29, name: "Maserati", logo: "https://www.carlogos.org/car-logos/maserati-logo.png" },
+    { id: 30, name: "Alfa Romeo", logo: "https://www.carlogos.org/car-logos/alfa-romeo-logo.png" },
+    { id: 31, name: "Fiat", logo: "https://www.carlogos.org/car-logos/fiat-logo.png" },
+
+    // Korean Brands
+    { id: 32, name: "Hyundai", logo: "https://www.carlogos.org/car-logos/hyundai-logo.png" },
+    { id: 33, name: "Kia", logo: "https://www.carlogos.org/car-logos/kia-logo.png" },
+    { id: 34, name: "Genesis", logo: "https://www.carlogos.org/car-logos/genesis-logo.png" },
+
+    // Swedish Brands
+    { id: 35, name: "Volvo", logo: "https://www.carlogos.org/car-logos/volvo-logo.png" },
+    { id: 36, name: "Saab", logo: "https://www.carlogos.org/car-logos/saab-logo.png" },
+
+    // British Brands
+    { id: 37, name: "Jaguar", logo: "https://www.carlogos.org/car-logos/jaguar-logo.png" },
+    { id: 38, name: "Land Rover", logo: "https://www.carlogos.org/car-logos/land-rover-logo.png" },
+    { id: 39, name: "Aston Martin", logo: "https://www.carlogos.org/car-logos/aston-martin-logo.png" },
+    { id: 40, name: "Bentley", logo: "https://www.carlogos.org/car-logos/bentley-logo.png" },
+    { id: 41, name: "Rolls-Royce", logo: "https://www.carlogos.org/car-logos/rolls-royce-logo.png" },
+    { id: 42, name: "Mini", logo: "https://www.carlogos.org/car-logos/mini-logo.png" },
+
+    // French Brands
+    { id: 43, name: "Peugeot", logo: "https://www.carlogos.org/car-logos/peugeot-logo.png" },
+    { id: 44, name: "Renault", logo: "https://www.carlogos.org/car-logos/renault-logo.png" },
+    { id: 45, name: "Citroën", logo: "https://www.carlogos.org/car-logos/citroen-logo.png" },
+
+    // Other European Brands
+    { id: 46, name: "Skoda", logo: "https://www.carlogos.org/car-logos/skoda-logo.png" },
+    { id: 47, name: "Seat", logo: "https://www.carlogos.org/car-logos/seat-logo.png" },
+
+    // Luxury & Sports Brands
+    { id: 48, name: "Bugatti", logo: "https://www.carlogos.org/car-logos/bugatti-logo.png" },
+    { id: 49, name: "McLaren", logo: "https://www.carlogos.org/car-logos/mclaren-logo.png" },
+    { id: 50, name: "Lotus", logo: "https://www.carlogos.org/car-logos/lotus-logo.png" },
+
+    // Chinese Brands
+    { id: 51, name: "BYD", logo: "https://www.carlogos.org/car-logos/byd-logo.png" },
+    { id: 52, name: "Geely", logo: "https://www.carlogos.org/car-logos/geely-logo.png" },
+
+    // Indian Brands
+    { id: 53, name: "Tata", logo: "https://www.carlogos.org/car-logos/tata-logo.png" },
+    { id: 54, name: "Mahindra", logo: "https://www.carlogos.org/car-logos/mahindra-logo.png" },
+  ]
+
   const [routeInfo, setRouteInfo] = useState(null)
   const [routeCoordinates, setRouteCoordinates] = useState([])
   const [routeSteps, setRouteSteps] = useState([])
@@ -115,11 +196,12 @@ const HomeScreen = ({ navigation }) => {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false)
   const [showFilterSidebar, setShowFilterSidebar] = useState(false)
   const [selectedCar, setSelectedCar] = useState(null)
-  const [userLocation, setUserLocation] = useState(null)
+  const [userLocation, setUserLocation] = useState({ latitude: -1.9441, longitude: 30.0619 })
+  const [locationSubscription, setLocationSubscription] = useState(null)
   const [nearestCars, setNearestCars] = useState([])
   const [nearestCar, setNearestCar] = useState(null)
   const [currentLanguage, setCurrentLanguage] = useState("rw")
-  const [isLoading, setIsLoading] = useState(true)
+  
   const [mapType, setMapType] = useState("standard")
   const [isTracking, setIsTracking] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -128,8 +210,45 @@ const HomeScreen = ({ navigation }) => {
   const [showNoResultsModal, setShowNoResultsModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const { t, i18n } = useTranslation();
+const unreadCount = Array.isArray(notifications)
+  ? notifications.filter(n => !n.isRead).length
+  : 0
 
-  // Refs
+
+
+const [showNotifications, setShowNotifications] = useState(false)
+const [expandedNotifications, setExpandedNotifications] = useState({})
+const notifications = useSelector(
+  (state) => state.notifications?.notifications || []
+)
+const isLoading = useSelector(
+  (state) => state.notifications?.isLoading
+)
+const error = useSelector(
+  (state) => state.notifications?.error
+)
+
+
+const selectedPinAnim = useRef(new Animated.Value(0)).current
+
+const [selectedCarId, setSelectedCarId] = useState(null)
+ const bouncePin = () => {
+  selectedPinAnim.setValue(0)
+  Animated.sequence([
+    Animated.timing(selectedPinAnim, {
+      toValue: -12,
+      duration: 180,
+      useNativeDriver: true,
+    }),
+    Animated.timing(selectedPinAnim, {
+      toValue: 0,
+      duration: 180,
+      useNativeDriver: true,
+    }),
+  ]).start()
+}
+
+
   const slideAnim = useRef(new Animated.Value(height * 0.65)).current
   const trackingAnim = useRef(new Animated.Value(1)).current
   const adSlideAnim = useRef(new Animated.Value(width)).current
@@ -173,6 +292,7 @@ const HomeScreen = ({ navigation }) => {
     ],
     [],
   )
+const [showNotificationModal, setShowNotificationModal] = useState(false)
 
   const advertisingImages = useMemo(() => {
     if (carBanners.length > 0) {
@@ -181,6 +301,23 @@ const HomeScreen = ({ navigation }) => {
     }
     return []
   }, [carBanners])
+useEffect(() => {
+  const getPermission = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
+      setPermissionDenied(true);
+      return;
+    }
+
+    setPermissionDenied(false);
+
+    const loc = await Location.getCurrentPositionAsync({});
+    setUserLocation(loc.coords);
+  };
+
+  getPermission();
+}, []); // ⬅️ VERY IMPORTANT
 
   const allCarsWithCoordinates = useMemo(() => {
     return actualApprovedCars.filter((car) => {
@@ -287,6 +424,15 @@ const HomeScreen = ({ navigation }) => {
     }, [dispatch, isLoading]),
   )
 
+  // Cleanup location subscription on unmount
+  useEffect(() => {
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove()
+      }
+    }
+  }, [locationSubscription])
+
   // Helpers: keys and logos
   const getStableCarKey = useCallback((car) => {
     const id = car?._id || car?.id
@@ -298,41 +444,45 @@ const HomeScreen = ({ navigation }) => {
     return `${brand}-${model}-${lat}-${lng}`
   }, [])
 
-  const getBrandLogoUri = useCallback((car) => {
-    const direct =
-      car?.brandLogo || car?.brand_logo || car?.logo || car?.logoUrl || car?.brandLogoUrl || car?.brand_image
-    if (direct) return direct
+    const getBrandLogo = (brand) => {
+    if (!brand) return null
 
-    const brandRaw = (car?.brand || car?.make || "").toString().trim()
-    if (!brandRaw) return null
+    const found = carBrands.find(
+      b => b.name.toLowerCase() === brand.toLowerCase()
+    )
 
-    const slug = brandRaw
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/&/g, "and")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
+    return found?.logo || null
+  }
+const handleNotificationPress = (notificationId, isRead) => {
+  setExpandedNotifications((prev) => ({
+    ...prev,
+    [notificationId]: !prev[notificationId],
+  }))
 
-    if (cloudinaryImages?.brands?.[slug]) return cloudinaryImages.brands[slug]
-    if (cloudinaryImages?.brandLogos?.[slug]) return cloudinaryImages.brandLogos[slug]
-    if (cloudinaryImages?.logos?.[slug]) return cloudinaryImages.logos[slug]
+  if (!isRead) {
+    dispatch(markNotificationAsRead(notificationId))
+  }
+}
 
-    const candidates = [
-      `brands/${slug}.png`,
-      `brands/${slug}.svg`,
-      `brand-logos/${slug}.png`,
-      `brand-logos/${slug}.svg`,
-      slug,
-    ]
-    for (const key of candidates) {
-      try {
-        const url = getCloudinaryImage ? getCloudinaryImage(key) : null
-        if (url) return url
-      } catch (_) { }
-    }
-    return null
-  }, [])
+const handleNotificationDelete = (notificationId) => {
+  Alert.alert(
+    "Delete Notification",
+    "Are you sure you want to delete this notification?",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => dispatch(deleteNotification(notificationId)),
+      },
+    ],
+  )
+}
+
+const closeNotificationModal = () => {
+  setShowNotifications(false)
+  setExpandedNotifications({})
+}
 
   // Helpers: map fitting
   const fitMapToAllCars = useCallback(
@@ -419,10 +569,12 @@ const HomeScreen = ({ navigation }) => {
 
   const getCurrentLocation = useCallback(async () => {
     try {
+      // First get current position
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
-        timeout: 10000,
-        maximumAge: 60000,
+        enableHighAccuracy: true,
+        timeout: 30000,
+        maximumAge: 10000,
       })
       const newLocation = {
         latitude: location.coords.latitude,
@@ -430,18 +582,19 @@ const HomeScreen = ({ navigation }) => {
       }
       setUserLocation(newLocation)
 
-      if (mapRef.current) {
-        setTimeout(() => {
-          mapRef.current.animateToRegion(
-            {
-              ...newLocation,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            },
-            1000,
-          )
-        }, 1000)
-      }
+      // Start watching for location updates
+      const subscription = await Location.watchPositionAsync({
+        accuracy: Location.Accuracy.High,
+        timeInterval: 10000,
+        distanceInterval: 50,
+      }, (loc) => {
+        const updatedLocation = {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        }
+        setUserLocation(updatedLocation)
+      })
+      setLocationSubscription(subscription)
     } catch (error) {
       console.log("Get location error:", error)
       const defaultLocation = { latitude: -1.9441, longitude: 30.0619 }
@@ -450,116 +603,30 @@ const HomeScreen = ({ navigation }) => {
   }, [])
 
   // Marker press: draw route + show popup + filter cards to selected car
-  const handleCarMarkerPress = useCallback(
-    async (car, event) => {
-      if (!userLocation) {
-        Alert.alert("Location Required", "Please enable location to get directions")
-        return
-      }
+  const handleCarMarkerPress = async (car) => {
+  setSelectedCarId(car._id || car.id)
+  bouncePin()
 
-      try {
-        if (car._id || car.id) {
-          const currentViews = car.views || 0
-          dispatch(
-            updateCarViewsAction({
-              carId: car._id || car.id,
-              views: currentViews + 1,
-            }),
-          )
-        }
+  try {
+    const carCoords = {
+      latitude: car.coordinates?.latitude || car.latitude,
+      longitude: car.coordinates?.longitude || car.longitude,
+    }
 
-        const carLat = car.coordinates?.latitude || car.latitude
-        const carLng = car.coordinates?.longitude || car.longitude
-        if (!carLat || !carLng || typeof carLat !== "number" || typeof carLng !== "number") {
-          Alert.alert("Error", "Car location not available")
-          return
-        }
-        const carCoords = { latitude: carLat, longitude: carLng }
+    const directions = await getTurnByTurnDirections(userLocation, carCoords)
 
-        // Position popup
-        const nativeEvent = event?.nativeEvent || {}
-        setPopupPosition({
-          x: nativeEvent.coordinate ? width / 2 : nativeEvent.position?.x || width / 2,
-          y: nativeEvent.coordinate ? height / 3 : nativeEvent.position?.y || height / 3,
-        })
-        setPopupCar(car)
-        setShowCarPopup(true)
-        Animated.spring(popupAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }).start()
+    setRouteCoordinates(directions.coordinates)
+    setRouteInfo({
+      distance: directions.totalDistance,
+      duration: directions.totalDuration,
+    })
 
-        // Filter bottom cards to this selection immediately
-        setFilteredCars([car])
-
-        // Get turn-by-turn (UI panel hidden)
-        try {
-          const directions = await getTurnByTurnDirections(userLocation, carCoords, {
-            mode: "drive",
-            traffic: true,
-            units: "metric",
-          })
-
-          if (directions?.coordinates?.length) {
-            setRouteCoordinates(directions.coordinates)
-            setRouteInfo({
-              distance: directions.totalDistance,
-              duration: directions.totalDuration,
-              steps: directions.steps,
-            })
-            setTurnByTurnSteps(directions.steps || [])
-            setRouteSteps(directions.steps || [])
-            setSelectedCarForRoute(car)
-            setCurrentStepIndex(0)
-            setShowNavigationPanel(true)
-
-            if (mapRef.current) {
-              const allCoords = [userLocation, carCoords, ...directions.coordinates]
-              const minLat = Math.min(...allCoords.map((c) => c.latitude))
-              const maxLat = Math.max(...allCoords.map((c) => c.latitude))
-              const minLng = Math.min(...allCoords.map((c) => c.longitude))
-              const maxLng = Math.max(...allCoords.map((c) => c.longitude))
-              const midLat = (minLat + maxLat) / 2
-              const midLng = (minLng + maxLng) / 2
-              const latDelta = (maxLat - minLat) * 1.3 + 0.01
-              const lngDelta = (maxLng - minLng) * 1.3 + 0.01
-
-              mapRef.current.animateToRegion(
-                {
-                  latitude: midLat,
-                  longitude: midLng,
-                  latitudeDelta: Math.max(latDelta, 0.01),
-                  longitudeDelta: Math.max(lngDelta, 0.01),
-                },
-                1000,
-              )
-            }
-          } else {
-            throw new Error("No route coordinates received")
-          }
-        } catch (routeError) {
-          const simpleRoute = [userLocation, carCoords]
-          setRouteCoordinates(simpleRoute)
-          setSelectedCarForRoute(car)
-          setRouteInfo({
-            distance: calculateDistance(userLocation.latitude, userLocation.longitude, carLat, carLng) + " km",
-            duration: "Estimated",
-            steps: [],
-          })
-        }
-
-        // Auto-hide popup after a short delay
-        setTimeout(() => {
-          hideCarPopup()
-        }, 3000)
-      } catch (error) {
-        Alert.alert("Error", "Unable to get directions to this car")
-      }
-    },
-    [userLocation, dispatch, popupAnim, mapRef],
-  )
+    setSelectedCar(car)
+    setShowCarDetails(true)
+  } catch (error) {
+    console.log("❌ Directions failed in Home:", error)
+  }
+}
 
   const hideCarPopup = useCallback(() => {
     Animated.timing(popupAnim, {
@@ -846,11 +913,6 @@ const handleSearchSubmit = useCallback(
 
   // FAB: track nearest or zoom out to all cars; ensure user is in Rwanda before tracking
   const handleTrackNearestCar = useCallback(() => {
-    if (!userLocation) {
-      Alert.alert(t("enableLocation"), t("locationPermission"))
-      return
-    }
-
     if (isTracking) {
       // Toggle off: show all available cars and zoom out to include them + current location
       setIsTracking(false)
@@ -1090,7 +1152,7 @@ Alert.alert(
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#007EFD" />
-
+ 
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
@@ -1103,20 +1165,17 @@ Alert.alert(
               <TouchableOpacity style={styles.flagButton} onPress={() => setShowLanguageDropdown(true)}>
                 <Image source={{ uri: getCurrentLanguageFlag() }} style={styles.flagImage} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.profileButton}>
-  <Image
-    source={{
-      uri:
-        user?.profileImage
-          ? user.profileImage.startsWith("http")
-            ? user.profileImage
-            : `http://localhost:5000/${user.profileImage.replace(/^\/+/, "")}` // 👈 update this to your actual API domain
-          : "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
-    }}
-    style={styles.profileImage}
-    resizeMode="cover"
-  />
+<TouchableOpacity
+ style={styles.notificationButton}
+  onPress={() => setShowNotifications(true)}
+>
+  <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
+
+  {unreadCount > 0 && <View style={styles.notificationDot} />}
 </TouchableOpacity>
+
+
+
 
             </View>
           </View>
@@ -1157,6 +1216,10 @@ Alert.alert(
           showsMyLocationButton={true}
           showsCompass={true}
           showsTraffic={true}
+          onUserLocationChange={(e) => {
+            const { coordinate } = e.nativeEvent
+            setUserLocation(coordinate)
+          }}
           onPress={() => {
             hideCarPopup()
           }}
@@ -1183,40 +1246,47 @@ Alert.alert(
           )}
 
           {/* Cars */}
-          {carsToShowOnMap.map((car) => {
-            const carLat = car.coordinates?.latitude || car.latitude
-            const carLng = car.coordinates?.longitude || car.longitude
-            const markerKey = `car-marker-${getStableCarKey(car)}`
-            return (
-              <Marker
-                key={markerKey}
-                coordinate={{ latitude: carLat, longitude: carLng }}
-                onPress={(event) => handleCarMarkerPress(car, event)}
-                title={`${car.brand || car.make} ${car.model}`}
-                description={`${car.sector}, ${car.district} - ${car.price || car.base_price || car.dailyRate} ${car.currency}/day`}
-              >
-                <View
-                  style={[
-                    styles.carMarkerContainer,
-                    nearestCar?._id === car._id && isTracking && styles.nearestCarMarker,
-                    selectedCarForRoute?._id === car._id && styles.selectedCarMarker,
-                  ]}
-                >
-                  <Image
-                    source={
-                      car.available ? require("../../assets/available.png") : require("../../assets/nonavailable.png")
-                    }
-                    style={styles.carMarkerImage}
-                  />
-                  {car.distance && (
-                    <View style={styles.distanceBadge}>
-                      <Text style={styles.distanceText}>{car.distance}km</Text>
-                    </View>
-                  )}
-                </View>
-              </Marker>
-            )
-          })}
+         {carsToShowOnMap.map((car) => {
+  const carLat = car.coordinates?.latitude || car.latitude
+  const carLng = car.coordinates?.longitude || car.longitude
+
+  if (!carLat || !carLng) return null
+
+  const isSelected = selectedCarId === (car._id || car.id)
+  const logo = getBrandLogo(car.brand || car.make)
+
+  return (
+    <Marker
+      key={`car-${getStableCarKey(car)}`}
+      coordinate={{ latitude: carLat, longitude: carLng }}
+      onPress={() => handleCarMarkerPress(car)}
+    >
+      <Animated.View
+        style={{
+         transform: [{ translateY: isSelected ? selectedPinAnim : 0 }]
+,
+        }}
+      >
+        <View style={styles.pinWrapper}>
+          <View
+            style={[
+              styles.pinCircle,
+              isSelected && { borderColor: "#FF9800" },
+            ]}
+          >
+            {logo ? (
+              <Image source={{ uri: logo }} style={styles.pinLogo} />
+            ) : (
+              <Icon name="car-outline" size={20} color="#007EFD" />
+            )}
+          </View>
+          <View style={styles.pinTriangle} />
+        </View>
+      </Animated.View>
+    </Marker>
+  )
+})}
+
 
           {/* Route */}
           {routeCoordinates.length > 0 && (
@@ -1245,6 +1315,7 @@ Alert.alert(
             </>
           )}
         </MapView>
+
 
         {/* No Results Modal */}
         <Modal
@@ -1300,11 +1371,15 @@ Alert.alert(
               <Image source={{ uri: popupCar.images?.[0] || popupCar.image }} style={styles.popupCarImage} />
               <View style={styles.popupInfo}>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  {getBrandLogoUri(popupCar) ? (
-                    <Image source={{ uri: getBrandLogoUri(popupCar) }} style={styles.brandLogoCircle} />
-                  ) : (
-                    <Icon name="car-outline" size={20} color="#1E88E5" style={{ marginRight: 8 }} />
-                  )}
+             {getBrandLogo(popupCar.brand || popupCar.make) ? (
+  <Image
+    source={{ uri: getBrandLogo(popupCar.brand || popupCar.make) }}
+    style={styles.brandLogoCircle}
+  />
+) : (
+  <Icon name="car-outline" size={20} color="#1E88E5" style={{ marginRight: 8 }} />
+)}
+
                   <Text style={styles.popupCarName}>{popupCar.model}</Text>
                 </View>
               </View>
@@ -1399,21 +1474,122 @@ Alert.alert(
             style={styles.navButton}
             onPress={() => navigation.navigate("CarListing", { cars: actualApprovedCars })}
           >
-            <Icon name="car" size={24} color="#007EFD" />
+            <Icon name="car" size={28} color="#007EFD" />
           </TouchableOpacity>
+<View style={styles.fabWrapper}>
+  <TouchableOpacity style={styles.fabButton} onPress={handleTrackNearestCar}>
+    <Image
+      source={{
+        uri: "https://i.pinimg.com/originals/1d/0f/be/1d0fbe16bf9237d6f082ad8cc9be1f74.gif",
+      }}
+      style={styles.trackGif}
+    />
+  </TouchableOpacity>
 
-          <TouchableOpacity style={styles.fabButton} onPress={handleTrackNearestCar}>
-            <Image
-              source={{ uri: "https://i.pinimg.com/originals/1d/0f/be/1d0fbe16bf9237d6f082ad8cc9be1f74.gif" }}
-              style={styles.trackGif}
-            />
-          </TouchableOpacity>
+  <Text style={styles.fabLabel}>
+    {t("trackNearestCar")}
+
+  </Text>
+</View>
 
           <TouchableOpacity style={styles.navButton} onPress={() => setShowSettingsModal(true)}>
-            <Icon name="settings" size={24} color="#007EFD" />
+            <Icon name="settings" size={28} color="#007EFD" />
           </TouchableOpacity>
         </View>
-
+<Modal
+              visible={showNotifications}
+              transparent={true}
+              animationType="fade"
+              onRequestClose={closeNotificationModal}
+            >
+              <TouchableWithoutFeedback onPress={closeNotificationModal}>
+                <View style={styles.modalOverlay}>
+                  <TouchableWithoutFeedback onPress={() => {}}>
+                    <View style={styles.notificationsModal}>
+                      <View style={styles.notificationsHeader}>
+                        <Text style={styles.notificationsTitle}>{t("notifications", "Amakuru")}</Text>
+                        <TouchableOpacity onPress={closeNotificationModal} style={styles.closeButton}>
+                          <Ionicons name="close-outline" size={24} color="#64748B" />
+                        </TouchableOpacity>
+                      </View>
+      
+                      <ScrollView style={styles.notificationsList} showsVerticalScrollIndicator={false}>
+                      {notifications.map((notification) => (
+        <View key={notification._id || notification.id} style={styles.notificationItemContainer}>
+          <TouchableOpacity
+            style={styles.notificationItem}
+            onPress={() => handleNotificationPress(notification._id, notification.isRead)}
+            onLongPress={() => handleNotificationDelete(notification._id)}
+          >
+            <View style={styles.notificationMainContent}>
+              {/* ✅ Show custom icon if provided */}
+              {notification.icon ? (
+                <Image
+                  source={{ uri: notification.icon }}
+                  style={styles.rushGoIcon}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.notificationIconContainer,
+                    { backgroundColor: `${getNotificationColor(notification.type)}15` },
+                  ]}
+                >
+                  <Ionicons
+                    name={getNotificationIcon(notification.type)}
+                    size={20}
+                    color={getNotificationColor(notification.type)}
+                  />
+                </View>
+              )}
+      
+              <View style={styles.notificationContent}>
+                <Text
+                  style={[
+                    styles.notificationTitle,
+                    { color: notification.isRead ? "#64748B" : "#1E293B" },
+                    !notification.isRead && styles.unreadNotificationTitle,
+                  ]}
+                >
+                  {notification.title}
+                </Text>
+      
+                <Text
+                  style={styles.notificationMessage}
+                  numberOfLines={expandedNotifications[notification._id] ? undefined : 2}
+                >
+                  {notification.message}
+                </Text>
+      
+                <Text style={styles.notificationTime}>
+                  {new Date(notification.createdAt).toLocaleString()}
+                </Text>
+              </View>
+      
+              <View style={styles.notificationActions}>
+                {!notification.isRead && <View style={styles.unreadIndicator} />}
+                <Ionicons
+                  name={
+                    expandedNotifications[notification._id]
+                      ? "chevron-up-outline"
+                      : "chevron-down-outline"
+                  }
+                  size={16}
+                  color="#9CA3AF"
+                />
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+      ))}
+                      </ScrollView>
+                    </View>
+                  </TouchableWithoutFeedback>
+                </View>
+              </TouchableWithoutFeedback>
+            </Modal>
+      
         {/* Language Dropdown */}
         <Modal
           visible={showLanguageDropdown}
@@ -1447,8 +1623,7 @@ Alert.alert(
         />
 
         {/* Notification ChatBot */}
-        <NotificationChatBot />
-
+       
         {/* Settings Modal */}
         <SettingsModal
           visible={showSettingsModal}
@@ -1477,6 +1652,7 @@ Alert.alert(
           navigation={navigation}
         />
       </View>
+      
     </TouchableWithoutFeedback>
   )
 }
@@ -1540,13 +1716,100 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#f0f0f0",
   },
+  dropPin: {
+  width: 46,
+  height: 46,
+  backgroundColor: "#ff0000ff",
+  borderRadius: 23,
+  justifyContent: "center",
+  alignItems: "center",
+  shadowColor: "#000",
+  shadowOpacity: 0.25,
+  shadowRadius: 6,
+  elevation: 6,
+  transform: [{ rotate: "45deg" }],
+},
+
+dropLogo: {
+  width: 28,
+  height: 28,
+  transform: [{ rotate: "-45deg" }],
+},
+
   profileImage: {
     width: "100%",
     height: "100%",
     borderRadius: 22.5,
     resizeMode: "cover",
   },
-  
+  notificationButton: {
+  position: "relative",
+  padding: 6,
+},
+
+
+notificationBadge: {
+  position: "absolute",
+  top: -4,
+  right: -4,
+  backgroundColor: "#FF3B30",
+  minWidth: 16,
+  height: 16,
+  borderRadius: 8,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: 4,
+},
+
+notificationCount: {
+  color: "#fff",
+  fontSize: 10,
+  fontWeight: "bold",
+},
+
+notificationDot: {
+  position: "absolute",
+  top: 4,
+  right: 4,
+  width: 8,
+  height: 8,
+  borderRadius: 4,
+  backgroundColor: "red",
+},
+pinWrapper: {
+  alignItems: "center",
+},
+
+pinCircle: {
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: "#fff",
+  justifyContent: "center",
+  alignItems: "center",
+  borderWidth: 2,
+  borderColor: "#007EFD",
+  elevation: 5,
+},
+
+pinLogo: {
+  width: 26,
+  height: 26,
+  resizeMode: "contain",
+},
+
+pinTriangle: {
+  width: 0,
+  height: 0,
+  borderLeftWidth: 6,
+  borderRightWidth: 6,
+  borderTopWidth: 10,
+  borderLeftColor: "transparent",
+  borderRightColor: "transparent",
+  borderTopColor: "#007EFD",
+  marginTop: -1,
+},
+
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -1562,6 +1825,29 @@ const styles = StyleSheet.create({
     height: 50,
     marginRight: 10,
   },
+  brandPin: {
+  width: 48,
+  height: 48,
+  borderRadius: 24,
+  backgroundColor: "#ff0000ff",
+  justifyContent: "center",
+  alignItems: "center",
+
+  borderWidth: 3,
+  borderColor: "#007EFD",
+
+  shadowColor: "#000",
+  shadowOpacity: 0.25,
+  shadowRadius: 6,
+  elevation: 6,
+},
+
+brandLogo: {
+  width: 28,
+  height: 28,
+  resizeMode: "contain",
+},
+
   searchIcon: {
     marginRight: 10,
   },
@@ -1665,6 +1951,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: "hidden",
   },
+
   popupCarImage: {
     width: "100%",
     height: 120,
@@ -1980,6 +2267,20 @@ const styles = StyleSheet.create({
   navButton: {
     padding: 12,
   },
+  fabWrapper: {
+  alignItems: "center",
+  justifyContent: "center",
+  marginTop: -25, // lifts FAB above bottom bar nicely
+},
+
+fabLabel: {
+  marginTop: 4,
+  fontSize: 12,
+  fontWeight: "600",
+  color: "#333",
+  textAlign: "center",
+},
+
   fabButton: {
     backgroundColor: "#007EFD",
     borderRadius: 40,
@@ -1995,9 +2296,9 @@ const styles = StyleSheet.create({
     marginTop: -15,
   },
   trackGif: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   languageModalOverlay: {
     flex: 1,

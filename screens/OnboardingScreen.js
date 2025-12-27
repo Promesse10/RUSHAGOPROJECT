@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   },
   skipBtn: {
     alignSelf: "flex-end",
-    marginTop: 16,
+    marginTop: 66,
     marginRight: 26,
   },
   skipText: {

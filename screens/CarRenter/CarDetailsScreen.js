@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react"
 import * as ScreenCapture from "expo-screen-capture";
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
+
 
 import {
   View,
@@ -40,6 +41,97 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
   const [internalRouteInfo, setInternalRouteInfo] = useState(null)
   const [showInternalRoute, setShowInternalRoute] = useState(false)
   const [showBlockedNotice, setShowBlockedNotice] = useState(false);
+
+  const carBrands = [
+    // Japanese Brands
+    { id: 1, name: "Toyota", logo: "https://www.carlogos.org/car-logos/toyota-logo.png" },
+    { id: 2, name: "Honda", logo: "https://www.carlogos.org/car-logos/honda-logo.png" },
+    { id: 3, name: "Nissan", logo: "https://www.carlogos.org/car-logos/nissan-logo.png" },
+    { id: 4, name: "Mazda", logo: "https://www.carlogos.org/car-logos/mazda-logo.png" },
+    { id: 5, name: "Subaru", logo: "https://www.carlogos.org/car-logos/subaru-logo.png" },
+    { id: 6, name: "Mitsubishi", logo: "https://www.carlogos.org/car-logos/mitsubishi-logo.png" },
+    { id: 7, name: "Suzuki", logo: "https://www.carlogos.org/car-logos/suzuki-logo.png" },
+    { id: 8, name: "Lexus", logo: "https://www.carlogos.org/car-logos/lexus-logo.png" },
+    { id: 9, name: "Infiniti", logo: "https://www.carlogos.org/car-logos/infiniti-logo.png" },
+    { id: 10, name: "Acura", logo: "https://www.carlogos.org/car-logos/acura-logo.png" },
+
+    // German Brands
+    { id: 11, name: "BMW", logo: "https://www.carlogos.org/car-logos/bmw-logo.png" },
+    { id: 12, name: "Mercedes-Benz", logo: "https://www.carlogos.org/car-logos/mercedes-benz-logo.png" },
+    { id: 13, name: "Audi", logo: "https://www.carlogos.org/car-logos/audi-logo.png" },
+    { id: 14, name: "Volkswagen", logo: "https://www.carlogos.org/car-logos/volkswagen-logo.png" },
+    { id: 15, name: "Porsche", logo: "https://www.carlogos.org/car-logos/porsche-logo.png" },
+    { id: 16, name: "Opel", logo: "https://www.carlogos.org/car-logos/opel-logo.png" },
+
+    // American Brands
+    { id: 17, name: "Ford", logo: "https://www.carlogos.org/car-logos/ford-logo.png" },
+    { id: 18, name: "Chevrolet", logo: "https://www.carlogos.org/car-logos/chevrolet-logo.png" },
+    { id: 19, name: "Tesla", logo: "https://www.carlogos.org/car-logos/tesla-logo.png" },
+    { id: 20, name: "Jeep", logo: "https://www.carlogos.org/car-logos/jeep-logo.png" },
+    { id: 21, name: "Dodge", logo: "https://www.carlogos.org/car-logos/dodge-logo.png" },
+    { id: 22, name: "Cadillac", logo: "https://www.carlogos.org/car-logos/cadillac-logo.png" },
+    { id: 23, name: "GMC", logo: "https://www.carlogos.org/car-logos/gmc-logo.png" },
+    { id: 24, name: "Buick", logo: "https://www.carlogos.org/car-logos/buick-logo.png" },
+    { id: 25, name: "Lincoln", logo: "https://www.carlogos.org/car-logos/lincoln-logo.png" },
+    { id: 26, name: "Ram", logo: "https://www.carlogos.org/car-logos/ram-logo.png" },
+
+    // Italian Brands
+    { id: 27, name: "Ferrari", logo: "https://www.carlogos.org/car-logos/ferrari-logo.png" },
+    { id: 28, name: "Lamborghini", logo: "https://www.carlogos.org/car-logos/lamborghini-logo.png" },
+    { id: 29, name: "Maserati", logo: "https://www.carlogos.org/car-logos/maserati-logo.png" },
+    { id: 30, name: "Alfa Romeo", logo: "https://www.carlogos.org/car-logos/alfa-romeo-logo.png" },
+    { id: 31, name: "Fiat", logo: "https://www.carlogos.org/car-logos/fiat-logo.png" },
+
+    // Korean Brands
+    { id: 32, name: "Hyundai", logo: "https://www.carlogos.org/car-logos/hyundai-logo.png" },
+    { id: 33, name: "Kia", logo: "https://www.carlogos.org/car-logos/kia-logo.png" },
+    { id: 34, name: "Genesis", logo: "https://www.carlogos.org/car-logos/genesis-logo.png" },
+
+    // Swedish Brands
+    { id: 35, name: "Volvo", logo: "https://www.carlogos.org/car-logos/volvo-logo.png" },
+    { id: 36, name: "Saab", logo: "https://www.carlogos.org/car-logos/saab-logo.png" },
+
+    // British Brands
+    { id: 37, name: "Jaguar", logo: "https://www.carlogos.org/car-logos/jaguar-logo.png" },
+    { id: 38, name: "Land Rover", logo: "https://www.carlogos.org/car-logos/land-rover-logo.png" },
+    { id: 39, name: "Aston Martin", logo: "https://www.carlogos.org/car-logos/aston-martin-logo.png" },
+    { id: 40, name: "Bentley", logo: "https://www.carlogos.org/car-logos/bentley-logo.png" },
+    { id: 41, name: "Rolls-Royce", logo: "https://www.carlogos.org/car-logos/rolls-royce-logo.png" },
+    { id: 42, name: "Mini", logo: "https://www.carlogos.org/car-logos/mini-logo.png" },
+
+    // French Brands
+    { id: 43, name: "Peugeot", logo: "https://www.carlogos.org/car-logos/peugeot-logo.png" },
+    { id: 44, name: "Renault", logo: "https://www.carlogos.org/car-logos/renault-logo.png" },
+    { id: 45, name: "Citroën", logo: "https://www.carlogos.org/car-logos/citroen-logo.png" },
+
+    // Other European Brands
+    { id: 46, name: "Skoda", logo: "https://www.carlogos.org/car-logos/skoda-logo.png" },
+    { id: 47, name: "Seat", logo: "https://www.carlogos.org/car-logos/seat-logo.png" },
+
+    // Luxury & Sports Brands
+    { id: 48, name: "Bugatti", logo: "https://www.carlogos.org/car-logos/bugatti-logo.png" },
+    { id: 49, name: "McLaren", logo: "https://www.carlogos.org/car-logos/mclaren-logo.png" },
+    { id: 50, name: "Lotus", logo: "https://www.carlogos.org/car-logos/lotus-logo.png" },
+
+    // Chinese Brands
+    { id: 51, name: "BYD", logo: "https://www.carlogos.org/car-logos/byd-logo.png" },
+    { id: 52, name: "Geely", logo: "https://www.carlogos.org/car-logos/geely-logo.png" },
+
+    // Indian Brands
+    { id: 53, name: "Tata", logo: "https://www.carlogos.org/car-logos/tata-logo.png" },
+    { id: 54, name: "Mahindra", logo: "https://www.carlogos.org/car-logos/mahindra-logo.png" },
+  ];
+
+  const getBrandLogo = (brandName, carBrands = []) => {
+    if (!brandName || !Array.isArray(carBrands)) return null;
+  
+    const brand = carBrands.find(
+      b => b?.name?.toLowerCase() === brandName?.toLowerCase()
+    );
+  
+    return brand?.logo || null;
+  };
+
   useEffect(() => {
     if (!car || !car._id) return; // ✅ Ensure `car` is valid before proceeding
 
@@ -62,7 +154,22 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
         .catch((err) => console.log("⚠️ Rating fetch failed:", err));
     }
   }, [car?._id]);
-  
+useEffect(() => {
+  if (normalizedCar?.ownerId) {
+    dispatch(getOwnerRatingAction(normalizedCar.ownerId))
+  }
+}, [normalizedCar?.ownerId])
+
+
+const { ratingCheck } = useSelector(state => state.user)
+
+useEffect(() => {
+  if (ratingCheck?.canRate) {
+    setShowReviewModal(true)
+
+  }
+}, [ratingCheck])
+
   useEffect(() => {
     let subscription;
   
@@ -180,14 +287,6 @@ const submitRating = async (stars) => {
   
   // Handle "Menyainzira" button - show route on internal map
   const handleMenyainzira = async () => {
-    if (!userLocation) {
-      Alert.alert(
-        I18n.t("locationRequired", "Location Required"),
-        I18n.t("enableLocationMessage", "Please enable location to get directions"),
-      )
-      return
-    }
-
     try {
       const carCoords = {
         latitude: normalizedCar.latitude,
@@ -255,22 +354,16 @@ const submitRating = async (stars) => {
   
 
   const handleGetDirections = () => {
-    if (!userLocation) {
-      Alert.alert(
-        I18n.t("locationRequired", "Location Required"),
-        I18n.t("enableLocationMessage", "Please enable location to get directions"),
-      )
-      return
-    }
+  // ✅ Do NOT block user here
+  onClose()
 
-    onClose()
-
-    navigation?.navigate("Home", {
-      showDirections: true,
-      destinationCar: normalizedCar,
-      userLocation: userLocation,
-    })
-  }
+  navigation?.navigate("Home", {
+    showDirections: true,
+    destinationCar: normalizedCar,
+    // pass it only if available
+    userLocation: userLocation ?? null,
+  })
+}
 
   const handleContactOwner = (method) => {
     const { ownerPhone, countryCode } = normalizedCar
@@ -429,18 +522,23 @@ const submitRating = async (stars) => {
                   )}
 
                   {/* Car Location */}
-                  <Marker coordinate={{ latitude: normalizedCar.latitude, longitude: normalizedCar.longitude }}>
-                    <View style={styles.carMarker}>
-                      <Image
-                        source={
-                          normalizedCar.available
-                            ? require("../../assets/available.png")
-                            : require("../../assets/nonavailable.png")
-                        }
-                        style={styles.carMarkerImage}
-                      />
-                    </View>
-                  </Marker>
+           <Marker
+  coordinate={{
+    latitude: normalizedCar.latitude,
+    longitude: normalizedCar.longitude,
+  }}
+  onPress={() => {}}
+>
+  <View style={styles.brandPin}>
+    <Image
+      source={{
+        uri: getBrandLogo(normalizedCar.make, carBrands),
+      }}
+      style={styles.brandLogo}
+    />
+  </View>
+</Marker>
+
 
                   {/* Internal Route Polyline - shown when "Menyainzira" is pressed */}
                   {showInternalRoute && internalRouteCoordinates.length > 0 && (

@@ -209,7 +209,8 @@ const handleNotificationItemPress = useCallback(
       </Animated.View>
 
       {/* Notification Modal */}
-      <Modal visible={showModal} transparent={true} animationType="slide" onRequestClose={() => setShowModal(false)}>
+      <Modal visible={showModal} transparent={true} animationType="slide"   presentationStyle="overFullScreen"
+  statusBarTranslucent={true} onRequestClose={() => setShowModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             {/* Header */}

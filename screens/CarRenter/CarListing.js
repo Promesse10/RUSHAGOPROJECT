@@ -305,7 +305,7 @@ const CarListing = ({ navigation, route }) => {
           <Image
             source={{ uri: normalizedCar.images[0] }}
             style={styles.carImage}
-            defaultSource={{ uri: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400" }}
+           
           />
           <View style={styles.brandBadge}>
             <Text style={styles.brandText}>{normalizedCar.make}</Text>

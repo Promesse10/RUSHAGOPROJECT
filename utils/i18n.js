@@ -542,7 +542,7 @@ noNearbyCarsMessage: "Nta modoka iboneka iri muri kilometero 10 uvuye aho uri",
 
       enableLocation: "Emera Aho Uri",
       locationPermission: "Nyabuna emera gukoresha aho uri kugirango tubone amamodoka yegereye",
-      trackNearestCar: "Kurikirana Imodoka Yegereye",
+      trackNearestCar: "Reba Imodoka ikwegereye",
 
       save: "Bika",
       cancel: "Hoya",
