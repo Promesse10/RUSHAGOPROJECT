@@ -41,8 +41,9 @@ import {
   markNotificationAsRead,
   deleteNotification,
 } from "../../redux/action/notificationActions";
-import { useRoute, useFocusEffect } from "@react-navigation/native"
 
+import { useRoute, useFocusEffect } from "@react-navigation/native"
+import NotificationBottomSheet from "../../components/NotificationBottomSheet"
 // Constants
 const screenDimensions = Dimensions.get("window")
 const { width, height } = screenDimensions
@@ -292,8 +293,12 @@ const [selectedCarId, setSelectedCarId] = useState(null)
     ],
     [],
   )
-const [showNotificationModal, setShowNotificationModal] = useState(false)
 
+const [showNotificationBottomSheet, setShowNotificationBottomSheet] = useState(false)
+    // Fetch notifications on mount
+    useEffect(() => {
+      dispatch(fetchNotifications())
+    }, [dispatch])
   const advertisingImages = useMemo(() => {
     if (carBanners.length > 0) {
       const validImages = carBanners.map((car) => car.images?.[0] || car.image || car.thumbnail).filter(Boolean)
@@ -454,15 +459,16 @@ useEffect(() => {
     return found?.logo || null
   }
 const handleNotificationPress = (notificationId, isRead) => {
-  setExpandedNotifications((prev) => ({
+  setExpandedNotifications(prev => ({
     ...prev,
     [notificationId]: !prev[notificationId],
-  }))
+  }));
 
   if (!isRead) {
-    dispatch(markNotificationAsRead(notificationId))
+    dispatch(markNotificationAsRead(notificationId));
   }
-}
+};
+
 
 const handleNotificationDelete = (notificationId) => {
   Alert.alert(
@@ -1165,15 +1171,20 @@ Alert.alert(
               <TouchableOpacity style={styles.flagButton} onPress={() => setShowLanguageDropdown(true)}>
                 <Image source={{ uri: getCurrentLanguageFlag() }} style={styles.flagImage} />
               </TouchableOpacity>
+
 <TouchableOpacity
- style={styles.notificationButton}
-  onPress={() => setShowNotifications(true)}
+  style={styles.notificationButton}
+  onPress={() => setShowNotificationBottomSheet(true)}
 >
   <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
 
   {unreadCount > 0 && <View style={styles.notificationDot} />}
 </TouchableOpacity>
-
+        {/* Notification Bottom Sheet */}
+        <NotificationBottomSheet
+          visible={showNotificationBottomSheet}
+          onClose={() => setShowNotificationBottomSheet(false)}
+        />
 
 
 
@@ -1220,7 +1231,8 @@ Alert.alert(
             const { coordinate } = e.nativeEvent
             setUserLocation(coordinate)
           }}
-          onPress={() => {
+          onPress={(event) => {
+            if (event && event.persist) event.persist()
             hideCarPopup()
           }}
         >
@@ -1259,7 +1271,10 @@ Alert.alert(
     <Marker
       key={`car-${getStableCarKey(car)}`}
       coordinate={{ latitude: carLat, longitude: carLng }}
-      onPress={() => handleCarMarkerPress(car)}
+      onPress={(event) => {
+        if (event && event.persist) event.persist()
+        handleCarMarkerPress(car)
+      }}
     >
       <Animated.View
         style={{
@@ -1518,7 +1533,8 @@ Alert.alert(
         <View key={notification._id || notification.id} style={styles.notificationItemContainer}>
           <TouchableOpacity
             style={styles.notificationItem}
-            onPress={() => handleNotificationPress(notification._id, notification.isRead)}
+            onPress={() => handleNotificationPress(notification._id, item.isRead
+)}
             onLongPress={() => handleNotificationDelete(notification._id)}
           >
             <View style={styles.notificationMainContent}>
@@ -1548,8 +1564,10 @@ Alert.alert(
                 <Text
                   style={[
                     styles.notificationTitle,
-                    { color: notification.isRead ? "#64748B" : "#1E293B" },
-                    !notification.isRead && styles.unreadNotificationTitle,
+                    { color: item.isRead
+ ? "#64748B" : "#1E293B" },
+                    !item.isRead
+ && styles.unreadNotificationTitle,
                   ]}
                 >
                   {notification.title}
@@ -1568,7 +1586,8 @@ Alert.alert(
               </View>
       
               <View style={styles.notificationActions}>
-                {!notification.isRead && <View style={styles.unreadIndicator} />}
+                {!item.isRead
+ && <View style={styles.unreadIndicator} />}
                 <Ionicons
                   name={
                     expandedNotifications[notification._id]

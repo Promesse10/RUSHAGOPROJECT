@@ -17,24 +17,27 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Platform,
+  Switch,
 } from "react-native"
 import Icon from "react-native-vector-icons/Ionicons"
 import * as ImagePicker from "expo-image-picker"
 import I18n from "../../utils/i18n"
 import { useDispatch, useSelector } from "react-redux"
 import { getCurrentUserAction, updateUserAction, uploadProfileImageAction } from "../../redux/action/UserActions"
+import { updateUserProfileAction, updateUserSettings, fetchUserProfile } from "../../redux/actions/settingAction"
 import axiosInstance from "../../utils/axios"
 
 const { width, height } = Dimensions.get("window")
 
 const SettingsModal = ({ visible, onClose, navigation }) => {
   const dispatch = useDispatch()
-const { currentUser, isUpdating } = useSelector((state) => state.user)
+const { user: currentUser, isLoading: isUpdating } = useSelector((state) => state.auth || {})
+const notifications = useSelector((state) => state.settings?.notifications || {})
+const profileImageUrl =
+  currentUser?.profileImage?.url ??
+  currentUser?.profileImage ??
+  "https://cdn-icons-png.flaticon.com/512/149/149071.png"
 
- const profileImageUrl =
-    typeof currentUser?.profileImage === "string"
-      ? currentUser.profileImage
-      : currentUser?.profileImage?.url
 
   const [showPersonalInfo, setShowPersonalInfo] = useState(false)
 
@@ -45,6 +48,8 @@ const [legalType, setLegalType] = useState("terms") // or "privacy"
   const [showHelpModal, setShowHelpModal] = useState(false)
   const [showNumber, setShowNumber] = useState(false)
   const phoneNumber = "+250780114522"
+
+  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true)
 
   const handleWhatsAppContact = () => {
     setShowNumber(true)
@@ -72,7 +77,7 @@ const [legalType, setLegalType] = useState("terms") // or "privacy"
   // ✅ Fetch user data when modal opens
   useEffect(() => {
     if (visible) {
-      dispatch(getCurrentUserAction())
+      dispatch(fetchUserProfile())
     }
   }, [visible])
 
@@ -88,6 +93,13 @@ const [legalType, setLegalType] = useState("terms") // or "privacy"
     }
   }, [currentUser])
 
+  // ✅ Update notification state when settings are loaded
+  useEffect(() => {
+    if (notifications) {
+      setIsNotificationsEnabled(notifications.pushNotifications || true)
+    }
+  }, [notifications])
+
   // ✅ Update profile info (name, email, phone)
   const handleSaveProfile = async () => {
     if (!tempProfile.name || !tempProfile.email || !tempProfile.phone) {
@@ -95,10 +107,10 @@ const [legalType, setLegalType] = useState("terms") // or "privacy"
     }
 
     try {
-      await dispatch(updateUserAction(tempProfile)).unwrap()
+      await dispatch(updateUserProfileAction(tempProfile)).unwrap()
       Alert.alert("Success", "Profile updated successfully")
       setShowPersonalInfo(false)
-      dispatch(getCurrentUserAction()) // Refresh after save
+      dispatch(fetchUserProfile()) // Refresh after save
     } catch (error) {
       Alert.alert("Error", error || "Failed to update profile")
     }
@@ -130,7 +142,7 @@ const [legalType, setLegalType] = useState("terms") // or "privacy"
       ).unwrap()
 
       Alert.alert("Success", "Profile picture updated successfully")
-      dispatch(getCurrentUserAction())
+      dispatch(fetchUserProfile())
     } catch (error) {
       console.error("❌ Upload error:", error)
       Alert.alert("Error", "Failed to update profile image")
@@ -139,6 +151,27 @@ const [legalType, setLegalType] = useState("terms") // or "privacy"
 }
 
   
+  const handleNotificationToggle = async (value) => {
+    setIsNotificationsEnabled(value)
+    // Add haptic feedback
+    // Vibration.vibrate(50)
+
+    // Update settings in Redux and backend
+    try {
+      await dispatch(
+        updateUserSettings({
+          notifications: {
+            ...notifications,
+            pushNotifications: value,
+          },
+        }),
+      ).unwrap()
+      console.log("✅ Notification setting updated")
+    } catch (error) {
+      console.error("❌ Failed to update notification setting", error)
+    }
+  }
+
   const handleLogout = () => {
     Alert.alert(I18n.t("logout"), "Are you sure you want to logout?", [
       { text: I18n.t("cancel"), style: "cancel" },
@@ -273,7 +306,7 @@ const PrivacyContent = () => (
               <Icon name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
           
-           
+         
 
             {/* Help */}
             <TouchableOpacity style={styles.settingItem} onPress={() => setShowHelpModal(true)}>

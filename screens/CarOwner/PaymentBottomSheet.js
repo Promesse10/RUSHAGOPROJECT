@@ -39,40 +39,11 @@ const PaymentBottomSheet = ({ isVisible, onClose, onPaymentSuccess, amount = 500
 
   const handlePayment = async () => {
     setLoading(true)
-    try {
-      let paymentData = {
-        amount,
-        method: selectedPaymentMethod,
-      }
-
-      if (selectedPaymentMethod === "credit" || selectedPaymentMethod === "debit") {
-        if (!cardData.number || !cardData.holderName || !cardData.expiryDate || !cardData.cvv) {
-          Alert.alert("Error", "Please fill all card details")
-          setLoading(false)
-          return
-        }
-        paymentData = { ...paymentData, cardData }
-      } else if (selectedPaymentMethod === "mtn") {
-        if (!mtnData.phoneNumber) {
-          Alert.alert("Error", "Please enter your MTN phone number")
-          setLoading(false)
-          return
-        }
-        paymentData = { ...paymentData, mtnData }
-      }
-
-      const result = await dispatch(processPayment(paymentData)).unwrap()
-
-      if (result.success) {
-        Alert.alert("Success", "Payment completed successfully!")
-        onPaymentSuccess(result)
-        onClose()
-      }
-    } catch (error) {
-      Alert.alert("Payment Failed", error || "Something went wrong")
-    } finally {
+    // Simulate processing
+    setTimeout(() => {
       setLoading(false)
-    }
+      Alert.alert("Feature Not Available", "We are still working on this feature.")
+    }, 2000)
   }
 
   const PaymentMethodButton = ({ method, title, icon, selected, onPress }) => (

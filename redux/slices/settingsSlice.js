@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit"
-import { updateUserSettings, updateUserProfileAction, changePasswordAction } from "../actions/settingAction"
+import { updateUserSettings, updateUserProfileAction, fetchUserProfile } from "../actions/settingAction"
 
 const initialState = {
   notifications: {
@@ -58,15 +58,15 @@ const settingsSlice = createSlice({
         state.error = action.payload
       })
 
-      // ✅ Change password
-      .addCase(changePasswordAction.pending, (state) => {
+      // ✅ Fetch user profile
+      .addCase(fetchUserProfile.pending, (state) => {
         state.loading = true
         state.error = null
       })
-      .addCase(changePasswordAction.fulfilled, (state) => {
+      .addCase(fetchUserProfile.fulfilled, (state) => {
         state.loading = false
       })
-      .addCase(changePasswordAction.rejected, (state, action) => {
+      .addCase(fetchUserProfile.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })

@@ -1,4 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
+import { getAuthHeaders, getUserData } from "../../utils/"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000"
@@ -7,8 +8,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000"
 export const getDrafts = createAsyncThunk("drafts/getDrafts", async (_, { rejectWithValue }) => {
   try {
     // Get user ID from stored data
-    const userData = await AsyncStorage.getItem('user')
-    const user = userData ? JSON.parse(userData) : null
+    const user = await getUserData()
     let userId = "user123" // fallback
 
     if (user) {
@@ -17,20 +17,15 @@ export const getDrafts = createAsyncThunk("drafts/getDrafts", async (_, { reject
 
     // Try to fetch from API first
     try {
-      const token = await AsyncStorage.getItem('token')
-      if (token) {
-        const response = await fetch(`${API_BASE_URL}/api/drafts/user/${userId}`, {
-          method: "GET",
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        })
+      const headers = await getAuthHeaders()
+      const response = await fetch(`${API_BASE_URL}/api/drafts/user/${userId}`, {
+        method: "GET",
+        headers,
+      })
 
-        if (response.ok) {
-          const data = await response.json()
-          return data || []
-        }
+      if (response.ok) {
+        const data = await response.json()
+        return data || []
       }
     } catch (apiError) {
       console.log("API drafts not available, using local storage")
@@ -49,8 +44,7 @@ export const getDrafts = createAsyncThunk("drafts/getDrafts", async (_, { reject
 export const saveDraft = createAsyncThunk("drafts/saveDraft", async (draftData, { rejectWithValue }) => {
   try {
     // Get user info from stored data
-    const userData = await AsyncStorage.getItem('user')
-    const user = userData ? JSON.parse(userData) : null
+    const user = await getUserData()
     let userId = "user123"
 
     if (user) {
@@ -66,21 +60,19 @@ export const saveDraft = createAsyncThunk("drafts/saveDraft", async (draftData, 
 
     // Try to save to API first
     try {
-      const token = await AsyncStorage.getItem('token')
-      if (token) {
-        const response = await fetch(`${API_BASE_URL}/api/drafts`, {
-          method: "POST",
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        })
+      const headers = await getAuthHeaders()
+      const response = await fetch(`${API_BASE_URL}/api/drafts`, {
+        method: "POST",
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
 
-        if (response.ok) {
-          const data = await response.json()
-          return data
-        }
+      if (response.ok) {
+        const data = await response.json()
+        return data
       }
     } catch (apiError) {
       console.log("API drafts not available, using local storage")
@@ -115,29 +107,26 @@ export const updateDraft = createAsyncThunk("drafts/updateDraft", async ({ id, d
 
     // Try to update via API first
     try {
-      const token = await AsyncStorage.getItem('token')
-      if (token) {
-        const response = await fetch(`${API_BASE_URL}/api/drafts/${id}`, {
-          method: "PUT",
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        })
+      const headers = await getAuthHeaders()
+      const response = await fetch(`${API_BASE_URL}/api/drafts/${id}`, {
+        method: "PUT",
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
 
-        if (response.ok) {
-          const data = await response.json()
-          return data
-        }
+      if (response.ok) {
+        const data = await response.json()
+        return data
       }
     } catch (apiError) {
       console.log("API drafts not available, using local storage")
     }
 
     // Fallback to local storage
-    const userData = await AsyncStorage.getItem('user')
-    const user = userData ? JSON.parse(userData) : null
+    const user = await getUserData()
     const userId = user?.id || user?._id || user?.userId || "user123"
 
     const existingDrafts = await AsyncStorage.getItem(`drafts_${userId}`)
@@ -162,26 +151,21 @@ export const deleteDraft = createAsyncThunk("drafts/deleteDraft", async (id, { r
   try {
     // Try to delete via API first
     try {
-      const token = await AsyncStorage.getItem('token')
-      if (token) {
-        const response = await fetch(`${API_BASE_URL}/api/drafts/${id}`, {
-          method: "DELETE",
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        })
+      const headers = await getAuthHeaders()
+      const response = await fetch(`${API_BASE_URL}/api/drafts/${id}`, {
+        method: "DELETE",
+        headers,
+      })
 
-        if (response.ok) {
-          return { id }
-        }
+      if (response.ok) {
+        return { id }
       }
     } catch (apiError) {
       console.log("API drafts not available, using local storage")
     }
 
     // Fallback to local storage
-    const userData = await AsyncStorage.getItem('user')
-    const user = userData ? JSON.parse(userData) : null
+    const user = await getUserData()
     const userId = user?.id || user?._id || user?.userId || "user123"
 
     const existingDrafts = await AsyncStorage.getItem(`drafts_${userId}`)
@@ -196,6 +180,3 @@ export const deleteDraft = createAsyncThunk("drafts/deleteDraft", async (id, { r
     return rejectWithValue(error.message || "Failed to delete draft")
   }
 })
-
-// Alias for compatibility
-export const loadDrafts = getDrafts

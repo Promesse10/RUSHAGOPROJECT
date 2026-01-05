@@ -5,6 +5,7 @@ import {
   logoutAction,
   updateUserProfileAction,
 } from "../action/LoginActions"
+import { fetchUserProfile } from "../actions/settingAction"
 
 const initialState = {
   user: null,
@@ -74,6 +75,9 @@ const loginSlice = createSlice({
         Object.assign(state, initialState)
       })
       .addCase(updateUserProfileAction.fulfilled, (state, action) => {
+        state.user = action.payload
+      })
+      .addCase(fetchUserProfile.fulfilled, (state, action) => {
         state.user = action.payload
       })
   },

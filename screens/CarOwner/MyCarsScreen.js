@@ -1,14 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, Switch, SafeAreaView, Modal } from "react-native"
+import { useState, useEffect, useMemo } from "react"
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, SafeAreaView, Modal, Alert } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
 import { useDispatch, useSelector } from "react-redux"
-import { getMyCarsAction, updateCarAvailabilityAction } from "../../redux/action/CarActions"
+import Swiper from 'react-native-swiper'
+import { getMyCarsAction, deleteCarAction } from "../../redux/action/CarActions"
 
-const CarDetailsModal = ({ visible, car, onClose, onEdit }) => {
+const CarDetailsModal = ({ visible, car, onClose, onEdit, onDelete }) => {
   const { t } = useTranslation()
 
   if (!car) return null
@@ -21,18 +22,31 @@ const CarDetailsModal = ({ visible, car, onClose, onEdit }) => {
             <Ionicons name="close-outline" size={24} color="#1E293B" />
           </TouchableOpacity>
           <Text style={styles.modalTitle}>Car Details</Text>
-          <TouchableOpacity onPress={onEdit} style={styles.editButton}>
-            <Ionicons name="pencil-outline" size={20} color="#007EFD" />
-            <Text style={styles.editButtonText}>Edit</Text>
-          </TouchableOpacity>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity onPress={onEdit} style={styles.editButton}>
+              <Ionicons name="pencil-outline" size={20} color="#007EFD" />
+              <Text style={styles.editButtonText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
+              <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              <Text style={styles.deleteButtonText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
           <View style={styles.carImageContainer}>
-            <Image
-              source={{ uri: car.images?.[0] || car.image || "/placeholder.svg?height=200&width=300" }}
-              style={styles.carDetailImage}
-            />
+            {car.images && car.images.length > 0 ? (
+              <Swiper style={styles.modalWrapper} showsButtons={false} autoplay={false} showsPagination={true} paginationStyle={styles.modalPagination}>
+                {car.images.map((image, index) => (
+                  <View key={index} style={styles.modalSlide}>
+                    <Image source={{ uri: image }} style={styles.carDetailImage} />
+                  </View>
+                ))}
+              </Swiper>
+            ) : (
+              <Image source={{ uri: car.image || "/placeholder.svg?height=200&width=300" }} style={styles.carDetailImage} />
+            )}
             <View style={styles.statusBadgeModal}>
               <Text style={styles.statusTextModal}>{car.status}</Text>
             </View>
@@ -89,6 +103,10 @@ const CarDetailsModal = ({ visible, car, onClose, onEdit }) => {
                 <Text style={styles.detailLabel}>Phone</Text>
                 <Text style={styles.detailValue}>{car.owner?.phone || car.phone || "+250 788 123 456"}</Text>
               </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Plate Number</Text>
+                <Text style={styles.detailValue}>{car.plateNumber || "Not set"}</Text>
+              </View>
             </View>
 
             {car.features && car.features.length > 0 && (
@@ -126,6 +144,17 @@ const MyCarsScreen = () => {
   const { user, isAuthenticated } = useSelector((state) => state.auth || {})
   const { cars, isLoading, error } = useSelector((state) => state.cars || {})
 
+  // Reorder images to show front exterior first
+  const reorderedCars = useMemo(() => {
+    if (!cars) return []
+    return cars.map(car => ({
+      ...car,
+      images: car.images && car.images.length >= 4
+        ? [car.images[1], car.images[2], car.images[3], car.images[0]] // front, side, rear, interior
+        : car.images
+    }))
+  }, [cars])
+
   const [selectedCar, setSelectedCar] = useState(null)
   const [modalVisible, setModalVisible] = useState(false)
 
@@ -139,10 +168,6 @@ const MyCarsScreen = () => {
     console.log("🚗 Fetching my cars for user:", user.name)
     dispatch(getMyCarsAction())
   }, [dispatch, isAuthenticated, user])
-  useEffect(() => {
-    const interval = setInterval(() => dispatch(getMyCarsAction()), 20000)
-    return () => clearInterval(interval)
-  }, [dispatch])
   
   // ✅ FIXED: Refetch when navigating back to this screen
   useEffect(() => {
@@ -155,11 +180,6 @@ const MyCarsScreen = () => {
 
     return unsubscribe
   }, [navigation, dispatch, isAuthenticated, user])
-
-  const toggleAvailability = (carId, available) => {
-    console.log("🔄 Toggling availability for car:", carId, "to:", !available)
-    dispatch(updateCarAvailabilityAction({ carId, available: !available }))
-  }
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -181,14 +201,24 @@ const MyCarsScreen = () => {
 
   const handleEditCar = () => {
     setModalVisible(false)
-    navigation.navigate("AddCar", {
-      draftData: {
-        id: selectedCar._id || selectedCar.id,
-        formData: selectedCar,
-        currentStep: 5,
-        isEditing: true,
-      },
+    navigation.navigate("EditCar", {
+      carData: selectedCar,
     })
+  }
+
+  const handleDeleteCar = (carId) => {
+    Alert.alert(
+      "Delete Car",
+      "Are you sure you want to delete this car listing? This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => dispatch(deleteCarAction(carId)),
+        },
+      ],
+    )
   }
 
   // ✅ FIXED: Show loading state
@@ -257,13 +287,20 @@ const MyCarsScreen = () => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Cars List */}
         <View style={styles.carsList}>
-          {cars.map((car) => (
+          {reorderedCars.map((car) => (
             <View key={car._id || car.id} style={styles.carCard}>
               <View style={styles.imageContainer}>
-                <Image
-                  source={{ uri: car.images?.[0] || car.image || "/placeholder.svg?height=200&width=300" }}
-                  style={styles.carImage}
-                />
+                {car.images && car.images.length > 0 ? (
+                  <Swiper style={styles.wrapper} showsButtons={false} autoplay={false} showsPagination={true} paginationStyle={styles.pagination}>
+                    {car.images.map((image, index) => (
+                      <View key={index} style={styles.slide}>
+                        <Image source={{ uri: image }} style={styles.carImage} />
+                      </View>
+                    ))}
+                  </Swiper>
+                ) : (
+                  <Image source={{ uri: car.image || "/placeholder.svg?height=200&width=300" }} style={styles.carImage} />
+                )}
                 <View style={[styles.statusBadge, getStatusColor(car.status)]}>
                   <Text style={[styles.statusText, { color: getStatusColor(car.status).color }]}>
                     {car.status?.charAt(0).toUpperCase() + car.status?.slice(1) || "Pending"}
@@ -303,20 +340,8 @@ const MyCarsScreen = () => {
                   </View>
                 </View>
 
-                {/* Availability Toggle */}
-                <View style={styles.availabilityContainer}>
-                  <View style={styles.switchContainer}>
-                    <Switch
-                      value={car.available !== false}
-                      onValueChange={() => toggleAvailability(car._id || car.id, car.available)}
-                      trackColor={{ false: "#E2E8F0", true: "#007EFD" }}
-                      thumbColor={car.available ? "#FFFFFF" : "#FFFFFF"}
-                      style={styles.switch}
-                    />
-                    <Text style={styles.availabilityText}>
-                      {car.available !== false ? t("available", "Available") : t("unavailable", "Unavailable")}
-                    </Text>
-                  </View>
+                {/* Details Button */}
+                <View style={styles.detailsContainer}>
                   <TouchableOpacity style={styles.detailsButton} onPress={() => handleViewDetails(car)}>
                     <Text style={styles.detailsButtonText}>{t("viewDetails", "View Details")}</Text>
                   </TouchableOpacity>
@@ -332,6 +357,7 @@ const MyCarsScreen = () => {
         car={selectedCar}
         onClose={() => setModalVisible(false)}
         onEdit={handleEditCar}
+        onDelete={() => handleDeleteCar(selectedCar._id || selectedCar.id)}
       />
     </SafeAreaView>
   )
@@ -522,23 +548,8 @@ const styles = StyleSheet.create({
     color: "#64748B",
     fontWeight: "500",
   },
-  availabilityContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  switchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  switch: {
-    transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
-  },
-  availabilityText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1E293B",
+  detailsContainer: {
+    alignItems: "flex-end",
   },
   detailsButton: {
     paddingHorizontal: 20,
@@ -579,6 +590,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#1E293B",
   },
+  actionButtons: {
+    flexDirection: "row",
+  },
   editButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -592,6 +606,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#007EFD",
+  },
+  deleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#FEF2F2",
+    marginLeft: 8,
+  },
+  deleteButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#EF4444",
   },
   modalContent: {
     flex: 1,
@@ -724,6 +753,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#64748B",
     lineHeight: 24,
+  },
+  imageScroll: {
+    height: 200,
+  },
+  modalImageScroll: {
+    height: 300,
   },
 })
 

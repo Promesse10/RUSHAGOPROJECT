@@ -131,7 +131,9 @@ useEffect(() => {
 
   const handleSignIn = () => {
     if (!validateForm()) return
-    dispatch(loginAction({ email, password, userType }))
+  dispatch(loginAction({ email, password, userType }))
+
+
   }
 
   const toggleSecureTextEntry = () => {

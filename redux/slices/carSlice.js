@@ -10,6 +10,7 @@ import {
   updateCarRatingAction,
   deleteCarAction,
   incrementCarViewAction,
+  checkPlateUniquenessAction,
 } from "../action/CarActions"
 
 const initialState = {
@@ -17,6 +18,7 @@ const initialState = {
   isCreating: false,
   isUpdating: false,
   isDeleting: false,
+  isCheckingPlate: false,
 
   isGetSuccess: false,
   isCreateSuccess: false,
@@ -39,6 +41,8 @@ const initialState = {
   createError: null,
   updateError: null,
   deleteError: null,
+  plateCheckError: null,
+  isPlateUnique: null,
 
   totalCars: 0,
   currentPage: 1,
@@ -278,6 +282,23 @@ const carSlice = createSlice({
         state.isDeleting = false
         state.isDeleteFailed = true
         state.deleteError = action.payload || "Failed to delete car"
+      })
+
+      // Check Plate Uniqueness
+      .addCase(checkPlateUniquenessAction.pending, (state) => {
+        state.isCheckingPlate = true
+        state.plateCheckError = null
+        state.isPlateUnique = null
+      })
+      .addCase(checkPlateUniquenessAction.fulfilled, (state, action) => {
+        state.isCheckingPlate = false
+        state.isPlateUnique = action.payload?.isUnique || false
+        state.plateCheckError = null
+      })
+      .addCase(checkPlateUniquenessAction.rejected, (state, action) => {
+        state.isCheckingPlate = false
+        state.isPlateUnique = false
+        state.plateCheckError = action.payload || "Failed to check plate uniqueness"
       })
   },
 })

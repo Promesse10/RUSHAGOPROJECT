@@ -8,6 +8,8 @@ import notificationsReducer from "./slices/notificationSlice";
 import  verification from "./slices/verificationSlice"    
 import carReducer from "./slices/carSlice"
 import authRecoveryReducer from "./slices/authRecoverySlice"
+import draftsReducer from "./slices/draftsSlice"
+
 export const store = configureStore({
   reducer: {
     signup: signupReducer,
@@ -19,5 +21,10 @@ export const store = configureStore({
     notifications: notificationsReducer,
     verification: verification,
     authRecovery: authRecoveryReducer,
+    drafts: draftsReducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: false, // Disable for large state/actions in development
+    }),
 })

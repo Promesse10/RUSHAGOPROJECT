@@ -25,7 +25,9 @@ import {
   fetchNotifications,
   markNotificationAsRead,
   deleteNotification,
-} from "../../redux/action/notificationActions";
+} from "../../redux/action/notificationActions"
+import LoadingSkeleton from "../../components/Map/LoadingSkeleton"
+import NotificationBottomSheet from "../../components/NotificationBottomSheet"
 
 
 
@@ -47,6 +49,10 @@ const DashboardScreen = () => {
     error: dashboardError,
   } = useSelector((state) => state.dashboard || {})
 
+  const notifications = useSelector((state) => state.notifications?.notifications || [])
+  const isLoadingNotifications = useSelector((state) => state.notifications?.isLoading)
+  const errorNotifications = useSelector((state) => state.notifications?.error)
+
   const [stats, setStats] = useState([])
   const [activities, setActivities] = useState([])
   const socket = io(`${process.env.EXPO_PUBLIC_API_URL}`)
@@ -55,6 +61,8 @@ const DashboardScreen = () => {
   const fadeAnim = useRef(new Animated.Value(1)).current
   const scaleAnim = useRef(new Animated.Value(1)).current
   const textFadeAnim = useRef(new Animated.Value(1)).current
+
+  const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.isRead).length : 0
 
   const carBrands = [
     // Japanese Brands
@@ -137,11 +145,14 @@ const DashboardScreen = () => {
   ]
 
   const [showLanguageOptions, setShowLanguageOptions] = useState(false)
-  const [showNotifications, setShowNotifications] = useState(false)
+  const [showNotificationBottomSheet, setShowNotificationBottomSheet] = useState(false)
+    // Fetch notifications on mount
+    useEffect(() => {
+      dispatch(fetchNotifications())
+    }, [dispatch])
   const [expandedNotifications, setExpandedNotifications] = useState({})
   const [currentLanguage, setCurrentLanguage] = useState("rw")
   const [hasNewNotifications, setHasNewNotifications] = useState(true)
-  const { notifications, unreadCount, isLoading, error } = useSelector((state) => state.notifications);
 
   const languages = [
     {
@@ -163,6 +174,7 @@ const DashboardScreen = () => {
   
 
   const rushGoLogo = "https://res.cloudinary.com/def0cjmh2/image/upload/v1747228499/logo_jlnvdx.png"
+
   
   useEffect(() => {
     const interval = setInterval(() => {
@@ -278,6 +290,10 @@ useEffect(() => {
       i18n.changeLanguage("rw")
     }
   }
+
+  useEffect(() => {
+    dispatch(fetchNotifications())
+  }, [dispatch])
 
   // ✅ UPDATED: Process real dashboard data from API with better stats
   useEffect(() => {
@@ -440,6 +456,7 @@ const handleNotificationPress = (notificationId, isRead) => {
   }
 };
 
+
 // Handle delete notification (long press)
 const handleNotificationDelete = (notificationId) => {
   Alert.alert(
@@ -468,7 +485,7 @@ const handleNotificationDelete = (notificationId) => {
   }
 
   const closeNotificationModal = () => {
-    setShowNotifications(false)
+    setShowNotificationBottomSheet(false)
     setExpandedNotifications({})
   }
 
@@ -581,9 +598,12 @@ const handleNotificationDelete = (notificationId) => {
         {/* Header Actions */}
         <View style={styles.headerActions}>
           {/* Notification Button */}
-          <TouchableOpacity style={styles.notificationButton} onPress={handleNotificationPress}>
+          <TouchableOpacity 
+            style={styles.notificationButton} 
+            onPress={() => setShowNotificationBottomSheet(true)}
+          >
             <Ionicons name="notifications-outline" size={24} color="#1E293B" />
-            {hasNewNotifications && <View style={styles.notificationDot} />}
+            {unreadCount > 0 && <View style={styles.notificationDot} />}
           </TouchableOpacity>
 
           <View style={{ position: "relative", marginLeft: 16 }}>
@@ -655,8 +675,15 @@ const handleNotificationDelete = (notificationId) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("quickStats", "Imibare y'imodoka ufite")}</Text>
           {dashboardLoading ? (
-            <View style={styles.loadingStats}>
-              <Text style={styles.loadingText}>{t("loading", "Loading...")}</Text>
+            <View style={styles.statsGrid}>
+              {[...Array(4)].map((_, index) => (
+                <View key={index} style={styles.statCard}>
+                  <LoadingSkeleton style={styles.statIconContainer} />
+                  <LoadingSkeleton style={{ width: 60, height: 28, marginBottom: 4 }} />
+                  <LoadingSkeleton style={{ width: 80, height: 14, marginBottom: 4 }} />
+                  <LoadingSkeleton style={{ width: 100, height: 12 }} />
+                </View>
+              ))}
             </View>
           ) : (
             <View style={styles.statsGrid}>
@@ -680,7 +707,7 @@ const handleNotificationDelete = (notificationId) => {
 
       {/* Notifications Modal */}
       <Modal
-        visible={showNotifications}
+        visible={showNotificationBottomSheet}
         transparent={true}
         animationType="fade"
         onRequestClose={closeNotificationModal}
@@ -701,7 +728,8 @@ const handleNotificationDelete = (notificationId) => {
   <View key={notification._id || notification.id} style={styles.notificationItemContainer}>
     <TouchableOpacity
       style={styles.notificationItem}
-      onPress={() => handleNotificationPress(notification._id, notification.isRead)}
+      onPress={() => handleNotificationPress(notification._id, item.isRead
+)}
       onLongPress={() => handleNotificationDelete(notification._id)}
     >
       <View style={styles.notificationMainContent}>
@@ -731,8 +759,10 @@ const handleNotificationDelete = (notificationId) => {
           <Text
             style={[
               styles.notificationTitle,
-              { color: notification.isRead ? "#64748B" : "#1E293B" },
-              !notification.isRead && styles.unreadNotificationTitle,
+              { color: item.isRead
+ ? "#64748B" : "#1E293B" },
+              !item.isRead
+ && styles.unreadNotificationTitle,
             ]}
           >
             {notification.title}
@@ -751,7 +781,8 @@ const handleNotificationDelete = (notificationId) => {
         </View>
 
         <View style={styles.notificationActions}>
-          {!notification.isRead && <View style={styles.unreadIndicator} />}
+          {!item.isRead
+ && <View style={styles.unreadIndicator} />}
           <Ionicons
             name={
               expandedNotifications[notification._id]

@@ -527,15 +527,21 @@ const submitRating = async (stars) => {
     latitude: normalizedCar.latitude,
     longitude: normalizedCar.longitude,
   }}
-  onPress={() => {}}
+  onPress={(event) => {
+    if (event && event.persist) event.persist()
+  }}
 >
   <View style={styles.brandPin}>
-    <Image
-      source={{
-        uri: getBrandLogo(normalizedCar.make, carBrands),
-      }}
-      style={styles.brandLogo}
-    />
+    {getBrandLogo(normalizedCar.make, carBrands) ? (
+      <Image
+        source={{
+          uri: getBrandLogo(normalizedCar.make, carBrands),
+        }}
+        style={styles.brandLogo}
+      />
+    ) : (
+      <Icon name="car-outline" size={28} color="#007EFD" />
+    )}
   </View>
 </Marker>
 
@@ -605,17 +611,26 @@ const submitRating = async (stars) => {
                 <View style={styles.carHeader}>
                   <View style={styles.carHeaderLeft}>
                     <Text style={styles.carCategory}>{getCarCategory(normalizedCar)}</Text>
-                    <Text style={styles.carTitle}>
-                      {normalizedCar.make} {normalizedCar.model} ({normalizedCar.year})
-                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      {getBrandLogo(normalizedCar.make, carBrands) ? (
+                        <Image
+                          source={{ uri: getBrandLogo(normalizedCar.make, carBrands) }}
+                          style={styles.brandLogoCircle}
+                        />
+                      ) : (
+                        <Icon name="car-outline" size={20} color="#007EFD" style={{ marginRight: 8 }} />
+                      )}
+                      <Text style={styles.carTitle}>
+                        {normalizedCar.make} {normalizedCar.model} ({normalizedCar.year})
+                      </Text>
+                    </View>
                     <Text style={styles.carPrice}>
                       {normalizedCar.base_price} {normalizedCar.currency}/{I18n.t("perDay")}
                     </Text>
                     <View style={styles.ratingContainer}>
-  <View style={styles.stars}>{renderStars(rating)}</View>
-  <Text style={styles.ratingValue}>{rating.toFixed(1)}/5.0</Text>
-</View>
-
+                      <View style={styles.stars}>{renderStars(rating)}</View>
+                      <Text style={styles.ratingValue}>{rating.toFixed(1)}/5.0</Text>
+                    </View>
                   </View>
                   <TouchableOpacity
                     style={styles.mainImageContainer}

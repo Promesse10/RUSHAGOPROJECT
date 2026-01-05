@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit"
-import { getCurrentUserAction, searchUsersAction, updateUserAction,rateUserAction,getOwnerRatingAction } from "../action/UserActions"
+import { getCurrentUserAction, searchUsersAction, updateUserAction, uploadProfileImageAction, rateUserAction,getOwnerRatingAction } from "../action/UserActions"
 
 const initialState = {
   currentUser: null,
@@ -63,6 +63,19 @@ const userSlice = createSlice({
         state.currentUser = action.payload
       })
       .addCase(updateUserAction.rejected, (state, action) => {
+        state.isUpdating = false
+        state.error = action.payload
+      })
+      // Upload profile image
+      .addCase(uploadProfileImageAction.pending, (state) => {
+        state.isUpdating = true
+        state.error = null
+      })
+      .addCase(uploadProfileImageAction.fulfilled, (state, action) => {
+        state.isUpdating = false
+        state.currentUser = action.payload
+      })
+      .addCase(uploadProfileImageAction.rejected, (state, action) => {
         state.isUpdating = false
         state.error = action.payload
       })

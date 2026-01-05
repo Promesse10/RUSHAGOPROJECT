@@ -72,7 +72,7 @@ export const createCarAction = createAsyncThunk("cars/create", async (carData, {
 export const updateCarAction = createAsyncThunk("cars/update", async ({ carId, updatedData }, { rejectWithValue }) => {
   try {
     console.log("✏️ Updating car:", carId)
-    const response = await axiosInstance.put(`${API_URL}/${carId}`, updatedData)
+    const response = await axiosInstance.put(`${API_URL}/${carId}`, updatedData, { timeout: 30000 })
     console.log("✅ Car updated successfully")
     return response.data
   } catch (err) {
@@ -147,4 +147,25 @@ export const updateCarRatingAction = createAsyncThunk(
       return rejectWithValue("Failed to update rating")
     }
   },
+)
+
+// Check plate number uniqueness
+export const checkPlateUniquenessAction = createAsyncThunk(
+  "cars/checkPlateUniqueness",
+  async (plateNumber, { rejectWithValue }) => {
+    try {
+      console.log("🔍 Checking plate uniqueness:", plateNumber)
+      const response = await axiosInstance.get(`${API_URL}/check-plate/${plateNumber}`)
+      console.log("✅ Plate check result:", response.data)
+      return response.data
+    } catch (err) {
+      console.error("❌ Plate check error:", err)
+      // For now, assume plate is unique if endpoint fails
+      if (err.response?.status === 404) {
+        console.log("🔄 Endpoint not found, assuming plate is unique")
+        return { isUnique: true }
+      }
+      return rejectWithValue(err.response?.data?.message || "Failed to check plate uniqueness")
+    }
+  }
 )

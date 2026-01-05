@@ -72,7 +72,7 @@ const NotificationChatBot = () => {
     if (unreadCount > 0) {
       notifications
         .filter((n) => !n.isRead)
-        .forEach((n) => dispatch(markNotificationAsRead(n._id)))
+        .forEach((n) => dispatch(markNotificationAsRead(n)))
     }
     
   }, [dispatch, unreadCount])
@@ -126,7 +126,7 @@ const handleNotificationItemPress = useCallback(
         {
           text: "Mark as Read",
           onPress: () => {
-            if (!notification.isRead) dispatch(markNotificationAsRead(notification._id))
+            if (!notification.isRead) dispatch(markNotificationAsRead(notification))
           },
         },
         { text: "Close", style: "cancel" },
@@ -256,10 +256,10 @@ const handleNotificationItemPress = useCallback(
               {notifications.length > 0
                 ? notifications.map((notification) => (
                     <TouchableOpacity
-                      key={notification._id}
+                      key={notification.id}
                       style={[styles.botMessage, !notification.isRead && styles.unreadMessage]}
                       onPress={() => handleNotificationItemPress(notification)}
-                      onLongPress={() => handleDeleteNotification(notification._id)}
+                      onLongPress={() => handleDeleteNotification(notification.id)}
                     >
                       <View style={[styles.botAvatar, { backgroundColor: getNotificationColor(notification.type) }]}>
                         <Icon name={getNotificationIcon(notification.type)} size={16} color="white" />
@@ -316,7 +316,7 @@ const handleNotificationItemPress = useCallback(
                         style: "destructive",
                         onPress: () => {
                           notifications.forEach((notification) => {
-                            dispatch(deleteNotification(notification._id))
+                            dispatch(deleteNotification(notification.id))
                           })
                         },
                       },

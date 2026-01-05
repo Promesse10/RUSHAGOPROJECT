@@ -43,8 +43,10 @@ export const loadAuthFromStorage = createAsyncThunk("auth/loadFromStorage", asyn
   try {
     const token = await SecureStore.getItemAsync("token")
     const userJson = await SecureStore.getItemAsync("user")
-
-    if (!token || !userJson) throw new Error("No stored auth found")
+    if (!token || !userJson) {
+      console.log("ℹ️ No stored auth found in secure storage")
+      return rejectWithValue("No stored auth")
+    }
 
     const user = JSON.parse(userJson)
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`
@@ -54,7 +56,7 @@ export const loadAuthFromStorage = createAsyncThunk("auth/loadFromStorage", asyn
     return { token, user }
   } catch (err) {
     console.error("❌ Load auth error:", err)
-    return rejectWithValue("Failed to load auth.")
+    return rejectWithValue(err.message || "Failed to load auth.")
   }
 })
 

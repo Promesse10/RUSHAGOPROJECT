@@ -220,7 +220,9 @@ const CarListing = ({ navigation, route }) => {
       available: car.available !== undefined ? car.available : true,
       images:
         car.images && car.images.length > 0
-          ? car.images
+          ? car.images.length >= 4
+            ? [car.images[1], car.images[2], car.images[3], car.images[0]] // front, side, rear, interior
+            : car.images
           : ["https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400"],
       rating: car.rating || 4.0,
     }

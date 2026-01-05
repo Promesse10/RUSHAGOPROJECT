@@ -49,7 +49,7 @@ const SignupScreen = ({ navigation }) => {
   const [timeLeft, setTimeLeft] = useState(300) // 5 minutes
   const [canResend, setCanResend] = useState(false)
   const [otp, setOtp] = useState("");
-  const OTP_LENGTH = 5
+  const OTP_LENGTH = 6
 
 
   const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector((state) => state.signup || {})
@@ -153,7 +153,8 @@ const SignupScreen = ({ navigation }) => {
 
 const handleVerifyEmail = () => {
   if (otp.length !== OTP_LENGTH) {
-    setErrors({ ...errors, verification: "Please enter the 6-digit code" })
+    setErrors({ ...errors, verification: `Please enter the ${OTP_LENGTH}-digit code` })
+
     return
   }
 
@@ -182,7 +183,11 @@ const handleVerifyEmail = () => {
       navigation.replace("LoginScreen")
     })
     .catch((err) => {
-      setErrors({ ...errors, verification: err || "Invalid verification code" })
+      setErrors(prev => ({
+  ...prev,
+  verification: err || "Invalid verification code",
+}));
+
     })
     .finally(() => setIsVerifying(false))
 }

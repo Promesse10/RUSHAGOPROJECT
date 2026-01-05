@@ -1,6 +1,8 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
+
+
 import {
   View,
   Text,
@@ -80,10 +82,13 @@ const initialFormData = {
   plateNumber: "",
 }
 
-const AddCarScreen = () => {
+const EditCarScreen = () => {
   const dispatch = useDispatch()
   const navigation = useNavigation()
   const route = useRoute()
+  const carData = route.params?.carData;
+const carId = carData?._id || carData?.id;
+
   const { t } = useTranslation()
   if (Platform.OS === 'web') {
     return <p>Map is not supported on web.</p>;
@@ -112,7 +117,7 @@ const AddCarScreen = () => {
   const [isEditing, setIsEditing] = useState(route.params?.draftData?.isEditing || false)
   const [editingCarId, setEditingCarId] = useState(route.params?.draftData?.id)
 
-  console.log("🚗 AddCarScreen - isEditing:", isEditing, "editingCarId:", editingCarId)
+  console.log("🚗 EditCarScreen - isEditing:", isEditing, "editingCarId:", editingCarId)
 
   const [currentStep, setCurrentStep] = useState(1)
   const [showMakeDropdown, setShowMakeDropdown] = useState(false)
@@ -133,6 +138,7 @@ const AddCarScreen = () => {
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false)
   const [showAllSuggestions, setShowAllSuggestions] = useState(false)
   const [isCustomModel, setIsCustomModel] = useState(false)
+ const [showExitPrompt, setShowExitPrompt] = useState(false)
 
   // ✅ NEW: Owner autocomplete states
   const [showOwnerSuggestions, setShowOwnerSuggestions] = useState(false)
@@ -152,25 +158,26 @@ const AddCarScreen = () => {
   const [showDraftPrompt, setShowDraftPrompt] = useState(false)
   const [draftData, setDraftData] = useState(null)
 
+const [showSaveDraftPrompt, setShowSaveDraftPrompt] = useState(false);
+
   // Local draft saving function
-  const saveDraftLocally = async (draftData) => {
-    try {
-      console.log("💾 Saving draft locally:", draftData)
-      const existingDrafts = await AsyncStorage.getItem('carDrafts')
-      const drafts = existingDrafts ? JSON.parse(existingDrafts) : []
-      
-      // Remove existing draft for this car if editing
-      const filteredDrafts = drafts.filter(d => d.id !== draftData.id)
-      filteredDrafts.push(draftData)
-      
-      await AsyncStorage.setItem('carDrafts', JSON.stringify(filteredDrafts))
-      console.log("💾 Draft saved successfully")
-      Alert.alert(t("Success"), t("Draft saved successfully!"))
-    } catch (error) {
-      console.error('❌ Failed to save draft:', error)
-      Alert.alert(t("Error"), t("Failed to save draft"))
-    }
+ const saveDraftLocally = async (draftData) => {
+  try {
+    const existing = await AsyncStorage.getItem("carDrafts");
+    const drafts = existing ? JSON.parse(existing) : [];
+
+    const filtered = drafts.filter(d => d.id !== draftData.id);
+    filtered.push(draftData);
+
+    await AsyncStorage.setItem("carDrafts", JSON.stringify(filtered));
+
+    Alert.alert(t("Success"), t("Draft saved successfully!"));
+
+  } catch (e) {
+    Alert.alert(t("Error"), t("Failed to save draft"));
   }
+};
+
 
   // Handle save as draft
   const handleSaveAsDraft = async () => {
@@ -195,16 +202,33 @@ const AddCarScreen = () => {
   }
   const [paymentCompleted, setPaymentCompleted] = useState(false)
   const [selectedImages, setSelectedImages] = useState([])
-
+ const [formData, setFormData] = useState(initialFormData)
   const [mapRegion, setMapRegion] = useState({
     latitude: -1.9441,
     longitude: 30.0619,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   })
-  const [selectedLocation, setSelectedLocation] = useState(null)
+ useEffect(() => {
+  if (!formData) return;
 
-  const [formData, setFormData] = useState(initialFormData)
+  if (formData.latitude && formData.longitude) {
+    setSelectedLocation({
+      latitude: Number(formData.latitude),
+      longitude: Number(formData.longitude),
+    });
+
+    setMapRegion({
+      latitude: Number(formData.latitude),
+      longitude: Number(formData.longitude),
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+  }
+}, [formData]);
+ const [selectedLocation, setSelectedLocation] = useState(null)
+
+ 
 
   // ✅ FIXED: Fetch current user on component mount
   useEffect(() => {
@@ -250,12 +274,11 @@ const AddCarScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-        if (!isEditing || !hasChanges) {
-          return
-        }
+      if (!hasChanges) return;
 
-        e.preventDefault()
+      e.preventDefault();
 
+      if (isEditing) {
         Alert.alert(
           t('Unsaved Changes'),
           t('You have unsaved changes. Would you like to save as draft or continue editing?'),
@@ -263,7 +286,7 @@ const AddCarScreen = () => {
             {
               text: t('Save as Draft'),
               onPress: async () => {
-                await handleSaveAsDraft()
+                await handleSaveAsDraft();
                 navigation.dispatch(e.data.action)
               },
             },
@@ -278,37 +301,31 @@ const AddCarScreen = () => {
             },
           ]
         )
-      })
+      } else {
+        setShowExitPrompt(true);
+      }
+    });
 
-      return unsubscribe
-    }, [navigation, isEditing, hasChanges, t])
-  )
-
-  // Check for drafts when adding new car
-useEffect(() => {
-  if (!isEditing) {
-    AsyncStorage.getItem('carDrafts')
-      .then(drafts => {
-        if (!drafts) return;
-
-        const parsed = JSON.parse(drafts);
-
-        // Only show popup if a REAL draft exists
-        const validDraft = parsed?.find(
-          d =>
-            d?.formData &&
-            Object.keys(d.formData).length > 0
-        );
-
-        if (validDraft) {
-          setDraftData(validDraft);
-          setShowDraftPrompt(true);
+    return unsubscribe;
+  }, [navigation, hasChanges, isEditing, t])
+)
+  useEffect(() => {
+    if (!isEditing) {
+      console.log("🔍 Checking for drafts when adding new car...")
+      AsyncStorage.getItem('carDrafts').then(drafts => {
+        console.log("📝 Drafts found:", drafts)
+        if (drafts) {
+          const parsed = JSON.parse(drafts)
+          console.log("📝 Parsed drafts:", parsed)
+          if (parsed && parsed.length > 0) {
+            setDraftData(parsed[0])
+            setShowDraftPrompt(true)
+            console.log("📝 Showing draft prompt with data:", parsed[0])
+          }
         }
-      })
-      .catch(err => console.log('❌ Error loading drafts:', err));
-  }
-}, [isEditing]);
-
+      }).catch(err => console.log('❌ Error loading drafts:', err))
+    }
+  }, [isEditing])
 
   // ✅ NEW: Handle owner name search for autocomplete
   const handleOwnerNameSearch = (text) => {
@@ -365,118 +382,78 @@ useEffect(() => {
   }
 
   // Load existing data if editing
-  useEffect(() => {
-    console.log("🔍 useEffect for loading data - isEditing:", isEditing, "route.params:", route.params)
-    if (isEditing && route.params?.draftData?.formData) {
-      const existingData = route.params.draftData.formData
-      console.log("📝 Loading existing data for editing from route params:", existingData)
-      console.log("📝 Raw data fields:", Object.keys(existingData))
-      console.log("📝 Seating capacity raw:", existingData.seatings, existingData.seats)
-      console.log("📝 Address raw:", existingData.address, existingData.location?.address)
-      console.log("📝 Category raw:", existingData.category)
-      console.log("📝 Type raw:", existingData.type, existingData.carType)
+ useEffect(() => {
+  if (!carData) return;
 
-      // Handle make/brand
-      const brand = existingData.brand || existingData.make || ""
-      const isStandardMake = carMakes.includes(brand)
+  setIsEditing(true);
+  setEditingCarId(carId);
 
-      // Handle images - support both array and object formats
-      let images = {
-        interior: null,
-        exterior_front: null,
-        exterior_side: null,
-        exterior_rear: null,
-      }
+  setFormData({
 
-      if (existingData.images) {
-        if (Array.isArray(existingData.images)) {
-          // Assuming order: front, side, rear, interior
-          images = {
-            exterior_front: existingData.images[0] || null,
-            exterior_side: existingData.images[1] || null,
-            exterior_rear: existingData.images[2] || null,
-            interior: existingData.images[3] || null,
-          }
-        } else if (typeof existingData.images === 'object') {
-          // If images is an object with keys
-          images = {
-            exterior_front: existingData.images.exterior_front || existingData.images.front || null,
-            exterior_side: existingData.images.exterior_side || existingData.images.side || null,
-            exterior_rear: existingData.images.exterior_rear || existingData.images.rear || null,
-            interior: existingData.images.interior || null,
-          }
-        }
-      }
+    make: carData.brand || "",
+    model: carData.model || "",
+    year: carData.year?.toString() || "",
 
-      setFormData({
-        make: isStandardMake ? brand : "Other",
-        model: existingData.model || "",
-        year: existingData.year?.toString() || "",
-        type: existingData.type || existingData.carType || "",
-        transmission: existingData.transmission || "",
-        fuel_type: existingData.fuelType || existingData.fuel_type || "",
-        seatings: existingData.seatings || existingData.seats || "",
-        features: existingData.features || [],
-        ownerType: existingData.owner?.type || existingData.ownerType || "individual",
-        ownerName: existingData.owner?.name || existingData.ownerName || "",
-        countryCode: "+250",
-        ownerPhone: existingData.owner?.phone?.replace("+250", "") || existingData.ownerPhone || "",
-        province: existingData.location?.province || existingData.province || "",
-        address: existingData.location?.address || existingData.address || "",
-        country: existingData.location?.country || existingData.country || "Rwanda",
-        latitude: existingData.location?.latitude?.toString() || existingData.latitude?.toString() || "",
-        longitude: existingData.location?.longitude?.toString() || existingData.longitude?.toString() || "",
-        base_price: existingData.price?.toString() || existingData.base_price?.toString() || "",
-        currency: existingData.currency || "FRW",
-        weekly_discount: existingData.weeklyDiscount?.toString() || existingData.weekly_discount?.toString() || "",
-        monthly_discount: existingData.monthlyDiscount?.toString() || existingData.monthly_discount?.toString() || "",
-        images: images,
-        thumbnail: existingData.thumbnail || null,
-        category: existingData.category || "",
-      })
-      
-      console.log("📝 Form data set with values:", {
-        type: existingData.type || existingData.carType || "",
-        seatings: existingData.seatings || existingData.seats || "",
-        address: existingData.location?.address || existingData.address || "",
-        category: existingData.category || "",
-        province: existingData.location?.province || existingData.province || "",
-      })
+    type: carData.type || carData.carType || "",
+    transmission: carData.transmission || "",
+    fuel_type: carData.fuelType || "",
 
-      if (!isStandardMake && brand) {
-        setCustomMake(brand)
-      }
+    seatings: carData.seatings?.toString() || "",
 
-      // Set map location if available
-      const lat = existingData.location?.latitude || existingData.latitude
-      const lng = existingData.location?.longitude || existingData.longitude
-      if (lat && lng) {
-        const latitude = Number.parseFloat(lat)
-        const longitude = Number.parseFloat(lng)
-        if (!isNaN(latitude) && !isNaN(longitude)) {
-          setMapRegion({
-            latitude,
-            longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-          })
-          setSelectedLocation({ latitude, longitude })
-        }
-      }
+    features: carData.features || [],
 
-      setPaymentCompleted(!!existingData.thumbnail)
-      setIsManualEntry(true) // Set to manual entry for editing
-      setCurrentStep(1) // Start at step 1 for editing so all fields are visible
-      // setOriginalData will be set after formData is updated
-    }
-  }, [isEditing, route.params])
+    ownerType: carData.owner?.type || "individual",
+    ownerName: carData.owner?.name || "",
+    ownerPhone: carData.owner?.phone?.replace("+250","") || "",
+    countryCode: "+250",
 
-  // Set original data after form data is loaded
-  useEffect(() => {
-    if (isEditing && formData && Object.keys(formData).some(key => formData[key] !== initialFormData[key])) {
-      setOriginalData(formData)
-    }
-  }, [formData, isEditing])
+      province: carData.province || "",
+  address: carData.location || "",
+  latitude: carData.coordinates?.latitude?.toString() || "",
+  longitude: carData.coordinates?.longitude?.toString() || "",
+  country: "Rwanda",
+
+ base_price: carData.price?.toString() || "",
+  weekly_discount: carData.weeklyDiscount?.toString() || "",
+  monthly_discount: carData.monthlyDiscount?.toString() || "",
+
+    category: carData.category || "",
+
+    images: {
+      exterior_front: carData.images?.[0] || null,
+      exterior_side: carData.images?.[1] || null,
+      exterior_rear: carData.images?.[2] || null,
+      interior: carData.images?.[3] || null,
+    },
+
+    thumbnail: carData.thumbnail || null,
+    plateNumber: carData.plate_number || "",
+
+  });
+
+setOriginalData({
+  ...carData,
+  weekly_discount: carData.weeklyDiscount,
+  monthly_discount: carData.monthlyDiscount,
+})
+
+
+}, [carData]);
+// Take ORIGINAL snapshot only once when editing starts
+const originalSet = useRef(false)
+
+useEffect(() => {
+  if (
+    isEditing &&
+    !originalSet.current &&
+    formData &&
+    Object.keys(formData).length
+  ) {
+    setOriginalData(formData)
+    originalSet.current = true
+  }
+}, [isEditing, formData])
+
 
   // Check for changes in form data
   useEffect(() => {
@@ -502,20 +479,22 @@ useEffect(() => {
       ])
     }
   }, [isCreateSuccess, dispatch, navigation, t])
+useEffect(() => {
+  if (isUpdateSuccess) {
 
-  useEffect(() => {
-    if (isUpdateSuccess) {
-      Alert.alert(t("Success"), t("Car listing updated successfully!"), [
-        {
-          text: t("OK"),
-          onPress: () => {
-            dispatch(clearUpdateState())
-            navigation.navigate("MyCars")
-          },
-        },
-      ])
-    }
-  }, [isUpdateSuccess, dispatch, navigation, t])
+    setOriginalData(formData); // sync baseline
+    setHasChanges(false);      // reset change flag
+
+    Alert.alert(
+      t("Success"),
+      t("Car listing updated successfully!"),
+      [{ text: t("OK") }]
+    );
+
+    dispatch(clearUpdateState());
+  }
+}, [isUpdateSuccess]);
+
 
   useEffect(() => {
     if (isCreateFailed && createError) {
@@ -834,9 +813,14 @@ useEffect(() => {
     return true
   }
 
-  const handleBackPress = () => {
+const handleBackPress = () => {
+  if (isEditing && hasChanges) {
+    setShowExitPrompt(true)
+  } else {
     navigation.goBack()
   }
+}
+
 
   const handleNext = () => {
     if (validateCurrentStep() && currentStep < 5) {
@@ -1084,18 +1068,18 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
 
       console.log("📋 Submit data prepared:", submitData)
 
-      if (isEditing) {
-        submitData._id = editingCarId
-        console.log("✏️ Updating existing car...")
-        dispatch(updateCarAction({ carId: editingCarId, updatedData: submitData }))
-      } else {
-        console.log("🆕 Creating new car...")
-        dispatch(createCarAction(submitData))
-      }
+    if (isEditing) {
+   dispatch(updateCarAction({
+     carId: editingCarId,
+     updatedData: submitData
+   }));
+} else {
+   dispatch(createCarAction(submitData));
+}
     } catch (error) {
       console.error("❌ Submission error:", error)
-      Alert.alert("Error", "Image upload failed or listing error: " + error.message)
-    }
+      Alert.alert(t("Error"), t("submissionFailed") + ": " + error.message)
+    } 
   }
 
   const toggleFeature = (feature) => {
@@ -1402,11 +1386,16 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
               <TextInput
                 style={[styles.input, validationErrors.plateNumber && styles.errorBorder]}
                 value={formData.plateNumber}
-                onChangeText={(text) => {
-                  const upperText = text.toUpperCase().slice(0,7).replace(/[^A-Z0-9]/g, '')
-                  setFormData({ ...formData, plateNumber: upperText })
-                  setValidationErrors((prev) => ({ ...prev, plateNumber: false }))
-                }}
+            onChangeText={(text) => {
+  const formatted = text
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0,7);
+
+  setFormData({ ...formData, plateNumber: formatted });
+  setValidationErrors((prev) => ({ ...prev, plateNumber: false }));
+}}
+
                 placeholder={t("Enter plate number")}
                 autoCapitalize="characters"
                 maxLength={10}
@@ -1834,73 +1823,70 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
       </ScrollView>
 
       <View style={styles.navigationContainer}>
-        <TouchableOpacity
-          style={[styles.navButton, styles.prevButton, currentStep === 1 && styles.disabledButton]}
-          onPress={handlePrevious}
-          disabled={currentStep === 1}
-        >
-          <Ionicons name="arrow-back-outline" size={16} color={currentStep === 1 ? "#9CA3AF" : "#475569"} />
-          <Text style={[styles.navButtonText, currentStep === 1 && styles.disabledButtonText]}>{t("previous")}</Text>
-        </TouchableOpacity>
 
-        {currentStep === 5 ? (
-          <TouchableOpacity
-            style={[styles.navButton, styles.submitButton, (isCreating || isUpdating) && styles.disabledButton]}
-            onPress={(isEditing && hasChanges) ? handleSaveChanges : handleSubmit}
-            disabled={isCreating || isUpdating}
-          >
-            <Text style={styles.submitButtonText}>
-              {isCreating || isUpdating ? t("Processing...") : (isEditing && hasChanges) ? t("saveChanges") : currentStep === 5 ? t("submit") : t("next")}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={[styles.navButton, styles.nextButton]} onPress={(isEditing && hasChanges) ? handleSaveChanges : handleNext}>
-            <Text style={styles.nextButtonText}>{ (isEditing && hasChanges) ? t("saveChanges") : t("next") }</Text>
-            <Ionicons name="arrow-forward-outline" size={16} color="#FFFFFF" />
-          </TouchableOpacity>
-        )}
-      </View>
+  {/* PREVIOUS */}
+  <TouchableOpacity
+    style={[styles.navButton, styles.prevButton, currentStep === 1 && styles.disabledButton]}
+    onPress={handlePrevious}
+    disabled={currentStep === 1}
+  >
+    <Ionicons name="arrow-back-outline" size={16} color={currentStep === 1 ? "#9CA3AF" : "#475569"} />
+    <Text style={[styles.navButtonText, currentStep === 1 && styles.disabledButtonText]}>
+      {t("previous")}
+    </Text>
+  </TouchableOpacity>
 
-      {/* Draft Prompt Modal */}
-      <Modal visible={showDraftPrompt} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.draftModal}>
-            <Text style={styles.draftTitle}>{t("unsavedDraft", "Unsaved Draft Found")}</Text>
-            <Text style={styles.draftMessage}>
-              {t("draftMessage", "You have an unsaved car listing draft. Would you like to continue editing it or start a new listing?")}
-            </Text>
-            <View style={styles.draftButtons}>
-              <TouchableOpacity
-                style={styles.loadDraftButton}
-                onPress={() => {
-                  console.log("📝 Loading draft data:", draftData)
-                  if (draftData) {
-                    setFormData(draftData.formData || {})
-                    setCurrentStep(draftData.currentStep || 1)
-                    setIsEditing(draftData.isEditing || false)
-                    setEditingCarId(draftData.id || null)
-                    setOriginalData(draftData.formData || {})
-                    console.log("📝 Draft loaded successfully")
-                  }
-                  setShowDraftPrompt(false)
-                }}
-              >
-                <Text style={styles.loadDraftText}>{t("continueEditing", "Continue Editing")}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.newCarButton}
-                onPress={() => {
-                  setShowDraftPrompt(false)
-                  AsyncStorage.removeItem('carDrafts')
-                }}
-              >
-                <Text style={styles.newCarText}>{t("startNew", "Start New")}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
+  {/* SAVE DRAFT — ALWAYS MIDDLE */}
+ <TouchableOpacity
+  style={styles.draftButton}
+  onPress={() => saveDraftLocally({
+    id: editingCarId || `draft_${Date.now()}`,
+    formData,
+    currentStep,
+    isEditing,
+    editingCarId,
+    updatedAt: new Date().toISOString()
+  })}
+>
+  <Text style={styles.draftButtonText}>{t("saveDraft")}</Text>
+</TouchableOpacity>
+
+
+
+  {/* NEXT / SAVE CHANGES */}
+  {currentStep === 5 ? (
+    <TouchableOpacity
+      style={[styles.navButton, styles.submitButton, (isCreating || isUpdating) && styles.disabledButton]}
+      onPress={(isEditing && hasChanges) ? handleSaveChanges : handleSubmit}
+      disabled={isCreating || isUpdating}
+    >
+      <Text style={styles.submitButtonText}>
+        {(isEditing && hasChanges) ? t("saveChanges") : t("submit")}
+      </Text>
+    </TouchableOpacity>
+  ) : (
+  <TouchableOpacity
+  style={[styles.navButton, styles.nextButton]}
+  onPress={(isEditing && hasChanges) ? handleSaveChanges : handleNext}
+>
+  <Text style={styles.nextButtonText}>
+    {(isEditing && hasChanges) ? t("saveChanges") : t("next")}
+  </Text>
+
+  <Ionicons
+    name={(isEditing && hasChanges) ? "checkmark-outline" : "arrow-forward-outline"}
+    size={16}
+    color="#FFFFFF"
+  />
+</TouchableOpacity>
+
+  )}
+
+</View>
+
+
+      
       <PaymentBottomSheet
         isVisible={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
@@ -1976,6 +1962,7 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
           </TouchableOpacity>
         </Modal>
       )}
+
     </SafeAreaView>
   )
 }
@@ -1994,7 +1981,62 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
-  },
+  },modalOverlay:{
+  flex:1,
+  justifyContent:"center",
+  alignItems:"center",
+  backgroundColor:"rgba(0,0,0,0.5)"
+},
+modalBox:{
+  width:"85%",
+  backgroundColor:"#fff",
+  borderRadius:12,
+  padding:20
+},
+modalTitle:{
+  fontSize:18,
+  fontWeight:"700",
+  marginBottom:5
+},
+navigationContainer: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+},
+draftButton: {
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  borderRadius: 10,
+  backgroundColor: "#E5E7EB",
+},
+draftButtonText: {
+  color: "#374151",
+  fontWeight: "600",
+},
+
+modalText:{
+  fontSize:15,
+  color:"#555",
+  marginBottom:15
+},
+modalButtons:{
+  flexDirection:"row",
+  justifyContent:"space-between"
+},
+cancelBtn:{
+  padding:10
+},
+draftBtn:{
+  backgroundColor:"#007EFD",
+  padding:10,
+  borderRadius:8
+},
+discardBtn:{
+  backgroundColor:"red",
+  padding:10,
+  borderRadius:8
+}
+,
   backButton: {
     width: 40,
     height: 40,
@@ -2715,5 +2757,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 })
-
-export default AddCarScreen
+  
+export default EditCarScreen

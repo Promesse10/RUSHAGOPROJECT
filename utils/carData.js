@@ -60,6 +60,11 @@ export const carMakes = [
 
 export const carModels = {
   Toyota: [
+    "Coaster",
+    "Hilux",
+    "Land Cruiser",
+    "Supra",
+    "Yaris",
     "Camry",
     "Corolla",
     "Prius",

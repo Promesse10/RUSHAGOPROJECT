@@ -11,16 +11,15 @@ import OnboardingScreen from "../screens/OnboardingScreen"
 import AuthScreen from "../screens/auth-screen"
 import LoginScreen from "../screens/CarRenter/LoginScreen"
 import UserTypeSelectionScreen from "../screens/UserTypeSelectionScreen"
-import CarOwnerSignupScreen from "../screens/CarOwner/SignupScreen"
-import CarOwnerLoginScreen from "../screens/CarOwner/LoginScreen"
+import CarRentalSignupScreen from "../screens/CarRenter/SignupScreen"
+import CarRentalLoginScreen from "../screens/CarRenter/LoginScreen"
 import DashboardScreen from "../screens/CarOwner/DashboardScreen"
 import MyCarsScreen from "../screens/CarOwner/MyCarsScreen"
 import AddCarScreen from "../screens/CarOwner/AddCarScreen"
+import EditCarScreen from "../screens/CarOwner/EditCarScreen"
 import SettingsScreen from "../screens/CarOwner/SettingsScreen"
 import PaymentMethodsScreen from "../screens/CarOwner/PaymentMethodsScreen"
 import SavedDraftsScreen from "../screens/CarOwner/SavedDraftsScreen"
-import CarRentalSignupScreen from "../screens/CarRenter/SignupScreen"
-import CarRentalLoginScreen from "../screens/CarRenter/LoginScreen"
 import FilterSidebar from "../screens/CarRenter/FilterSidebar"
 import Home from "../screens/CarRenter/Home"
 import CarListing from "../screens/CarRenter/CarListing"
@@ -141,11 +140,12 @@ const AppNavigator = () => {
             <Stack.Screen name="LoginScreen" component={LoginScreen} />
             <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} />
             <Stack.Screen name="FilterSidebar" component={FilterSidebar} />
-            <Stack.Screen name="CarOwnerSignup" component={CarOwnerSignupScreen} />
-            <Stack.Screen name="CarOwnerLogin" component={CarOwnerLoginScreen} />
+            <Stack.Screen name="CarOwnerSignup" component={CarRentalSignupScreen} />
+            <Stack.Screen name="CarOwnerLogin" component={CarRentalLoginScreen} />
             <Stack.Screen name="CarOwnerDashboard" component={CarOwnerTabNavigator} />
             <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
             <Stack.Screen name="SavedDrafts" component={SavedDraftsScreen} />
+            <Stack.Screen name="EditCar" component={EditCarScreen} />
             <Stack.Screen name="CarRentalSignup" component={CarRentalSignupScreen} />
             <Stack.Screen name="CarRentalLogin" component={CarRentalLoginScreen} />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />

@@ -37,10 +37,13 @@ export const verifyEmailOtpAction = createAsyncThunk(
   "verification/verifyOtp",
   async ({ email, otp }, { rejectWithValue }) => {
     try {
+      console.log("Verifying OTP for email:", email, "OTP:", otp);
       const res = await axiosInstance.post(
-        `${API_URL}recovery/verify-otp-update-email`,
-        { email, otp }
+        `${API_URL}/auth/verify-otp`,
+        { email, otp: otp.trim()
+ }
       );
+      console.log("Verify response:", res.data);
 
       if (res.data.success) {
         return true;
@@ -48,6 +51,7 @@ export const verifyEmailOtpAction = createAsyncThunk(
 
       return rejectWithValue(res.data.error || "Invalid OTP");
     } catch (err) {
+      console.log("Verify OTP error:", err.response?.status, err.response?.data, err.message);
       return rejectWithValue(err.response?.data?.error || err.message);
     }
   }

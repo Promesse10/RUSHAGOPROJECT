@@ -19,7 +19,7 @@ const notificationSlice = createSlice({
   // ✅ ALWAYS force array
   const list = Array.isArray(action.payload) ? action.payload : [];
 
-  state.notifications = list;
+  state.notifications = list.map(n => ({ ...n, id: n._id || n.id }));
   state.unreadCount = list.filter((n) => !n.isRead).length;
 },
 
@@ -27,20 +27,26 @@ const notificationSlice = createSlice({
       state.isLoading = false;
       state.error = action.payload;
     },
-    markRead: (state, action) => {
-      state.notifications = state.notifications.map((n) =>
-        n._id === action.payload ? { ...n, isRead: true } : n
-      );
-      state.unreadCount = state.notifications.filter((n) => !n.isRead).length;
-    },
+   markRead: (state, action) => {
+  state.notifications = state.notifications.map((n) =>
+    (n._id || n.id) === action.payload ? { ...n, isRead: true } : n
+  );
+
+  state.unreadCount = state.notifications.filter((n) => !n.isRead).length;
+},
+
     markAllRead: (state) => {
       state.notifications = state.notifications.map((n) => ({ ...n, isRead: true }));
       state.unreadCount = 0;
     },
-    deleteOne: (state, action) => {
-      state.notifications = state.notifications.filter((n) => n._id !== action.payload);
-      state.unreadCount = state.notifications.filter((n) => !n.isRead).length;
-    },
+   deleteOne: (state, action) => {
+  state.notifications = state.notifications.filter(
+    (n) => (n._id || n.id) !== action.payload
+  );
+
+  state.unreadCount = state.notifications.filter((n) => !n.isRead).length;
+},
+
   },
 });
 
