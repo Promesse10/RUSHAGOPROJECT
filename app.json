@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "MUVCAR",
-    "slug": "MUVCAR",
+    "slug": "rushago",
     "platforms": [
       "ios",
       "android"
@@ -13,7 +13,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.MUVCAR.app",
+      "bundleIdentifier": "com.muvar.app",
       "runtimeVersion": "1.0.0"
     },
     "android": {
@@ -21,10 +21,9 @@
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#FFFFFF"
       },
-      "runtimeVersion": {
-        "policy": "appVersion"
-      },
-      "package": "com.MUVCAR.app"
+      "runtimeVersion": "1.0.0",
+      "package": "com.muvar.app",
+      "newArchEnabled": true
     },
     "web": {
       "favicon": "./assets/logo.png"
