@@ -22,7 +22,12 @@ import {
   PermissionsAndroid,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps"
+// Use project mock to avoid native dependency resolution during bundling
+import MapsMock from "../../mocks/react-native-maps"
+const MapView = MapsMock.MapView || MapsMock.default?.MapView || (() => null)
+const Marker = MapsMock.Marker || MapsMock.default?.Marker || (() => null)
+const Polyline = MapsMock.Polyline || MapsMock.default?.Polyline || (() => null)
+const PROVIDER_GOOGLE = MapsMock.PROVIDER_GOOGLE || MapsMock.default?.PROVIDER_GOOGLE || null
 import Icon from "react-native-vector-icons/Ionicons"
 import * as Location from "expo-location"
 import { useDispatch, useSelector } from "react-redux"

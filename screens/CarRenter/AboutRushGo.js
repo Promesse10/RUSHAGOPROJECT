@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Image } from 'react-native';
-import { ChevronLeft } from 'react-native-feather';
+import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 const AboutRushGo = () => {
@@ -15,7 +15,7 @@ const AboutRushGo = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={navigateBack}>
-            <ChevronLeft width={24} height={24} color="#FFF" />
+            <Feather name="chevron-left" size={24} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>About MUVCAR</Text>
           <View style={{ width: 24 }} />

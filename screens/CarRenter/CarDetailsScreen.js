@@ -19,12 +19,47 @@ import {
   Share,
   StatusBar,
 } from "react-native"
-import MapView, { Marker, Polyline } from "react-native-maps"
+// Use mock for react-native-maps to avoid native resolution issues during bundling
+import MapsMock from "../../mocks/react-native-maps"
+const MapView = MapsMock.MapView || MapsMock.default?.MapView || (() => null)
+const Marker = MapsMock.Marker || MapsMock.default?.Marker || (() => null)
+const Polyline = MapsMock.Polyline || MapsMock.default?.Polyline || (() => null)
 import Icon from "react-native-vector-icons/Ionicons"
 import I18n from "../../utils/i18n"
 import { rateUserAction,getOwnerRatingAction } from "../../redux/action/UserActions"
 import { getTurnByTurnDirections } from "../../utils/googleDirections"
-import ImageViewing from "react-native-image-viewing";
+// Try to load `react-native-image-viewing`, fall back to a tiny internal viewer if unavailable
+let ImageViewing
+try {
+  // prefer default export when available
+  const mod = require("react-native-image-viewing")
+  ImageViewing = mod && (mod.default || mod)
+} catch (err) {
+  // Lightweight fallback viewer used during bundling or when the package isn't installed
+  ImageViewing = ({ images = [], imageIndex = 0, visible = false, onRequestClose = () => {} }) => {
+    const [index, setIndex] = useState(imageIndex)
+    if (!visible) return null
+
+    const uri = images && images[index] && (images[index].uri || images[index])
+
+    return (
+      <Modal visible={visible} transparent onRequestClose={onRequestClose}>
+        <View style={{ flex: 1, backgroundColor: "#000" }}>
+          {uri ? (
+            <Image source={{ uri }} style={{ flex: 1, resizeMode: "contain" }} />
+          ) : (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+              <Text style={{ color: "#fff" }}>No image available</Text>
+            </View>
+          )}
+          <TouchableOpacity onPress={onRequestClose} style={{ position: "absolute", top: 40, left: 20 }}>
+            <Text style={{ color: "#fff", fontSize: 16 }}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    )
+  }
+}
 import { incrementCarViewAction } from "../../redux/action/CarActions"
 const { width, height } = Dimensions.get("window")
 

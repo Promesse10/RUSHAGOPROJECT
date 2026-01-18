@@ -25,7 +25,7 @@ import Home from "../screens/CarRenter/Home"
 import CarListing from "../screens/CarRenter/CarListing"
 import MapView from "../screens/CarRenter/MapView"
 import CarDetailsScreen from "../screens/CarRenter/CarDetailsScreen"
-import LinkAccount from "../screens/CarRenter/LinkAccount"
+
 import AboutRushGo from "../screens/CarRenter/AboutRushGo"
 import GetHelp from "../screens/CarRenter/Privacy"
 import PrivacyPolicy from "../screens/CarRenter/PrivacyPolicy"
@@ -34,7 +34,7 @@ import PushNotifications from "../screens/CarRenter/PushNotifications"
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen"
 import ResetPasswordScreen from "../screens/ResetPasswordScreen"
 
-import { Home as HomeIcon, Car, Settings } from "lucide-react-native"
+// using Ionicons (already installed) instead of lucide-react-native
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 
 import { LocationProvider } from "../screens/CarRenter/LocationContext"
@@ -93,9 +93,16 @@ const CarRenterTabNavigator = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          if (route.name === "HomeTab") return <HomeIcon size={size} color={color} />
-          if (route.name === "CarsTab") return <Car size={size} color={color} />
-          if (route.name === "SettingsTab") return <Settings size={size} color={color} />
+          let iconName;
+          if (route.name === "HomeTab") {
+            iconName = focused ? "home" : "home-outline";
+          } else if (route.name === "CarsTab") {
+            iconName = focused ? "car" : "car-outline";
+          } else if (route.name === "SettingsTab") {
+            iconName = focused ? "settings" : "settings-outline";
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: "#007EFD",
         tabBarInactiveTintColor: "#9CA3AF",
@@ -154,7 +161,7 @@ const AppNavigator = () => {
             <Stack.Screen name="CarListing" component={CarListing} />
             <Stack.Screen name="CarDetails" component={CarDetailsScreen} />
             <Stack.Screen name="MapView" component={MapView} />
-            <Stack.Screen name="LinkAccount" component={LinkAccount} />
+           
             <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
             <Stack.Screen name="AboutRushGo" component={AboutRushGo} />
             <Stack.Screen name="GetHelp" component={GetHelp} />

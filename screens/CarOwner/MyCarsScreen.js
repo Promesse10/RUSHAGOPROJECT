@@ -1,12 +1,49 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, SafeAreaView, Modal, Alert } from "react-native"
+import { useState, useEffect, useMemo, useRef } from "react"
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, SafeAreaView, Modal, Alert, Dimensions } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
 import { useDispatch, useSelector } from "react-redux"
-import Swiper from 'react-native-swiper'
+// Lightweight internal image carousel to avoid extra native deps
+const { width: SCREEN_WIDTH } = Dimensions.get("window")
+
+const ImageCarousel = ({ images = [], height = 200, imageStyle, containerStyle, paginationStyle }) => {
+  const scrollRef = useRef(null)
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  const onMomentumScrollEnd = (e) => {
+    const offsetX = e.nativeEvent.contentOffset.x
+    const index = Math.round(offsetX / SCREEN_WIDTH)
+    setActiveIndex(index)
+  }
+
+  if (!images || images.length === 0) return null
+
+  return (
+    <View style={[{ height, width: "100%" }, containerStyle]}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+      >
+        {images.map((uri, idx) => (
+          <View key={idx} style={{ width: SCREEN_WIDTH, height }}>
+            <Image source={{ uri }} style={[{ width: "100%", height }, imageStyle]} />
+          </View>
+        ))}
+      </ScrollView>
+      <View style={[{ position: "absolute", bottom: 8, left: 0, right: 0, flexDirection: "row", justifyContent: "center" }, paginationStyle]}>
+        {images.map((_, i) => (
+          <View key={i} style={{ width: 8, height: 8, borderRadius: 4, marginHorizontal: 4, backgroundColor: i === activeIndex ? "#007EFD" : "rgba(255,255,255,0.6)" }} />
+        ))}
+      </View>
+    </View>
+  )
+}
 import { getMyCarsAction, deleteCarAction } from "../../redux/action/CarActions"
 
 const CarDetailsModal = ({ visible, car, onClose, onEdit, onDelete }) => {
@@ -36,14 +73,8 @@ const CarDetailsModal = ({ visible, car, onClose, onEdit, onDelete }) => {
 
         <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
           <View style={styles.carImageContainer}>
-            {car.images && car.images.length > 0 ? (
-              <Swiper style={styles.modalWrapper} showsButtons={false} autoplay={false} showsPagination={true} paginationStyle={styles.modalPagination}>
-                {car.images.map((image, index) => (
-                  <View key={index} style={styles.modalSlide}>
-                    <Image source={{ uri: image }} style={styles.carDetailImage} />
-                  </View>
-                ))}
-              </Swiper>
+              {car.images && car.images.length > 0 ? (
+                  <ImageCarousel images={car.images} height={250} imageStyle={styles.carDetailImage} containerStyle={styles.modalWrapper} />
             ) : (
               <Image source={{ uri: car.image || "/placeholder.svg?height=200&width=300" }} style={styles.carDetailImage} />
             )}
@@ -291,13 +322,7 @@ const MyCarsScreen = () => {
             <View key={car._id || car.id} style={styles.carCard}>
               <View style={styles.imageContainer}>
                 {car.images && car.images.length > 0 ? (
-                  <Swiper style={styles.wrapper} showsButtons={false} autoplay={false} showsPagination={true} paginationStyle={styles.pagination}>
-                    {car.images.map((image, index) => (
-                      <View key={index} style={styles.slide}>
-                        <Image source={{ uri: image }} style={styles.carImage} />
-                      </View>
-                    ))}
-                  </Swiper>
+                  <ImageCarousel images={car.images} height={200} imageStyle={styles.carImage} containerStyle={styles.wrapper} />
                 ) : (
                   <Image source={{ uri: car.image || "/placeholder.svg?height=200&width=300" }} style={styles.carImage} />
                 )}

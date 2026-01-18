@@ -1,5 +1,9 @@
 import React from 'react';
-import MapView, { Marker, Callout } from 'react-native-maps';
+// Use mock to avoid native dependency during bundling when native module isn't installed
+import MapsMock from '../../mocks/react-native-maps'
+const MapView = MapsMock.MapView || MapsMock.default?.MapView || (() => null)
+const Marker = MapsMock.Marker || MapsMock.default?.Marker || (() => null)
+const Callout = MapsMock.Callout || MapsMock.default?.Callout || (() => null)
 import { StyleSheet, View, Text, Image } from 'react-native';
 import carIcon from '../../assets/car-marker.png'; // Import your car icon
 

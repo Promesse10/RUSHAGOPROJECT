@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from "react-native"
-import { ChevronLeft, Plus, Minus } from "react-native-feather"
+import { Feather } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
 
 const privacyItems = [
@@ -71,7 +71,7 @@ const Privacy = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={navigateBack}>
-            <ChevronLeft width={24} height={24} color="#FFF" />
+            <Feather name="chevron-left" size={24} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Terms & Privacy Policy</Text>
           <View style={{ width: 24 }} />
@@ -96,9 +96,9 @@ const Privacy = () => {
                 <TouchableOpacity style={styles.policyHeader} onPress={() => toggleItem(item.id)}>
                   <Text style={styles.policyTitle}>{item.title}</Text>
                   {expandedItem === item.id ? (
-                    <Minus width={20} height={20} color="#8E8E93" />
+                    <Feather name="minus" size={20} color="#8E8E93" />
                   ) : (
-                    <Plus width={20} height={20} color="#8E8E93" />
+                    <Feather name="plus" size={20} color="#8E8E93" />
                   )}
                 </TouchableOpacity>
 

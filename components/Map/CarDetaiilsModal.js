@@ -16,7 +16,7 @@ import {
   PanResponder,
   Animated,
 } from "react-native"
-import { X, Calendar, MapPin, Phone, User, Droplet, Settings, Star } from "react-native-feather"
+import { Feather } from "@expo/vector-icons"
 import { cloudinaryImages, getCloudinaryImage } from "../../utils/image-loader"
 
 const { width, height } = Dimensions.get("window")
@@ -349,7 +349,7 @@ const CarDetailsModal = ({ car, visible, onClose, hideBottomNav }) => {
         <View style={styles.modalHandle} />
 
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <X width={24} height={24} color="#000" />
+          <Feather name="x" size={24} color="#000" />
         </TouchableOpacity>
 
         <ScrollView
@@ -430,12 +430,12 @@ const CarDetailsModal = ({ car, visible, onClose, hideBottomNav }) => {
                 {/* Car Details */}
                 <View style={styles.detailsContainer}>
                   <View style={styles.detailItem}>
-                    <Settings width={18} height={18} color="#666" />
+                    <Feather name="settings" size={18} color="#666" />
                     <Text style={styles.detailText}>{car.transmission}</Text>
                   </View>
 
                   <View style={styles.detailItem}>
-                    <Droplet width={18} height={18} color="#666" />
+                    <Feather name="droplet" size={18} color="#666" />
                     <Text style={styles.detailText}>{car.fuel}</Text>
                   </View>
 
@@ -449,7 +449,7 @@ const CarDetailsModal = ({ car, visible, onClose, hideBottomNav }) => {
                   <Text style={styles.sectionTitle}>Availability</Text>
                   <View style={styles.calendarContainer}>
                     <View style={styles.calendarHeader}>
-                      <Calendar width={18} height={18} color="#4B4DFF" />
+                      <Feather name="calendar" size={18} color="#4B4DFF" />
                       <Text style={styles.calendarTitle}>{`${currentMonthName} ${currentYear}`}</Text>
                     </View>
                     <View style={styles.datesContainer}>
@@ -472,7 +472,7 @@ const CarDetailsModal = ({ car, visible, onClose, hideBottomNav }) => {
                       <Image source={owner.photo} style={styles.ownerPhoto} />
                     ) : (
                       <View style={styles.ownerIconContainer}>
-                        <User width={24} height={24} color="#4B4DFF" />
+                        <Feather name="user" size={24} color="#4B4DFF" />
                       </View>
                     )}
                     <View style={styles.ownerDetails}>
@@ -480,7 +480,7 @@ const CarDetailsModal = ({ car, visible, onClose, hideBottomNav }) => {
                       <Text style={styles.ownerType}>Company</Text>
 
                       <TouchableOpacity style={styles.locationButton} onPress={handleLocationPress}>
-                        <MapPin width={16} height={16} color="#4B4DFF" />
+                        <Feather name="map-pin" size={16} color="#4B4DFF" />
                         <Text style={styles.locationText}>{owner?.location || "Rwanda"}</Text>
                       </TouchableOpacity>
                     </View>
@@ -489,7 +489,7 @@ const CarDetailsModal = ({ car, visible, onClose, hideBottomNav }) => {
 
                 {/* Contact Button */}
                 <TouchableOpacity style={styles.contactButton} onPress={handleContactPress}>
-                  <Phone width={20} height={20} color="#FFFFFF" />
+                  <Feather name="phone" size={20} color="#FFFFFF" />
                   <Text style={styles.contactButtonText}>Contact Us</Text>
                 </TouchableOpacity>
 
@@ -504,11 +504,10 @@ const CarDetailsModal = ({ car, visible, onClose, hideBottomNav }) => {
                         key={`star-${star}`}
                         onPress={() => Alert.alert("Rating", `You rated ${star} stars!`)}
                       >
-                        <Star
-                          fill={star <= (car.rating || 3) ? "#FFD700" : "transparent"}
-                          stroke="#FFD700"
-                          width={30}
-                          height={30}
+                        <Feather
+                          name="star"
+                          size={30}
+                          color={star <= (car.rating || 3) ? "#FFD700" : "#CCCCCC"}
                           style={styles.starIcon}
                         />
                       </TouchableOpacity>

@@ -32,8 +32,9 @@ export const updateUserProfileAction = createAsyncThunk(
         name: profileData.name,
         email: profileData.email,
         phone: profileData.phone,
-        profileImage: profileData.profileImage,
+     
       })
+      
 
       console.log("✅ Profile updated:", response.data)
 

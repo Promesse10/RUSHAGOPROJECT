@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { User, Phone, Mail, Lock, Eye, EyeOff, Google, Apple } from "react-native-feather";
+import { Feather } from "@expo/vector-icons";
 
 const AuthScreen = () => {
   const navigation = useNavigation();
@@ -141,7 +141,7 @@ const AuthScreen = () => {
       </Text>
 
       <View style={styles.inputContainer}>
-        <User width={20} height={20} color="#666" style={styles.inputIcon} />
+        <Feather name="user" size={20} color="#666" style={styles.inputIcon} />
         <TextInput
           style={styles.input}
           placeholder="Full Name"
@@ -153,7 +153,7 @@ const AuthScreen = () => {
       </View>
 
       <View style={styles.inputContainer}>
-        <Mail width={20} height={20} color="#666" style={styles.inputIcon} />
+        <Feather name="mail" size={20} color="#666" style={styles.inputIcon} />
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -165,7 +165,7 @@ const AuthScreen = () => {
       </View>
 
       <View style={styles.inputContainer}>
-        <Lock width={20} height={20} color="#666" style={styles.inputIcon} />
+        <Feather name="lock" size={20} color="#666" style={styles.inputIcon} />
         <TextInput
           style={styles.input}
           placeholder="Password"
@@ -179,9 +179,9 @@ const AuthScreen = () => {
           onPress={() => setShowPassword(!showPassword)}
         >
           {showPassword ? (
-            <Eye width={20} height={20} color="#666" />
+            <Feather name="eye" size={20} color="#666" />
           ) : (
-            <EyeOff width={20} height={20} color="#666" />
+            <Feather name="eye-off" size={20} color="#666" />
           )}
         </TouchableOpacity>
       </View>
@@ -213,7 +213,7 @@ const AuthScreen = () => {
               style={styles.socialButton}
               onPress={handleGoogleLogin}
             >
-              <Google width={20} height={20} color="#000" style={styles.socialIcon} />
+              <Feather name="log-in" size={20} color="#000" style={styles.socialIcon} />
               <Text style={styles.socialButtonText}>Login with Google</Text>
             </TouchableOpacity>
           )}
@@ -222,7 +222,7 @@ const AuthScreen = () => {
               style={styles.socialButton}
               onPress={handleAppleLogin}
             >
-              <Apple width={20} height={20} color="#000" style={styles.socialIcon} />
+              <Feather name="phone" size={20} color="#000" style={styles.socialIcon} />
               <Text style={styles.socialButtonText}>Login with Apple</Text>
             </TouchableOpacity>
           )}

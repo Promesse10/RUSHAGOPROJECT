@@ -1,7 +1,7 @@
 // PushNotifications.js
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Switch } from 'react-native';
-import { ChevronLeft, ThumbsUp, MessageSquare, Tag, Mail, FileText } from 'react-native-feather';
+import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 const PushNotifications = () => {
@@ -21,7 +21,7 @@ const PushNotifications = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={navigateBack}>
-            <ChevronLeft width={24} height={24} color="#000" />
+            <Feather name="chevron-left" size={24} color="#000" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Push notification</Text>
           <View style={{ width: 24 }} />
@@ -31,7 +31,7 @@ const PushNotifications = () => {
           <View style={styles.notificationItem}>
             <View style={styles.notificationLeft}>
               <View style={styles.iconContainer}>
-                <ThumbsUp width={20} height={20} color="#007EFD" />
+                <Feather name="thumbs-up" size={20} color="#007EFD" />
               </View>
               <View style={styles.notificationInfo}>
                 <Text style={styles.notificationTitle}>Recommendation</Text>
@@ -51,7 +51,7 @@ const PushNotifications = () => {
           <View style={styles.notificationItem}>
             <View style={styles.notificationLeft}>
               <View style={styles.iconContainer}>
-                <MessageSquare width={20} height={20} color="#007EFD" />
+                <Feather name="message-square" size={20} color="#007EFD" />
               </View>
               <View style={styles.notificationInfo}>
                 <Text style={styles.notificationTitle}>Communication</Text>
@@ -71,7 +71,7 @@ const PushNotifications = () => {
           <View style={styles.notificationItem}>
             <View style={styles.notificationLeft}>
               <View style={styles.iconContainer}>
-                <Tag width={20} height={20} color="#007EFD" />
+                <Feather name="tag" size={20} color="#007EFD" />
               </View>
               <View style={styles.notificationInfo}>
                 <Text style={styles.notificationTitle}>Promotion</Text>
@@ -91,7 +91,7 @@ const PushNotifications = () => {
           <View style={styles.notificationItem}>
             <View style={styles.notificationLeft}>
               <View style={styles.iconContainer}>
-                <Mail width={20} height={20} color="#007EFD" />
+                <Feather name="mail" size={20} color="#007EFD" />
               </View>
               <View style={styles.notificationInfo}>
                 <Text style={styles.notificationTitle}>Get alert in your email</Text>
@@ -111,7 +111,7 @@ const PushNotifications = () => {
           <View style={styles.notificationItem}>
             <View style={styles.notificationLeft}>
               <View style={styles.iconContainer}>
-                <FileText width={20} height={20} color="#007EFD" />
+                <Feather name="file-text" size={20} color="#007EFD" />
               </View>
               <View style={styles.notificationInfo}>
                 <Text style={styles.notificationTitle}>Newsletter</Text>

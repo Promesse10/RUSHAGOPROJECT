@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "MUVCAR",
-    "slug": "rushago",
+    "slug": "muvcar",
     "platforms": [
       "ios",
       "android"
@@ -9,33 +9,44 @@
     "version": "1.0.0",
     "plugins": [
       "expo-asset",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35
+          }
+        }
+      ]
     ],
     "ios": {
-      "supportsTablet": true,
       "bundleIdentifier": "com.muvar.app",
-      "runtimeVersion": "1.0.0"
+      "supportsTablet": true,
+     "runtimeVersion": "1.0.0"
+      ,
+      "newArchEnabled": true
     },
     "android": {
+      "package": "com.muvar.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#FFFFFF"
       },
-      "runtimeVersion": "1.0.0",
-      "package": "com.muvar.app",
+     "runtimeVersion": "1.0.0"
+      ,
       "newArchEnabled": true
     },
     "web": {
       "favicon": "./assets/logo.png"
     },
-    "updates": {
-      "url": "https://u.expo.dev/b9e40fcf-e9ff-4dc3-ac65-54fac7fea8b3"
-    },
-    "owner": "promesse10",
     "extra": {
       "eas": {
-        "projectId": "b9e40fcf-e9ff-4dc3-ac65-54fac7fea8b3"
+        "projectId": "5915e19e-60c2-4bd0-afdc-e383612f8f0d"
       }
-    }
+    },
+    "owner": "carconnect02"
   }
 }

@@ -10,7 +10,7 @@ import {
   Platform,
   Linking
 } from 'react-native';
-import { ChevronLeft, Layers, MapPin, Filter } from 'react-native-feather';
+import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import carIcon from '../../assets/car-marker.png';
@@ -233,7 +233,7 @@ const MapViewScreen = () => {
       {/* Your existing native map code */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ChevronLeft width={24} height={24} color="#000" />
+          <Feather name="chevron-left" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Map View</Text>
       </View>

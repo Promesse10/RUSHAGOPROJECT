@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, TextInput, Image } from 'react-native';
-import { ChevronLeft, Search, ChevronDown, ThumbsUp, MessageCircle } from 'react-native-feather';
+import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 const faqCategories = [
@@ -100,7 +100,7 @@ const GetHelp = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={navigateBack}>
-            <ChevronLeft width={24} height={24} color="#FFF" />
+            <Feather name="chevron-left" size={24} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>FAQ</Text>
           <View style={{ width: 24 }} />
@@ -117,7 +117,7 @@ const GetHelp = () => {
               value={searchQuery}
               onChangeText={handleSearch}
             />
-            <Search width={24} height={24} color="#FFF" />
+            <Feather name="search" size={24} color="#FFF" />
           </View>
         </View>
 
@@ -155,14 +155,14 @@ const GetHelp = () => {
                   onPress={() => toggleFaq(faq.id)}
                 >
                   <Text style={styles.questionText}>{faq.question}</Text>
-                  <ChevronDown 
-                    width={20} 
-                    height={20} 
+                  <Feather
+                    name="chevron-down"
+                    size={20}
                     color="#333"
                     style={[
                       styles.chevron,
-                      expandedFaq === faq.id && styles.chevronExpanded
-                    ]} 
+                      expandedFaq === faq.id && styles.chevronExpanded,
+                    ]}
                   />
                 </TouchableOpacity>
                 
@@ -172,11 +172,11 @@ const GetHelp = () => {
                     
                     <View style={styles.faqFooter}>
                       <View style={styles.faqStat}>
-                        <ThumbsUp width={16} height={16} color="#999" />
+                        <Feather name="thumbs-up" size={16} color="#999" />
                         <Text style={styles.faqStatText}>{faq.likes}</Text>
                       </View>
                       <View style={styles.faqStat}>
-                        <MessageCircle width={16} height={16} color="#999" />
+                        <Feather name="message-circle" size={16} color="#999" />
                         <Text style={styles.faqStatText}>{faq.comments}</Text>
                       </View>
                     </View>
