@@ -11,8 +11,10 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from "react-native"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 
 const { width, height } = Dimensions.get("window")
+const ONBOARDING_KEY = "hasSeenOnboarding"
 
 const OnboardingScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true)
@@ -49,11 +51,17 @@ const OnboardingScreen = ({ navigation }) => {
       title: "See cars near you, rent with ease",
       cta: "Get Started",
       image: { uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1765010344/0ca8425d-afff-4dac-93d9-c868ffdbfaf1_srpxvy_1_lgjbaj.png" },
-      onPress: () => navigation?.navigate("AuthScreen"),
+      onPress: async () => {
+  await AsyncStorage.setItem(ONBOARDING_KEY, "true")
+  navigation.replace("AuthScreen")
+},
     },
   ]
 
   useEffect(() => {
+  const checkOnboarding = async () => {
+    const hasSeen = await AsyncStorage.getItem(ONBOARDING_KEY)
+
     const animationSequence = Animated.sequence([
       Animated.timing(carPosition, {
         toValue: 0,
@@ -83,28 +91,38 @@ const OnboardingScreen = ({ navigation }) => {
     animationSequence.start(() => {
       setTimeout(() => {
         setIsLoading(false)
-        setIsVisible(true)
-        Animated.sequence([
-          Animated.timing(fadeAnimation, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(slideAnimation, {
-            toValue: 1,
-            duration: 500,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ]).start()
+
+        if (hasSeen) {
+          // ✅ Skip onboarding
+          navigation.replace("AuthScreen")
+        } else {
+          // ✅ First time → show onboarding
+          setIsVisible(true)
+          Animated.sequence([
+            Animated.timing(fadeAnimation, {
+              toValue: 1,
+              duration: 800,
+              useNativeDriver: true,
+            }),
+            Animated.timing(slideAnimation, {
+              toValue: 1,
+              duration: 500,
+              easing: Easing.out(Easing.quad),
+              useNativeDriver: true,
+            }),
+          ]).start()
+        }
       }, 200)
     })
+  }
 
-    return () => {
-      carPosition.setValue(-width)
-      carScale.setValue(1)
-    }
-  }, [])
+  checkOnboarding()
+
+  return () => {
+    carPosition.setValue(-width)
+    carScale.setValue(1)
+  }
+}, [])
 
   const renderLoadingScreen = () => {
     return (
@@ -128,7 +146,10 @@ const OnboardingScreen = ({ navigation }) => {
       <View style={styles.slide}>
         <SafeAreaView style={styles.safeTop}>
           <TouchableOpacity
-            onPress={() => navigation?.navigate("AuthScreen")}
+            onPress={async () => {
+  await AsyncStorage.setItem(ONBOARDING_KEY, "true")
+  navigation.replace("AuthScreen")
+}}
             style={styles.skipBtn}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
             activeOpacity={0.7}
@@ -270,7 +291,7 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     width: width * 1.0,
-    height: height * 0.7,
+    height: height * 1.7,
     
     borderBottomLeftRadius: width * 0.3,
     borderBottomRightRadius: width * 0.3,

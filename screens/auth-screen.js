@@ -54,20 +54,28 @@ const AuthScreen = ({ navigation }) => {
   }, [])
 
   // Handle back button press - allow going back to onboarding
-  useFocusEffect(
-    React.useCallback(() => {
-      // Only add the back handler on Android
-      if (Platform.OS === "android") {
-        const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-          navigation.navigate("Onboarding")
-          return true // Prevent default back behavior
-        })
+useFocusEffect(
+  React.useCallback(() => {
+    if (Platform.OS !== "android") return
 
-        // Return a cleanup function that uses the backHandler.remove() method
-        return () => backHandler.remove()
+    const onBackPress = () => {
+      if (navigation.canGoBack()) {
+        navigation.goBack()
+        return true
       }
-    }, [navigation]),
-  )
+      return false // allow Android to close app
+    }
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onBackPress
+    )
+
+    return () => subscription.remove()
+  }, [navigation])
+)
+
+
 
   const handleSignIn = () => {
     navigation?.navigate("LoginScreen")

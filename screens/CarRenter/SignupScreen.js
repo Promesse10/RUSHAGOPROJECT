@@ -54,6 +54,7 @@ const SignupScreen = ({ navigation }) => {
 
   const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector((state) => state.signup || {})
   const { isSending, error: verificationError } = useSelector((state) => state.verification || {})
+const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   const dispatch = useDispatch()
 
@@ -106,7 +107,7 @@ const SignupScreen = ({ navigation }) => {
       newErrors.phone = "Phone number is required"
       isValid = false
     } else if (!validatePhone(inputs.phone)) {
-      newErrors.phone = "Enter a valid 10-digit phone number"
+      newErrors.phone = "Enter a valid 9-digit phone number"
       isValid = false
     }
     if (!inputs.password.trim()) {
@@ -123,6 +124,10 @@ const SignupScreen = ({ navigation }) => {
       newErrors.confirmPassword = "Passwords do not match"
       isValid = false
     }
+if (!acceptedTerms) {
+  newErrors.terms = "You must accept Terms & Privacy Policy"
+  isValid = false
+}
 
     setErrors(newErrors)
     return isValid
@@ -232,7 +237,8 @@ const handleVerifyEmail = () => {
         <TextInput
         
           style={[styles.input, errors.name && styles.inputError]}
-          placeholder="Enter your full name"
+          placeholder="
+ full name"
           placeholderTextColor="#999"
           value={inputs.name}
           onChangeText={(value) => setInputs({ ...inputs, name: value })}
@@ -242,7 +248,8 @@ const handleVerifyEmail = () => {
       <View style={styles.inputContainer}>
         <TextInput
           style={[styles.input, errors.email && styles.inputError]}
-          placeholder="Enter your email"
+          placeholder="
+ email"
           placeholderTextColor="#999"
           value={inputs.email}
           onChangeText={(value) => setInputs({ ...inputs, email: value })}
@@ -250,17 +257,23 @@ const handleVerifyEmail = () => {
         />
         {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
       </View>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={[styles.input, errors.phone && styles.inputError]}
-          placeholder="Enter your phone number"
-          placeholderTextColor="#999"
-          value={inputs.phone}
-          onChangeText={(value) => setInputs({ ...inputs, phone: value })}
-          keyboardType="phone-pad"
-        />
-        {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-      </View>
+    <View style={styles.inputContainer}>
+  <View style={styles.phoneContainer}>
+    <Text style={styles.countryCode}>+250</Text>
+    <TextInput
+      style={[styles.phoneInput, errors.phone && styles.inputError]}
+      placeholder="7XXXXXXXX"
+      keyboardType="phone-pad"
+      value={inputs.phone}
+      maxLength={9}
+      onChangeText={(value) =>
+        setInputs({ ...inputs, phone: value.replace(/\D/g, "") })
+      }
+    />
+  </View>
+  {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+</View>
+
       <View style={styles.inputContainer}>
         <View style={[styles.passwordInputContainer, errors.password && styles.inputError]}>
           <TextInput
@@ -299,6 +312,28 @@ const handleVerifyEmail = () => {
         </View>
         {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
       </View>
+      <View style={styles.termsContainer}>
+  <TouchableOpacity
+    style={styles.checkbox}
+    onPress={() => setAcceptedTerms(!acceptedTerms)}
+  >
+    {acceptedTerms && <View style={styles.checkboxChecked} />}
+  </TouchableOpacity>
+
+  <Text style={styles.termsText}>
+    I agree to the{" "}
+    <Text style={styles.linkText} onPress={() => Alert.alert("Terms", "Muvcar Terms of Service")}>
+      Terms
+    </Text>{" "}
+    and{" "}
+    <Text style={styles.linkText} onPress={() => Alert.alert("Privacy", "Muvcar Privacy Policy")}>
+      Privacy Policy
+    </Text>
+  </Text>
+</View>
+
+{errors.terms && <Text style={styles.errorText}>{errors.terms}</Text>}
+
       <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} disabled={isLoading || isSending}>
         {isLoading || isSending ? (
           <ActivityIndicator color="#fff" size="small" />
@@ -447,14 +482,42 @@ const styles = StyleSheet.create({
   },
   activeUserTypeButton: {
     backgroundColor: "#007EFD",
-  },
+  }, termsContainer: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginBottom: 15,
+},
+checkbox: {
+  width: 22,
+  height: 22,
+  borderWidth: 1,
+  borderColor: "#007EFD",
+  marginRight: 10,
+  justifyContent: "center",
+  alignItems: "center",
+},
+checkboxChecked: {
+  width: 14,
+  height: 14,
+  backgroundColor: "#007EFD",
+},
+termsText: {
+  fontSize: 13,
+  color: "#333",
+  flex: 1,
+},
+linkText: {
+  color: "#007EFD",
+  fontWeight: "600",
+},
+
   userTypeText: {
     fontSize: 16,
     fontWeight: "500",
     color: "#888",
   },
   activeUserTypeText: {
-    color: "#fff",
+    color: "#000000",
   },
   form: {
     width: "100%",
@@ -478,6 +541,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   passwordInputContainer: {
+     color: "#000000",
     flexDirection: "row",
     backgroundColor: "#f5f5f5",
     borderRadius: 10,
@@ -487,6 +551,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     fontSize: 16,
+     color: "#000000",
   },
   eyeIcon: {
     padding: 10,
@@ -504,6 +569,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
+  phoneContainer: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#f5f5f5",
+  borderRadius: 10,
+  paddingHorizontal: 12,
+},
+countryCode: {
+  fontSize: 16,
+  marginRight: 8,
+  color: "#000",
+  fontWeight: "600",
+},
+phoneInput: {
+  flex: 1,
+  fontSize: 16,
+  paddingVertical: 12,
+},
+
   signinContainer: {
     flexDirection: "row",
     justifyContent: "center",

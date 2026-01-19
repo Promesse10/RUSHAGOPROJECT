@@ -1,14 +1,12 @@
 import { createAsyncThunk } from "@reduxjs/toolkit"
 import axiosInstance from "../../utils/axios"
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL
-
 export const sendVerificationCodeAction = createAsyncThunk(
   "verification/sendCode",
   async ({ email, userName }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post(
-        `${API_URL}/email/send-verification-code`,
+        "/email/send-verification-code",
         { email, userName }
       )
 
@@ -39,7 +37,7 @@ export const verifyEmailOtpAction = createAsyncThunk(
     try {
       console.log("Verifying OTP for email:", email, "OTP:", otp);
       const res = await axiosInstance.post(
-        `${API_URL}/auth/verify-otp`,
+        "/auth/verify-otp",
         { email, otp: otp.trim()
  }
       );

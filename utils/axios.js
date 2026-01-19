@@ -9,8 +9,8 @@ const axiosInstance = axios.create({
   baseURL: API_URL,
   timeout: 10000,
   headers: { "Content-Type": "application/json" },
-  withCredentials: true, // Enable credentials for CORS
 });
+
 
 axiosInstance.interceptors.request.use(
   async (config) => {

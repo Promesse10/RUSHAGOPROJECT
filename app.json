@@ -2,6 +2,7 @@
   "expo": {
     "name": "MUVCAR",
     "slug": "muvcar",
+    "icon": "./assets/icon.png",
     "platforms": [
       "ios",
       "android"
@@ -24,23 +25,26 @@
     "ios": {
       "bundleIdentifier": "com.muvar.app",
       "supportsTablet": true,
-     "runtimeVersion": "1.0.0"
-      ,
-      "newArchEnabled": true
+      "runtimeVersion": "1.0.0",
+      "newArchEnabled": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.muvar.app",
-      "versionCode": 1,
+       "versionCode": 2 ,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.png",
+        "foregroundImage": "./assets/icon.png",
+         "monochromeImage": "./assets/icon.png",
         "backgroundColor": "#FFFFFF"
+
       },
-     "runtimeVersion": "1.0.0"
-      ,
+      "runtimeVersion": "1.0.0",
       "newArchEnabled": true
     },
     "web": {
-      "favicon": "./assets/logo.png"
+      "favicon": "./assets/icon.png"
     },
     "extra": {
       "eas": {

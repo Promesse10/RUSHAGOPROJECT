@@ -1,7 +1,6 @@
 // redux/action/AuthRecoveryActions.js
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../../utils/axios";
-const API_URL = `${process.env.EXPO_PUBLIC_API_URL}/recovery`;
 
 // Send SMS OTP (now expects { name, phone })
 export const sendForgotEmailOtpAction = createAsyncThunk(
@@ -9,7 +8,7 @@ export const sendForgotEmailOtpAction = createAsyncThunk(
   async ({ phone }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post(
-        `${API_URL}/send-otp-for-email-update`,
+        "/recovery/send-otp-for-email-update",
         { phone }
       );
       return res.data;
@@ -26,7 +25,7 @@ export const verifyOtpAction = createAsyncThunk(
   async ({ phone, otp }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post(
-        `${API_URL}/verify-otp-reveal-or-update-email`,
+        "/recovery/verify-otp-reveal-or-update-email",
         { phone, otp }
       );
       return res.data;
@@ -44,7 +43,7 @@ export const verifyPasswordResetOtpAction = createAsyncThunk(
   async ({ email, otp }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post(
-        `${API_URL}/verify-password-reset-otp`,
+        "/recovery/verify-password-reset-otp",
         { email, otp }
       );
       return res.data;
@@ -62,7 +61,7 @@ export const verifyOtpAndUpdateEmailAction = createAsyncThunk(
   async ({ phone, otp, newEmail }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post(
-        `${API_URL}/verify-otp-reveal-or-update-email`,
+        "/recovery/verify-otp-reveal-or-update-email",
         { phone, otp, newEmail}
       );
       return res.data;
@@ -84,7 +83,7 @@ export const sendPasswordResetEmailAction = createAsyncThunk(
   async ({ email }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post(
-        `${API_URL}/send-password-reset-otp`,
+        "/recovery/send-password-reset-otp",
         { email }
       );
       return res.data;
@@ -103,7 +102,7 @@ export const resetPasswordAction = createAsyncThunk(
   async ({ email, otp, newPassword }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post(
-        `${API_URL}/reset-password-otp`,
+        "/recovery/reset-password-otp",
         { email, otp, newPassword }
       );
       return res.data;
@@ -120,7 +119,7 @@ export const sendRecoveryFormAction = createAsyncThunk(
   "authRecovery/sendRecoveryForm",
   async ({ email }, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.post(`${API_URL}/send-recovery-form`, { email });
+      const res = await axiosInstance.post("/recovery/send-recovery-form", { email });
       return res.data;
     } catch (err) {
       console.error("❌ sendRecoveryForm error:", err.response?.data || err.message);
