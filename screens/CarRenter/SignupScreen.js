@@ -1,6 +1,4 @@
-"use client"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import {
   View,
@@ -18,14 +16,107 @@ import {
   Dimensions,
   ActivityIndicator,
   Modal,
+  TouchableWithoutFeedback,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import PhoneInput from 'react-native-phone-number-input'
 import { signupAction } from "../../redux/action/signupAction"
 import {
   sendVerificationCodeAction,
  verifyEmailOtpAction,
 } from "../../redux/action/verificationAction"
+
+
+const privacyItems = [
+  {
+    id: 1,
+    title: "1. What information do we collect?",
+    content:
+      "We obtain information about you through the means discussed below when we provide the Services. Please note that we need certain types of information to provide the Services to you. If you do not provide us with such information, or if you ask us to delete that information, you may no longer be able to access or use certain Services.\n\nWhen you register for MUVCAR, we collect your name, email, phone number, and location. For car owners, we collect vehicle information including make, model, year, license plate, and photos. For renters, we collect driver's license information and payment details. We also collect usage data such as rental history, reviews, and communication between users.",
+  },
+  {
+    id: 2,
+    title: "2. We Use Your Information For?",
+    content:
+      "We use your information to facilitate car rentals between owners and renters, process payments, verify identities, provide customer support, improve our services, send notifications about bookings and updates, and ensure compliance with our terms of service. We may also use your information for marketing purposes, but you can opt out at any time. Location data helps us show nearby available vehicles and optimize the rental experience.",
+  },
+  {
+    id: 3,
+    title: "3. How Do We Protect?",
+    content:
+      "MUVCAR employs industry-standard security measures to protect your personal information. We use encryption for all data transmissions, secure payment processing, and regular security audits. Access to user data is restricted to authorized personnel only. We implement multi-factor authentication for account access and continuously monitor our systems for potential vulnerabilities. However, no method of transmission over the Internet or electronic storage is 100% secure, so we cannot guarantee absolute security.",
+  },
+  {
+    id: 4,
+    title: "4. Online Analytics",
+    content:
+      "We use analytics tools to understand how users interact with our app. This helps us improve the user experience and develop new features. These tools collect information such as how often you use the app, which features you use, and performance data. We may share anonymous, aggregated data with third-party analytics providers. You can opt out of certain analytics tracking through your device settings.",
+  },
+  {
+    id: 5,
+    title: "5. Children's Privacy",
+    content:
+      "MUVCAR services are not intended for use by children under the age of 18. We do not knowingly collect personal information from children under 18. If we become aware that we have collected personal information from a child under 18 without verification of parental consent, we will take steps to remove that information from our servers. If you believe we might have any information from or about a child under 18, please contact us immediately.",
+  },
+  {
+    id: 6,
+    title: "6. Sharing Your Information",
+    content:
+      "We share your information with other users as necessary to facilitate rentals (e.g., car owners receive renter information and vice versa). We may share data with service providers who help us operate our platform, including payment processors, identity verification services, and cloud hosting providers. We may also disclose information when required by law or to protect our rights or the safety of users. We do not sell your personal information to third parties.",
+  },
+  {
+    id: 7,
+    title: "7. Your Rights and Choices",
+    content:
+      "You have the right to access, correct, or delete your personal information. You can update most information directly through your account settings. You can also request a copy of your data or ask us to delete your account by contacting our support team. Depending on your location, you may have additional rights under applicable privacy laws, such as the right to data portability or the right to restrict processing.",
+  },
+]
+
+const faqItems = [
+  {
+    id: 1,
+    question: 'What is MUVCAR?',
+    answer: 'MUVCAR is a platform that connects car owners with people who want to rent cars. We provide an app where car owners can list their vehicles and renters can browse and contact owners directly to arrange car rentals. Our platform enables seamless and secure car rentals between individuals.',
+    category: 'general',
+  },
+  {
+    id: 2,
+    question: 'How do I get in contact with MUVCAR support?',
+    answer: 'You can contact MUVCAR support through our email at support@MUVCAR.com or by phone at +250780114522.',
+    category: 'general',
+  },
+  {
+    id: 3,
+    question: 'Do you offer discounts?',
+    answer: 'MUVCAR itself doesn\'t offer discounts, but car owners can set their own prices and may offer discounts directly to renters during their negotiations through the app\'s contact feature.',
+    category: 'general',
+  },
+  {
+    id: 4,
+    question: 'Is MUVCAR hiring?',
+    answer: 'MUVCAR is always looking for talented individuals to join our team. Check our careers page at MUVCAR.com/careers for current openings.',
+    category: 'general',
+  },
+  {
+    id: 5,
+    question: 'How do I list my car on MUVCAR?',
+    answer: 'To list your car, create an account as a car owner, verify your identity, add your car details including photos, set your pricing and availability, and publish your listing. Renters can then contact you through the app to arrange a rental.',
+    category: 'general',
+  },
+  {
+    id: 6,
+    question: 'How do I rent a car on MUVCAR?',
+    answer: 'To rent a car, create an account as a renter, verify your identity, browse available cars in your area, select a car you like, and click the contact button to reach the car owner via call through the app to negotiate and finalize the rental deal.',
+    category: 'general',
+  },
+  {
+    id: 7,
+    question: 'How do car owners and renters connect?',
+    answer: 'Through the MUVCAR app, renters can choose a car they wish to rent and click the contact button, which initiates a call to the car owner. Both parties can then discuss and agree on the rental terms directly.',
+    category: 'general',
+  },
+]
 
 
 const { height } = Dimensions.get("window")
@@ -55,8 +146,36 @@ const SignupScreen = ({ navigation }) => {
   const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector((state) => state.signup || {})
   const { isSending, error: verificationError } = useSelector((state) => state.verification || {})
 const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [fullPhone, setFullPhone] = useState('')
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
+  const [showCaptchaModal, setShowCaptchaModal] = useState(false)
+  const [captchaInput, setCaptchaInput] = useState('')
+  const [captchaText, setCaptchaText] = useState('')
+  const phoneInputRef = useRef(null)
 
   const dispatch = useDispatch()
+
+  const handleSignUp = () => {
+    try {
+      if (!validateForm()) return
+
+      // Randomly show captcha (30% chance)
+      if (Math.random() < 0.3) {
+        const words = ['human', 'robot', 'verify', 'check', 'confirm']
+        const randomWord = words[Math.floor(Math.random() * words.length)]
+        setCaptchaText(randomWord)
+        setCaptchaInput('')
+        setShowCaptchaModal(true)
+        return
+      }
+
+      proceedWithSignup()
+    } catch (error) {
+      console.error('Error in handleSignUp:', error)
+      Alert.alert('Error', 'An unexpected error occurred during sign up')
+    }
+  }
 
   // Countdown timer effect
   useEffect(() => {
@@ -81,12 +200,43 @@ const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   useEffect(() => {
     if (isSignupFailed && error) {
-      Alert.alert("Signup Failed", error)
+      Alert.alert("Signup Failed", typeof error === 'string' ? error : "An error occurred")
     }
   }, [isSignupFailed, error])
 
+  const validatePhone = (phone) => phone.length === 9 && /^\d+$/.test(phone)
+
   const validateEmail = (email) => /\S+@\S+\.\S+/.test(email)
-  const validatePhone = (phone) => /^\d{10}$/.test(phone)
+
+  const proceedWithSignup = () => {
+  dispatch(
+    sendVerificationCodeAction({
+      email: inputs.email,
+      userName: inputs.name,
+    })
+  )
+    .unwrap()
+   .then(() => {
+  setOtp("")
+  setShowVerificationModal(true)
+  setTimeLeft(300)
+  setCanResend(false)
+})
+
+    .catch((err) => {
+      Alert.alert("Error", err?.error || "Could not send verification code")
+    })
+}
+
+  const handleCaptchaSubmit = () => {
+    if (captchaInput.toLowerCase() === captchaText.toLowerCase()) {
+      setShowCaptchaModal(false)
+      proceedWithSignup()
+    } else {
+      Alert.alert("Error", "Incorrect captcha. Please try again.")
+      setCaptchaInput('')
+    }
+  }
 
   const validateForm = () => {
     let isValid = true
@@ -133,33 +283,15 @@ if (!acceptedTerms) {
     return isValid
   }
 
-  const handleSignUp = () => {
-  if (!validateForm()) return
-
-  dispatch(
-    sendVerificationCodeAction({
-      email: inputs.email,
-      userName: inputs.name,
-    })
-  )
-    .unwrap()
-   .then(() => {
-  setOtp("")
-  setShowVerificationModal(true)
-  setTimeLeft(300)
-  setCanResend(false)
-})
-
-    .catch((err) => {
-      Alert.alert("Error", err || "Could not send verification code")
-    })
-}
-
-
 const handleVerifyEmail = () => {
   if (otp.length !== OTP_LENGTH) {
     setErrors({ ...errors, verification: `Please enter the ${OTP_LENGTH}-digit code` })
 
+    return
+  }
+
+  if (!fullPhone || fullPhone.trim() === '') {
+    setErrors({ ...errors, verification: "Phone number is required" })
     return
   }
 
@@ -178,19 +310,25 @@ const handleVerifyEmail = () => {
           role: userType,
           name: inputs.name,
           email: inputs.email,
-          phone: inputs.phone,
+          phone: fullPhone,
           password: inputs.password,
         })
       ).unwrap()
     })
     .then(() => {
       setShowVerificationModal(false)
-      navigation.replace("LoginScreen")
+      console.log("Signup successful, navigating to LoginScreen")
+      try {
+        navigation.navigate("LoginScreen")
+      } catch (navError) {
+        console.error('Navigation error:', navError)
+        Alert.alert('Error', 'Failed to navigate after signup')
+      }
     })
     .catch((err) => {
       setErrors(prev => ({
   ...prev,
-  verification: err || "Invalid verification code",
+  verification: err?.error || "Invalid verification code",
 }));
 
     })
@@ -231,14 +369,100 @@ const handleVerifyEmail = () => {
   const toggleSecureConfirmTextEntry = () => setSecureConfirmTextEntry(!secureConfirmTextEntry)
   const handleSignIn = () => navigation.navigate("LoginScreen")
 
+  const renderTermsModal = () => (
+    <Modal visible={showTermsModal} animationType="slide" transparent>
+      <TouchableWithoutFeedback onPress={() => setShowTermsModal(false)}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.bottomSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Terms & Privacy Policy</Text>
+                <TouchableOpacity onPress={() => setShowTermsModal(false)}>
+                  <Ionicons name="close" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalContent} contentContainerStyle={{flexGrow: 1, paddingBottom: 20}} showsVerticalScrollIndicator={false}>
+                {privacyItems.map((item) => (
+                  <View key={item.id} style={styles.policyItemModal}>
+                    <Text style={styles.policyTitleModal}>{item.title}</Text>
+                    <Text style={styles.policyTextModal}>{item.content}</Text>
+                  </View>
+                ))}
+                <TouchableOpacity style={styles.confirmButton} onPress={() => { setAcceptedTerms(true); setShowTermsModal(false); }}>
+                  <Text style={styles.confirmButtonText}>I Agree</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  )
+
+  const renderPrivacyModal = () => (
+    <Modal visible={showPrivacyModal} animationType="slide" transparent>
+      <TouchableWithoutFeedback onPress={() => setShowPrivacyModal(false)}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.bottomSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>FAQ</Text>
+                <TouchableOpacity onPress={() => setShowPrivacyModal(false)}>
+                  <Ionicons name="close" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalContent} contentContainerStyle={{flexGrow: 1, paddingBottom: 20}} showsVerticalScrollIndicator={false}>
+                {faqItems.map((item) => (
+                  <View key={item.id} style={styles.policyItemModal}>
+                    <Text style={styles.policyTitleModal}>{item.question}</Text>
+                    <Text style={styles.policyTextModal}>{item.answer}</Text>
+                  </View>
+                ))}
+                <TouchableOpacity style={styles.confirmButton} onPress={() => setShowPrivacyModal(false)}>
+                  <Text style={styles.confirmButtonText}>Got it</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  )
+
+  const renderCaptchaModal = () => (
+    <Modal visible={showCaptchaModal} animationType="fade" transparent>
+      <View style={styles.captchaModalContainer}>
+        <View style={styles.captchaModalContent}>
+          <Text style={styles.captchaTitle}>Verify You're Human</Text>
+          <Text style={styles.captchaInstruction}>Please type the word below to continue:</Text>
+          <Text style={styles.captchaText}>{captchaText}</Text>
+          <TextInput
+            style={styles.captchaInput}
+            value={captchaInput}
+            onChangeText={setCaptchaInput}
+            placeholder="Type the word here"
+            autoCapitalize="none"
+          />
+          <View style={styles.captchaButtons}>
+            <TouchableOpacity style={styles.captchaButton} onPress={() => setShowCaptchaModal(false)}>
+              <Text style={styles.captchaButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.captchaButton, styles.captchaSubmitButton]} onPress={handleCaptchaSubmit}>
+              <Text style={styles.captchaSubmitButtonText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  )
+
   const renderForm = () => (
     <View style={styles.form}>
       <View style={styles.inputContainer}>
         <TextInput
         
           style={[styles.input, errors.name && styles.inputError]}
-          placeholder="
- full name"
+          placeholder="Full name"
           placeholderTextColor="#999"
           value={inputs.name}
           onChangeText={(value) => setInputs({ ...inputs, name: value })}
@@ -248,8 +472,7 @@ const handleVerifyEmail = () => {
       <View style={styles.inputContainer}>
         <TextInput
           style={[styles.input, errors.email && styles.inputError]}
-          placeholder="
- email"
+          placeholder="Email"
           placeholderTextColor="#999"
           value={inputs.email}
           onChangeText={(value) => setInputs({ ...inputs, email: value })}
@@ -258,21 +481,24 @@ const handleVerifyEmail = () => {
         {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
       </View>
     <View style={styles.inputContainer}>
-  <View style={styles.phoneContainer}>
-    <Text style={styles.countryCode}>+250</Text>
-    <TextInput
-      style={[styles.phoneInput, errors.phone && styles.inputError]}
-      placeholder="7XXXXXXXX"
-      keyboardType="phone-pad"
-      value={inputs.phone}
-      maxLength={9}
-      onChangeText={(value) =>
-        setInputs({ ...inputs, phone: value.replace(/\D/g, "") })
-      }
-    />
-  </View>
-  {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-</View>
+      <View style={[styles.phoneContainer, errors.phone && styles.inputError]}>
+        <PhoneInput
+          ref={phoneInputRef}
+          defaultCode="RW"
+          layout="first"
+          onChangeText={(text) => setInputs({ ...inputs, phone: text })}
+          onChangeFormattedText={(text) => setFullPhone(text)}
+          containerStyle={styles.phoneInputContainer}
+          textContainerStyle={styles.phoneTextContainer}
+          textInputProps={{
+            maxLength: 9,
+            placeholder: "Phone number",
+          }}
+          textInputStyle={styles.phoneInput}
+        />
+      </View>
+      {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+    </View>
 
       <View style={styles.inputContainer}>
         <View style={[styles.passwordInputContainer, errors.password && styles.inputError]}>
@@ -317,16 +543,16 @@ const handleVerifyEmail = () => {
     style={styles.checkbox}
     onPress={() => setAcceptedTerms(!acceptedTerms)}
   >
-    {acceptedTerms && <View style={styles.checkboxChecked} />}
+    {acceptedTerms && <Ionicons name="checkmark" size={16} color="#007EFD" />}
   </TouchableOpacity>
 
   <Text style={styles.termsText}>
     I agree to the{" "}
-    <Text style={styles.linkText} onPress={() => Alert.alert("Terms", "Muvcar Terms of Service")}>
+    <Text style={styles.linkText} onPress={() => setShowTermsModal(true)}>
       Terms
     </Text>{" "}
     and{" "}
-    <Text style={styles.linkText} onPress={() => Alert.alert("Privacy", "Muvcar Privacy Policy")}>
+    <Text style={styles.linkText} onPress={() => setShowPrivacyModal(true)}>
       Privacy Policy
     </Text>
   </Text>
@@ -334,7 +560,7 @@ const handleVerifyEmail = () => {
 
 {errors.terms && <Text style={styles.errorText}>{errors.terms}</Text>}
 
-      <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} disabled={isLoading || isSending}>
+      <TouchableOpacity style={[styles.signUpButton, !acceptedTerms && styles.disabledButton]} onPress={handleSignUp} disabled={isLoading || isSending || !acceptedTerms}>
         {isLoading || isSending ? (
           <ActivityIndicator color="#fff" size="small" />
         ) : (
@@ -424,6 +650,9 @@ const handleVerifyEmail = () => {
         </ScrollView>
       </KeyboardAvoidingView>
       {renderVerificationModal()}
+      {renderTermsModal()}
+      {renderPrivacyModal()}
+      {renderCaptchaModal()}
     </SafeAreaView>
   )
 }
@@ -496,20 +725,6 @@ checkbox: {
   justifyContent: "center",
   alignItems: "center",
 },
-checkboxChecked: {
-  width: 14,
-  height: 14,
-  backgroundColor: "#007EFD",
-},
-termsText: {
-  fontSize: 13,
-  color: "#333",
-  flex: 1,
-},
-linkText: {
-  color: "#007EFD",
-  fontWeight: "600",
-},
 
   userTypeText: {
     fontSize: 16,
@@ -517,19 +732,21 @@ linkText: {
     color: "#888",
   },
   activeUserTypeText: {
-    color: "#000000",
+    color: "#ffffff",
   },
   form: {
     width: "100%",
   },
   inputContainer: {
     marginBottom: 15,
+       color: "#000000",
   },
   input: {
     backgroundColor: "#f5f5f5",
     borderRadius: 10,
     padding: 12,
     fontSize: 16,
+       color: "#000000",
   },
   inputError: {
     borderWidth: 1,
@@ -564,29 +781,29 @@ linkText: {
     justifyContent: "center",
     marginBottom: 15,
   },
+  disabledButton: {
+    opacity: 0.5,
+  },
   signUpButtonText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "600",
   },
-  phoneContainer: {
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: "#f5f5f5",
-  borderRadius: 10,
-  paddingHorizontal: 12,
-},
-countryCode: {
-  fontSize: 16,
-  marginRight: 8,
-  color: "#000",
-  fontWeight: "600",
-},
-phoneInput: {
-  flex: 1,
-  fontSize: 16,
-  paddingVertical: 12,
-},
+  phoneTextContainer: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 10,
+  },
+  phoneInputContainer: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 10,
+   
+   
+  },
+  phoneInput: {
+    fontSize: 16,
+    color: "#000000",
+    
+  },
 
   signinContainer: {
     flexDirection: "row",
@@ -658,6 +875,7 @@ phoneInput: {
     width: "85%",
     maxWidth: 400,
   },
+
   emailIconContainer: {
     width: 80,
     height: 80,
@@ -743,6 +961,131 @@ phoneInput: {
     fontSize: 14,
     color: "#666",
     textAlign: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '85%',
+    minHeight: '60%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  policyItemModal: {
+    marginBottom: 25,
+  },
+  policyTitleModal: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#333',
+  },
+  policyTextModal: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#555',
+  },
+  confirmButton: {
+    backgroundColor: '#007EFD',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  confirmButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  captchaModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  captchaModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    width: '80%',
+    maxWidth: 400,
+  },
+  captchaTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  captchaInstruction: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  captchaText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#007EFD',
+    marginBottom: 20,
+    letterSpacing: 5,
+  },
+  captchaInput: {
+    width: '100%',
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: '#f9f9f9',
+  },
+  captchaButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  captchaButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 5,
+    backgroundColor: '#f0f0f0',
+  },
+  captchaButtonText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  captchaSubmitButton: {
+    backgroundColor: '#007EFD',
+  },
+  captchaSubmitButtonText: {
+    color: '#fff',
   },
 })
 

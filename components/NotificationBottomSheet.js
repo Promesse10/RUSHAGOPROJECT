@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useMemo } from "react"
 import {
   View,
   Text,
@@ -18,12 +18,13 @@ import {
   deleteNotification,
 } from "../redux/action/notificationActions"
 
-const { height } = Dimensions.get("window")
+const { width, height } = Dimensions.get("window")
 
 const NotificationBottomSheet = ({ visible, onClose }) => {
   const dispatch = useDispatch()
-  const notifications = useSelector((state) => state.notifications?.notifications || [])
-  const isLoading = useSelector((state) => state.notifications?.isLoading)
+  const notifications = useSelector((state) => state.notifications?.notifications ?? [])
+  const isLoading = useSelector((state) => state.notifications?.isLoading ?? false)
+  const filteredNotifications = notifications.filter(n => n && typeof n === 'object' && n._id)
   const [expandedId, setExpandedId] = useState(null)
 
   const handleMarkAsRead = (id) => {
@@ -76,6 +77,9 @@ const NotificationBottomSheet = ({ visible, onClose }) => {
   }
 
   const renderNotificationItem = ({ item }) => {
+    if (!item || typeof item !== 'object') {
+      return null
+    }
     const notificationId = item._id || item.id
     const isExpanded = expandedId === notificationId
     const isUnread = !item.isRead
@@ -164,7 +168,7 @@ const NotificationBottomSheet = ({ visible, onClose }) => {
     )
   }
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length
+  const unreadCount = filteredNotifications.filter((n) => !n.isRead).length
 
   return (
     <Modal
@@ -191,7 +195,7 @@ const NotificationBottomSheet = ({ visible, onClose }) => {
                   style={styles.headerButton}
                   onPress={handleMarkAllAsRead}
                 >
-                  <Ionicons name="checkmark-all" size={20} color="#007EFD" />
+                  <Ionicons name="checkmark-circle" size={20} color="#007EFD" />
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={styles.headerButton} onPress={onClose}>
@@ -206,16 +210,16 @@ const NotificationBottomSheet = ({ visible, onClose }) => {
               <ActivityIndicator size="large" color="#007EFD" />
               <Text style={styles.loadingText}>Loading notifications...</Text>
             </View>
-          ) : notifications.length === 0 ? (
+          ) : filteredNotifications.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="notifications-off" size={48} color="#CBD5E1" />
               <Text style={styles.emptyText}>No notifications yet</Text>
             </View>
           ) : (
             <FlatList
-              data={notifications}
+              data={filteredNotifications}
               renderItem={renderNotificationItem}
-              keyExtractor={(item) => item._id || item.id}
+              keyExtractor={(item) => item?._id || item?.id || Math.random().toString()}
               scrollEnabled
               style={styles.notificationsList}
             />
@@ -230,13 +234,14 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
+    justifyContent: "center",
+    alignItems: "center",
   },
   bottomSheet: {
     backgroundColor: "white",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: height * 0.85,
+    borderRadius: 24,
+    width: width * 0.9,
+    height: height * 0.8,
     paddingTop: 16,
   },
   header: {

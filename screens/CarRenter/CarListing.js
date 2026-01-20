@@ -27,7 +27,7 @@ const CarListing = ({ navigation, route }) => {
   const dispatch = useDispatch()
 
   // Get cars from Redux store
-  const { cars: reduxCars, isLoading, error } = useSelector((state) => state.cars)
+  const { cars: reduxCars, isLoading, error } = useSelector((state) => state.cars || {})
 
   const [searchText, setSearchText] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")

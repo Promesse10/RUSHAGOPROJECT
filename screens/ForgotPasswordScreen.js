@@ -49,7 +49,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
     otpVerified,
     fullName: storedname,
     selectedPhone: storedPhone,
-  } = useSelector((state) => state.authRecovery)
+  } = useSelector((state) => state.authRecovery || {})
 
   // Track recovery type: 'email' or 'password'
   const [recoveryType, setRecoveryType] = useState(null)

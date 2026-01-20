@@ -18,7 +18,7 @@ const initialState = {
 }
 
 const loginSlice = createSlice({
-  name: "loginState", // ✅ renamed slice name
+  name: "auth", // ✅ renamed slice name
   initialState,
   reducers: {
     clearLoginState: (state) => {

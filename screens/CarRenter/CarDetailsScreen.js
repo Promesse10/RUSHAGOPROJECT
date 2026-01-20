@@ -20,10 +20,8 @@ import {
   StatusBar,
 } from "react-native"
 // Use mock for react-native-maps to avoid native resolution issues during bundling
-import MapsMock from "../../mocks/react-native-maps"
-const MapView = MapsMock.MapView || MapsMock.default?.MapView || (() => null)
-const Marker = MapsMock.Marker || MapsMock.default?.Marker || (() => null)
-const Polyline = MapsMock.Polyline || MapsMock.default?.Polyline || (() => null)
+// Use real react-native-maps for native platforms
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import Icon from "react-native-vector-icons/Ionicons"
 import I18n from "../../utils/i18n"
 import { rateUserAction,getOwnerRatingAction } from "../../redux/action/UserActions"
@@ -199,10 +197,10 @@ useEffect(() => {
 const { ratingCheck } = useSelector(state => state.user)
 
 useEffect(() => {
-  if (ratingCheck?.canRate) {
-    setShowReviewModal(true)
-
-  }
+  // Removed: No longer show review modal based on ratingCheck on load
+  // if (ratingCheck?.canRate) {
+  //   setShowReviewModal(true)
+  // }
 }, [ratingCheck])
 
   useEffect(() => {
@@ -438,12 +436,14 @@ const submitRating = async (stars) => {
               Linking.openURL(`sms:${fullPhone}`).catch(() => {
                 Alert.alert("Error", "Unable to send SMS")
               })
+              setTimeout(() => setShowReviewModal(true), 2000)
               break
             case "whatsapp":
               const whatsappUrl = `https://wa.me/${fullPhone.replace("+", "")}?text=Hi, I'm interested in your ${normalizedCar.make} ${normalizedCar.model}`
               Linking.openURL(whatsappUrl).catch(() => {
                 Alert.alert("Error", "WhatsApp not available")
               })
+              setTimeout(() => setShowReviewModal(true), 2000)
               break
           }
         },

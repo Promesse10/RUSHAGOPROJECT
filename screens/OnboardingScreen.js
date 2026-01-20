@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   },
   loadingLogo: {
     width: width * 0.9,
-    height: height * 0.6,
+    height: height * 0.4,
   },
   contentContainer: {
     flex: 1,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: height * 0.65,
+    height: height * 0.7,
     backgroundColor: BLUE,
     zIndex: 1,
   },
@@ -274,16 +274,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: height * 0.75,
+    height: height * 0.8,
     zIndex: 1,
   },
 
   heroContainer: {
     position: "absolute",
-    top: height * 0.10,
+    top: height * 0.05,
     left: 0,
     right: 0,
-    height: height * 0.7,
+    height: height * 0.8,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 2,
@@ -291,10 +291,10 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     width: width * 1.0,
-    height: height * 1.7,
+    height: height * 1.0,
     
-    borderBottomLeftRadius: width * 0.3,
-    borderBottomRightRadius: width * 0.3,
+    borderBottomLeftRadius: width * 0.2,
+    borderBottomRightRadius: width * 0.2,
     backgroundColor: BLUE,
   },
   contentSection: {
@@ -302,10 +302,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: height * 0.25,
+    height: height * 0.3,
     zIndex: 3,
     justifyContent: "center",
-    paddingBottom: 40,
+    paddingBottom: 50,
   },
   captionText: {
     textAlign: "center",

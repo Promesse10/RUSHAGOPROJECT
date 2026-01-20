@@ -5,10 +5,12 @@ export const sendVerificationCodeAction = createAsyncThunk(
   "verification/sendCode",
   async ({ email, userName }, { rejectWithValue }) => {
     try {
+      console.log("Sending verification code to:", email);
       const res = await axiosInstance.post(
         "/email/send-verification-code",
         { email, userName }
-      )
+      );
+      console.log("Send verification response:", res.data);
 
       if (res.data.success) {
         return {
@@ -22,6 +24,7 @@ export const sendVerificationCodeAction = createAsyncThunk(
         retryAfter: res.data.retryAfter || null,
       })
     } catch (err) {
+      console.log("Send verification error:", err);
       const data = err.response?.data
 
       return rejectWithValue({

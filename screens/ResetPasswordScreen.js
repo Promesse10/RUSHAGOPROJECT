@@ -10,7 +10,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const dispatch = useDispatch()
-  const { isLoading, passwordReset, error } = useSelector((state) => state.authRecovery)
+  const { isLoading, passwordReset, error } = useSelector((state) => state.authRecovery || {})
 
   // ✅ Handle deep links with ?token=...
   useEffect(() => {

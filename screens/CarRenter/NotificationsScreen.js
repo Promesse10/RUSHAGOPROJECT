@@ -25,10 +25,12 @@ const NotificationChatBot = () => {
   const dispatch = useDispatch()
 
   // Redux state
-  const notifications = useSelector((state) => state.notifications?.notifications) || []
-  const unreadCount = useSelector((state) => state.notifications?.unreadCount) || 0
-  const isLoading = useSelector((state) => state.notifications?.isLoading) || false
-  const error = useSelector((state) => state.notifications?.error) || null
+  const { notifications, unreadCount, isLoading, error } = useSelector((state) => ({
+    notifications: (state.notifications?.notifications || []).filter(n => n),
+    unreadCount: state.notifications?.unreadCount ?? 0,
+    isLoading: state.notifications?.isLoading ?? false,
+    error: state.notifications?.error ?? null,
+  }))
   const [initialLoad, setInitialLoad] = useState(true);
 
   
@@ -66,16 +68,18 @@ const NotificationChatBot = () => {
 
   // Handle notification press - open modal and mark all as read
   const handleNotificationPress = useCallback(() => {
+    console.log("Opening notification modal, unread count:", unreadCount)
     setShowModal(true)
 
     // Mark all notifications as read when modal is opened
     if (unreadCount > 0) {
+      console.log("Marking unread notifications as read")
       notifications
         .filter((n) => !n.isRead)
         .forEach((n) => dispatch(markNotificationAsRead(n)))
     }
     
-  }, [dispatch, unreadCount])
+  }, [dispatch, unreadCount, notifications])
 
   // Handle refresh
   const onRefresh = useCallback(() => {
@@ -87,6 +91,7 @@ const NotificationChatBot = () => {
 // 🔁 Polling for new notifications every 5 seconds
 useEffect(() => {
   const fetchData = async () => {
+    console.log("Polling: Fetching notifications...")
     await dispatch(fetchNotifications());
     if (initialLoad) setInitialLoad(false);
   };
@@ -381,8 +386,8 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: "80%",
-    minHeight: "50%",
+    maxHeight: "90%",
+    minHeight: "60%",
   },
   modalHeader: {
     flexDirection: "row",

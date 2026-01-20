@@ -22,12 +22,8 @@ import {
   PermissionsAndroid,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-// Use project mock to avoid native dependency resolution during bundling
-import MapsMock from "../../mocks/react-native-maps"
-const MapView = MapsMock.MapView || MapsMock.default?.MapView || (() => null)
-const Marker = MapsMock.Marker || MapsMock.default?.Marker || (() => null)
-const Polyline = MapsMock.Polyline || MapsMock.default?.Polyline || (() => null)
-const PROVIDER_GOOGLE = MapsMock.PROVIDER_GOOGLE || MapsMock.default?.PROVIDER_GOOGLE || null
+// Use real react-native-maps for native platforms
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import Icon from "react-native-vector-icons/Ionicons"
 import * as Location from "expo-location"
 import { useDispatch, useSelector } from "react-redux"
@@ -215,6 +211,7 @@ const HomeScreen = ({ navigation }) => {
   const [currentAdIndex, setCurrentAdIndex] = useState(0)
   const [showNoResultsModal, setShowNoResultsModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const { t, i18n } = useTranslation();
 const unreadCount = Array.isArray(notifications)
   ? notifications.filter(n => !n.isRead).length
@@ -222,17 +219,10 @@ const unreadCount = Array.isArray(notifications)
 
 
 
-const [showNotifications, setShowNotifications] = useState(false)
-const [expandedNotifications, setExpandedNotifications] = useState({})
-const notifications = useSelector(
-  (state) => state.notifications?.notifications || []
-)
-const isLoading = useSelector(
-  (state) => state.notifications?.isLoading
-)
-const error = useSelector(
-  (state) => state.notifications?.error
-)
+// Removed duplicate notification state - using NotificationBottomSheet component instead
+const { notifications } = useSelector((state) => ({
+  notifications: state.notifications?.notifications ?? [],
+}))
 
 
 const selectedPinAnim = useRef(new Animated.Value(0)).current
@@ -300,10 +290,15 @@ const [selectedCarId, setSelectedCarId] = useState(null)
   )
 
 const [showNotificationBottomSheet, setShowNotificationBottomSheet] = useState(false)
-    // Fetch notifications on mount
-    useEffect(() => {
+  
+  // Fetch notifications on mount - only once when component mounts
+  useEffect(() => {
+    const timer = setTimeout(() => {
       dispatch(fetchNotifications())
-    }, [dispatch])
+    }, 500) // Small delay to avoid race conditions
+    
+    return () => clearTimeout(timer)
+  }, []) // Empty dependency array - only run once on mount
   const advertisingImages = useMemo(() => {
     if (carBanners.length > 0) {
       const validImages = carBanners.map((car) => car.images?.[0] || car.image || car.thumbnail).filter(Boolean)
@@ -463,36 +458,9 @@ useEffect(() => {
 
     return found?.logo || null
   }
-const handleNotificationPress = (notificationId, isRead) => {
-  setExpandedNotifications(prev => ({
-    ...prev,
-    [notificationId]: !prev[notificationId],
-  }));
-
-  if (!isRead) {
-    dispatch(markNotificationAsRead(notificationId));
-  }
-};
-
-
-const handleNotificationDelete = (notificationId) => {
-  Alert.alert(
-    "Delete Notification",
-    "Are you sure you want to delete this notification?",
-    [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => dispatch(deleteNotification(notificationId)),
-      },
-    ],
-  )
-}
-
-const closeNotificationModal = () => {
-  setShowNotifications(false)
-  setExpandedNotifications({})
+// Removed custom notification handlers - now handled by NotificationBottomSheet component
+const closeNotificationBottomSheet = () => {
+  setShowNotificationBottomSheet(false)
 }
 
   // Helpers: map fitting
@@ -1186,12 +1154,6 @@ Alert.alert(
   {unreadCount > 0 && <View style={styles.notificationDot} />}
 </TouchableOpacity>
         {/* Notification Bottom Sheet */}
-        <NotificationBottomSheet
-          visible={showNotificationBottomSheet}
-          onClose={() => setShowNotificationBottomSheet(false)}
-        />
-
-
 
             </View>
           </View>
@@ -1516,103 +1478,11 @@ Alert.alert(
             <Icon name="settings" size={28} color="#007EFD" />
           </TouchableOpacity>
         </View>
-<Modal
-              visible={showNotifications}
-              transparent={true}
-              animationType="fade"
-              onRequestClose={closeNotificationModal}
-            >
-              <TouchableWithoutFeedback onPress={closeNotificationModal}>
-                <View style={styles.modalOverlay}>
-                  <TouchableWithoutFeedback onPress={() => {}}>
-                    <View style={styles.notificationsModal}>
-                      <View style={styles.notificationsHeader}>
-                        <Text style={styles.notificationsTitle}>{t("notifications", "Amakuru")}</Text>
-                        <TouchableOpacity onPress={closeNotificationModal} style={styles.closeButton}>
-                          <Ionicons name="close-outline" size={24} color="#64748B" />
-                        </TouchableOpacity>
-                      </View>
-      
-                      <ScrollView style={styles.notificationsList} showsVerticalScrollIndicator={false}>
-                      {notifications.map((notification) => (
-        <View key={notification._id || notification.id} style={styles.notificationItemContainer}>
-          <TouchableOpacity
-            style={styles.notificationItem}
-            onPress={() => handleNotificationPress(notification._id, item.isRead
-)}
-            onLongPress={() => handleNotificationDelete(notification._id)}
-          >
-            <View style={styles.notificationMainContent}>
-              {/* ✅ Show custom icon if provided */}
-              {notification.icon ? (
-                <Image
-                  source={{ uri: notification.icon }}
-                  style={styles.rushGoIcon}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.notificationIconContainer,
-                    { backgroundColor: `${getNotificationColor(notification.type)}15` },
-                  ]}
-                >
-                  <Ionicons
-                    name={getNotificationIcon(notification.type)}
-                    size={20}
-                    color={getNotificationColor(notification.type)}
-                  />
-                </View>
-              )}
-      
-              <View style={styles.notificationContent}>
-                <Text
-                  style={[
-                    styles.notificationTitle,
-                    { color: item.isRead
- ? "#64748B" : "#1E293B" },
-                    !item.isRead
- && styles.unreadNotificationTitle,
-                  ]}
-                >
-                  {notification.title}
-                </Text>
-      
-                <Text
-                  style={styles.notificationMessage}
-                  numberOfLines={expandedNotifications[notification._id] ? undefined : 2}
-                >
-                  {notification.message}
-                </Text>
-      
-                <Text style={styles.notificationTime}>
-                  {new Date(notification.createdAt).toLocaleString()}
-                </Text>
-              </View>
-      
-              <View style={styles.notificationActions}>
-                {!item.isRead
- && <View style={styles.unreadIndicator} />}
-                <Ionicons
-                  name={
-                    expandedNotifications[notification._id]
-                      ? "chevron-up-outline"
-                      : "chevron-down-outline"
-                  }
-                  size={16}
-                  color="#9CA3AF"
-                />
-              </View>
-            </View>
-          </TouchableOpacity>
-        </View>
-      ))}
-                      </ScrollView>
-                    </View>
-                  </TouchableWithoutFeedback>
-                </View>
-              </TouchableWithoutFeedback>
-            </Modal>
+{/* Notification Bottom Sheet */}
+      <NotificationBottomSheet
+        visible={showNotificationBottomSheet}
+        onClose={closeNotificationBottomSheet}
+      />
       
         {/* Language Dropdown */}
         <Modal
@@ -1646,7 +1516,11 @@ Alert.alert(
           cars={actualApprovedCars}
         />
 
-        {/* Notification ChatBot */}
+        {/* Notification Bottom Sheet */}
+        <NotificationBottomSheet
+          visible={showNotificationBottomSheet}
+          onClose={closeNotificationBottomSheet}
+        />
        
         {/* Settings Modal */}
         <SettingsModal
@@ -2413,6 +2287,69 @@ fabLabel: {
   skeletonCircle: {
     backgroundColor: "rgba(255, 255, 255, 0.3)",
     borderRadius: 50,
+  },
+  // Notification styles
+  notificationsList: {
+    maxHeight: height * 0.6,
+  },
+  notificationItemContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  notificationItem: {
+    padding: 16,
+  },
+  unreadNotificationItem: {
+    backgroundColor: "#F0F9FF",
+  },
+  notificationMainContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  notificationIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  rushGoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  notificationContent: {
+    flex: 1,
+  },
+  notificationTitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  unreadNotificationTitle: {
+    fontWeight: "600",
+  },
+  notificationMessage: {
+    fontSize: 14,
+    marginBottom: 4,
+    color: "#64748B",
+  },
+  notificationTime: {
+    fontSize: 12,
+    color: "#9CA3AF",
+  },
+  notificationActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  unreadIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#007EFD",
   },
 })
 

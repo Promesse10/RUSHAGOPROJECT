@@ -27,7 +27,7 @@ const { width, height } = Dimensions.get("window")
 const LoginScreen = ({ navigation , route  }) => {
    const recoveredEmail = route?.params?.recoveredEmail
   const dispatch = useDispatch()
-  const { isLoading, isLoginSuccess, isLoginFailed, error, user } = useSelector((state) => state.auth)
+  const { isLoading, isLoginSuccess, isLoginFailed, error, user } = useSelector((state) => state.auth || {})
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   userTypeButton: { flex: 1, justifyContent: "center", alignItems: "center" },
   activeUserTypeButton: { backgroundColor: "#007EFD" },
   userTypeText: { fontSize: 16, fontWeight: "500", color: "#888" },
-  activeUserTypeText: { color: "#030303" },
+  activeUserTypeText: { color: "#ffffff" },
   form: { width: "100%" },
   inputContainer: { marginBottom: 15 },
   input: { backgroundColor: "#f5f5f5", borderRadius: 10, padding: 12, fontSize: 16 },

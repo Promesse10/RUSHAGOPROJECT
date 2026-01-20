@@ -1,4 +1,5 @@
 import axios from "axios";
+import axiosInstance from "../../utils/axios";
 import {
   fetchStart,
   fetchSuccess,
@@ -11,50 +12,43 @@ import {
 const API_URL = `${process.env.EXPO_PUBLIC_API_URL}/notifications`;
 
 // ✅ Fetch all notifications
-export const fetchNotifications = () => async (dispatch, getState) => {
+export const fetchNotifications = () => async (dispatch) => {
   try {
     dispatch(fetchStart());
 
-    const token = getState().auth?.token;
-    const { data } = await axios.get(API_URL, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await axiosInstance.get("/notifications");
 
-    dispatch(fetchSuccess(data));
+    // 🔥 FIX: backend returns ARRAY directly
+    let list = [];
+
+    if (Array.isArray(response.data)) {
+      list = response.data;
+    } else if (Array.isArray(response.data?.notifications)) {
+      list = response.data.notifications;
+    } else if (Array.isArray(response.data?.data)) {
+      list = response.data.data;
+    }
+
+    dispatch(fetchSuccess(list));
   } catch (err) {
     dispatch(fetchFail(err.response?.data?.message || err.message));
   }
 };
 
+
 // ✅ Mark single notification as read (FIXED)
-export const markNotificationAsRead = (id) => async (dispatch, getState) => {
+export const markNotificationAsRead = (notification) => async (dispatch) => {
+  const id = notification?._id || notification?.id || notification;
+
+  if (!id) return;
+
   try {
-    // Handle both _id and id formats
-    const notificationId = id || null
-    
-    if (!notificationId) {
-      console.error("❌ No notification ID provided")
-      return
-    }
-
-    console.log("📤 Marking notification as read:", notificationId)
-
-    const token = getState().auth?.token;
-
-    const response = await axios.patch(
-      `${API_URL}/${notificationId}/read`,
-      {}, 
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-
-    console.log("✅ Notification marked as read:", response.data)
-    dispatch(markRead(notificationId))
-
+    await axiosInstance.patch(`/notifications/${id}/read`, {});
   } catch (err) {
-    console.error("❌ Mark notification as read failed:", err?.response?.data || err.message)
+    console.error("Mark as read failed:", err.message);
   }
+
+  dispatch(markRead(id));
 };
 
 
@@ -69,9 +63,8 @@ export const markAllNotificationsAsRead = () => async (dispatch, getState) => {
     
     // Mark each unread notification as read
     for (const notification of unreadNotifications) {
-      await axios.patch(
-        `${API_URL}/${(notification._id || notification.id)}/read`,
-
+      await axiosInstance.patch(
+        `/notifications/${(notification._id || notification.id)}/read`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -88,7 +81,7 @@ export const markAllNotificationsAsRead = () => async (dispatch, getState) => {
 export const deleteNotification = (id) => async (dispatch, getState) => {
   try {
     const token = getState().auth?.token;
-    await axios.delete(`${API_URL}/${id}`, {
+    await axiosInstance.delete(`/notifications/${id}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

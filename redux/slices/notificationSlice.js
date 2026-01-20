@@ -7,6 +7,7 @@ const notificationSlice = createSlice({
     unreadCount: 0,
     isLoading: false,
     error: null,
+    currentUserId: null,
   },
   reducers: {
     fetchStart: (state) => {
@@ -15,13 +16,36 @@ const notificationSlice = createSlice({
     },
  fetchSuccess: (state, action) => {
   state.isLoading = false;
+  state.error = null;
 
-  // ✅ ALWAYS force array
-  const list = Array.isArray(action.payload) ? action.payload : [];
+  const data = action.payload || [];
+  const list = Array.isArray(data) ? data : [];
 
-  state.notifications = list.map(n => ({ ...n, id: n._id || n.id }));
-  state.unreadCount = list.filter((n) => !n.isRead).length;
+  state.notifications = list
+    .filter(n => n && (n._id || n.id))
+    .map(n => {
+      const id = n._id || n.id;
+
+      // 🔥 IMPORTANT: backend readBy is per-user
+      const currentUserId =
+        state.currentUserId || null; // we’ll inject this
+
+      const isReadForUser = currentUserId
+        ? Array.isArray(n.readBy) &&
+          n.readBy.some(r => String(r) === String(currentUserId))
+        : Boolean(n.isRead);
+
+      return {
+        ...n,
+        id,
+        _id: id,
+        isRead: isReadForUser
+      };
+    });
+
+  state.unreadCount = state.notifications.filter(n => !n.isRead).length;
 },
+
 
     fetchFail: (state, action) => {
       state.isLoading = false;

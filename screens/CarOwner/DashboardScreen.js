@@ -49,9 +49,11 @@ const DashboardScreen = () => {
     error: dashboardError,
   } = useSelector((state) => state.dashboard || {})
 
-  const notifications = useSelector((state) => state.notifications?.notifications || [])
-  const isLoadingNotifications = useSelector((state) => state.notifications?.isLoading)
-  const errorNotifications = useSelector((state) => state.notifications?.error)
+  const { notifications, isLoadingNotifications, errorNotifications } = useSelector((state) => ({
+    notifications: state.notifications?.notifications ?? [],
+    isLoadingNotifications: state.notifications?.isLoading ?? false,
+    errorNotifications: state.notifications?.error ?? null,
+  }))
 
   const [stats, setStats] = useState([])
   const [activities, setActivities] = useState([])
@@ -62,7 +64,21 @@ const DashboardScreen = () => {
   const scaleAnim = useRef(new Animated.Value(1)).current
   const textFadeAnim = useRef(new Animated.Value(1)).current
 
-  const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.isRead).length : 0
+  const unreadCount = Array.isArray(notifications) ? notifications.filter(n => n && !n.isRead).length : 0
+
+  // Fetch notifications on mount
+  useEffect(() => {
+    dispatch(fetchNotifications())
+  }, [dispatch])
+
+  // Polling for notifications
+  useEffect(() => {
+    const interval = setInterval(() => {
+      dispatch(fetchNotifications())
+    }, 30000) // every 30 seconds
+
+    return () => clearInterval(interval)
+  }, [dispatch])
 
   const carBrands = [
     // Japanese Brands
@@ -728,7 +744,7 @@ const handleNotificationDelete = (notificationId) => {
   <View key={notification._id || notification.id} style={styles.notificationItemContainer}>
     <TouchableOpacity
       style={styles.notificationItem}
-      onPress={() => handleNotificationPress(notification._id, item.isRead
+      onPress={() => handleNotificationPress(notification._id, notification.isRead
 )}
       onLongPress={() => handleNotificationDelete(notification._id)}
     >
@@ -759,9 +775,9 @@ const handleNotificationDelete = (notificationId) => {
           <Text
             style={[
               styles.notificationTitle,
-              { color: item.isRead
+              { color: notification.isRead
  ? "#64748B" : "#1E293B" },
-              !item.isRead
+              !notification.isRead
  && styles.unreadNotificationTitle,
             ]}
           >
@@ -781,7 +797,7 @@ const handleNotificationDelete = (notificationId) => {
         </View>
 
         <View style={styles.notificationActions}>
-          {!item.isRead
+          {!notification.isRead
  && <View style={styles.unreadIndicator} />}
           <Ionicons
             name={
