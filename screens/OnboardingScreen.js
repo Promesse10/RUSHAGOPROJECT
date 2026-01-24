@@ -10,8 +10,10 @@ import {
   FlatList,
   TouchableOpacity,
   SafeAreaView,
+  Modal,
 } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import I18n from "../utils/i18n"
 
 const { width, height } = Dimensions.get("window")
 const ONBOARDING_KEY = "hasSeenOnboarding"
@@ -20,6 +22,7 @@ const OnboardingScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [isVisible, setIsVisible] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [showLanguageModal, setShowLanguageModal] = useState(false)
   const listRef = useRef(null)
 
   const fadeAnimation = useRef(new Animated.Value(0)).current
@@ -34,22 +37,22 @@ const OnboardingScreen = ({ navigation }) => {
   const slides = [
     {
       id: "group-21",
-      title: "Find your perfect car",
-      cta: "Next",
+      title: I18n.t("onboarding1"),
+      cta: I18n.t("next"),
        image: { uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1765010340/e2652669-ac1e-40fb-a829-13a1319f04f2_lentwk_1_coowtb.png" },
       onPress: (idx) => listRef.current?.scrollToIndex({ index: idx + 1, animated: true }),
     },
     {
       id: "group-20",
-      title: "Get the keys\nstart your trip",
-      cta: "Continue",
+      title: I18n.t("onboarding2"),
+      cta: I18n.t("continue"),
       image: { uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1765010340/ae94073a-f8c7-4a28-a618-f810f74ccc26_xkrf6b_1_j0jmqi.png" },
       onPress: (idx) => listRef.current?.scrollToIndex({ index: idx + 1, animated: true }),
     },
     {
       id: "group-19",
-      title: "See cars near you, rent with ease",
-      cta: "Get Started",
+      title: I18n.t("onboarding3"),
+      cta: I18n.t("getStarted"),
       image: { uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1765010344/0ca8425d-afff-4dac-93d9-c868ffdbfaf1_srpxvy_1_lgjbaj.png" },
       onPress: async () => {
   await AsyncStorage.setItem(ONBOARDING_KEY, "true")
@@ -58,10 +61,27 @@ const OnboardingScreen = ({ navigation }) => {
     },
   ]
 
-  useEffect(() => {
-  const checkOnboarding = async () => {
-    const hasSeen = await AsyncStorage.getItem(ONBOARDING_KEY)
+  const selectLanguage = async (language) => {
+    I18n.changeLanguage(language)
+    await AsyncStorage.setItem("userLanguage", language)
+    setShowLanguageModal(false)
+    setIsVisible(true)
+    Animated.sequence([
+      Animated.timing(fadeAnimation, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnimation, {
+        toValue: 1,
+        duration: 500,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }
 
+  useEffect(() => {
     const animationSequence = Animated.sequence([
       Animated.timing(carPosition, {
         toValue: 0,
@@ -91,38 +111,15 @@ const OnboardingScreen = ({ navigation }) => {
     animationSequence.start(() => {
       setTimeout(() => {
         setIsLoading(false)
-
-        if (hasSeen) {
-          // ✅ Skip onboarding
-          navigation.replace("AuthScreen")
-        } else {
-          // ✅ First time → show onboarding
-          setIsVisible(true)
-          Animated.sequence([
-            Animated.timing(fadeAnimation, {
-              toValue: 1,
-              duration: 800,
-              useNativeDriver: true,
-            }),
-            Animated.timing(slideAnimation, {
-              toValue: 1,
-              duration: 500,
-              easing: Easing.out(Easing.quad),
-              useNativeDriver: true,
-            }),
-          ]).start()
-        }
+        setShowLanguageModal(true)
       }, 200)
     })
-  }
 
-  checkOnboarding()
-
-  return () => {
-    carPosition.setValue(-width)
-    carScale.setValue(1)
-  }
-}, [])
+    return () => {
+      carPosition.setValue(-width)
+      carScale.setValue(1)
+    }
+  }, [])
 
   const renderLoadingScreen = () => {
     return (
@@ -154,7 +151,7 @@ const OnboardingScreen = ({ navigation }) => {
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
             activeOpacity={0.7}
           >
-            <Text style={styles.skipText}>Skip</Text>
+            <Text style={styles.skipText}>{I18n.t("skip")}</Text>
           </TouchableOpacity>
         </SafeAreaView>
 
@@ -214,7 +211,52 @@ const OnboardingScreen = ({ navigation }) => {
     )
   }
 
-  return <View style={styles.container}>{isLoading ? renderLoadingScreen() : renderMainContent()}</View>
+  return (
+    <View style={styles.container}>
+      {isLoading ? renderLoadingScreen() : renderMainContent()}
+      <LanguageModal visible={showLanguageModal} onSelectLanguage={selectLanguage} />
+    </View>
+  )
+}
+
+const LanguageModal = ({ visible, onSelectLanguage }) => {
+  const languages = [
+    {
+      code: "rw",
+      name: "kinyarwanda",
+      flag: "https://cdn4.iconfinder.com/data/icons/world-flags-circular/1000/Flag_of_Rwanda_-_Circle-512.png",
+    },
+    {
+      code: "en",
+      name: "english",
+      flag: "https://images.vexels.com/media/users/3/163966/isolated/preview/6ecbb5ec8c121c0699c9b9179d6b24aa-england-flag-language-icon-circle.png",
+    },
+    {
+      code: "fr",
+      name: "french",
+      flag: "https://cdn-icons-png.flaticon.com/512/197/197560.png",
+    },
+  ]
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={styles.languageModalOverlay}>
+        <View style={styles.languageModalContainer}>
+          <Text style={styles.languageModalTitle}>{I18n.t("chooseLanguage")}</Text>
+          {languages.map((lang) => (
+            <TouchableOpacity
+              key={lang.code}
+              style={styles.languageOption}
+              onPress={() => onSelectLanguage(lang.code)}
+            >
+              <Image source={{ uri: lang.flag }} style={styles.languageFlag} />
+              <Text style={styles.languageText}>{I18n.t(lang.name)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    </Modal>
+  )
 }
 
 const BLUE = "#007EFD"
@@ -265,7 +307,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: height * 0.7,
+    height: height * 0.35,
     backgroundColor: BLUE,
     zIndex: 1,
   },
@@ -274,24 +316,24 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: height * 0.8,
+    height: height * 0.35,
     zIndex: 1,
   },
-
+  curvedBlueSection: {
+    // Placeholder for curved section if needed
+  },
   heroContainer: {
     position: "absolute",
-    top: height * 0.05,
+    top: 0,
     left: 0,
     right: 0,
-    height: height * 0.8,
-    justifyContent: "center",
-    alignItems: "center",
+    bottom: height * 0.35,
     zIndex: 2,
-    overflow: "hidden",
   },
+
   heroImage: {
     width: width * 1.0,
-    height: height * 1.0,
+    height: height * 0.74,
     
     borderBottomLeftRadius: width * 0.2,
     borderBottomRightRadius: width * 0.2,
@@ -302,10 +344,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: height * 0.3,
+    height: height * 0.35,
     zIndex: 3,
     justifyContent: "center",
-    paddingBottom: 50,
+    paddingBottom: 40,
   },
   captionText: {
     textAlign: "center",
@@ -332,6 +374,45 @@ const styles = StyleSheet.create({
   primaryCtaText: {
     color: BLUE,
     fontSize: 18,
+    fontWeight: "600",
+  },
+  languageModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  languageModalContainer: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 30,
+    width: width * 0.8,
+    alignItems: "center",
+  },
+  languageModalTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 30,
+  },
+  languageOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: "#f8f9fa",
+    marginBottom: 10,
+    width: "100%",
+  },
+  languageFlag: {
+    width: 30,
+    height: 30,
+    marginRight: 15,
+  },
+  languageText: {
+    fontSize: 18,
+    color: "#333",
     fontWeight: "600",
   },
 })

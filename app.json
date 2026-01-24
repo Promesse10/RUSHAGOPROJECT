@@ -2,6 +2,7 @@
   "expo": {
     "name": "MUVCAR",
     "slug": "muvcar",
+    "schema": "muvar",
     "icon": "./assets/icon.png",
     "platforms": [
       "ios",
@@ -21,13 +22,7 @@
           }
         }
       ],
-      [
-        "react-native-maps",
-        {
-          "ios": "GoogleMaps",
-          "android": "GoogleMaps"
-        }
-      ]
+      "expo-web-browser"
     ],
     "ios": {
       "bundleIdentifier": "com.muvar.app",
@@ -45,12 +40,11 @@
     },
     "android": {
       "package": "com.muvar.app",
-       "versionCode": 2 ,
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
-         "monochromeImage": "./assets/icon.png",
+        "monochromeImage": "./assets/icon.png",
         "backgroundColor": "#FFFFFF"
-
       },
       "runtimeVersion": "1.0.0",
       "newArchEnabled": true,
@@ -64,6 +58,7 @@
       "favicon": "./assets/icon.png"
     },
     "extra": {
+        "apiUrl": "https://rushagoadmin-api.onrender.com/api",
       "eas": {
         "projectId": "5915e19e-60c2-4bd0-afdc-e383612f8f0d"
       }

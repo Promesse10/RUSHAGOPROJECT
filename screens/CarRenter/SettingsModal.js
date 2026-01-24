@@ -31,19 +31,51 @@ const { width, height } = Dimensions.get("window")
 
 const SettingsModal = ({ visible, onClose, navigation }) => {
   const dispatch = useDispatch()
-const { user: currentUser, isLoading: isUpdating } = useSelector((state) => state.auth || {})
-const notifications = useSelector((state) => state.settings?.notifications || {})
-const profileImageUrl =
-  currentUser?.profileImage?.url ??
-  currentUser?.profileImage ??
-  "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+  const { user: currentUser, isLoading: isUpdating } = useSelector((state) => state.auth || {})
+  const notifications = useSelector((state) => state.settings?.notifications || {})
+  const profileImageUrl =
+    currentUser?.profileImage?.url ??
+    currentUser?.profileImage ??
+    "https://cdn-icons-png.flaticon.com/512/149/149071.png"
 
 
   const [showPersonalInfo, setShowPersonalInfo] = useState(false)
 
-const [showLegalModal, setShowLegalModal] = useState(false)
-const [legalType, setLegalType] = useState("terms") // or "privacy"
+  const [showLegalModal, setShowLegalModal] = useState(false)
+  const [legalType, setLegalType] = useState("terms") // or "privacy"
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This will deactivate your account. You will not be able to log in again. Are you sure?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await dispatch(deleteAccountAction()).unwrap()
+
+              Alert.alert(
+                "Account Deleted",
+                "Your account has been deleted. You must sign up again to continue."
+              )
+
+              // Clear auth & redirect
+              dispatch(logoutAction())
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "AuthScreen" }],
+              })
+            } catch (error) {
+              Alert.alert("Error", error || "Failed to delete account")
+            }
+          },
+        },
+      ]
+    )
+  }
 
   const [showHelpModal, setShowHelpModal] = useState(false)
   const [showNumber, setShowNumber] = useState(false)
@@ -116,41 +148,41 @@ const [legalType, setLegalType] = useState("terms") // or "privacy"
     }
   }
 
-  
+
   // ✅ Pick and update profile image (optional)
- const handleImagePicker = async () => {
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-  if (status !== "granted") {
-    Alert.alert("Permission Required", "Please allow photo library access")
-    return
-  }
+  const handleImagePicker = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== "granted") {
+      Alert.alert("Permission Required", "Please allow photo library access")
+      return
+    }
 
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
 
-    allowsEditing: true,
-    aspect: [1, 1],
-    quality: 0.8,
-  })
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    })
 
-  if (!result.canceled) {
-    const imageUri = result.assets[0].uri
+    if (!result.canceled) {
+      const imageUri = result.assets[0].uri
 
-    try {
-      await dispatch(
-        uploadProfileImageAction({ uri: imageUri })
-      ).unwrap()
+      try {
+        await dispatch(
+          uploadProfileImageAction({ uri: imageUri })
+        ).unwrap()
 
-      Alert.alert("Success", "Profile picture updated successfully")
-      dispatch(fetchUserProfile())
-    } catch (error) {
-      console.error("❌ Upload error:", error)
-      Alert.alert("Error", "Failed to update profile image")
+        Alert.alert("Success", "Profile picture updated successfully")
+        dispatch(fetchUserProfile())
+      } catch (error) {
+        console.error("❌ Upload error:", error)
+        Alert.alert("Error", "Failed to update profile image")
+      }
     }
   }
-}
 
-  
+
   const handleNotificationToggle = async (value) => {
     setIsNotificationsEnabled(value)
     // Add haptic feedback
@@ -185,79 +217,79 @@ const [legalType, setLegalType] = useState("terms") // or "privacy"
       },
     ])
   }
-const TermsContent = () => (
-  <>
-    <Text style={legalStyles.title}>MUVCAR Terms of Use</Text>
+  const TermsContent = () => (
+    <>
+      <Text style={legalStyles.title}>MUVCAR Terms of Use</Text>
 
-    <Text style={legalStyles.text}>
-      MUVCAR is a digital car rental platform designed to connect vehicle owners
-      with renters in a secure and transparent environment.
-    </Text>
+      <Text style={legalStyles.text}>
+        MUVCAR is a digital car rental platform designed to connect vehicle owners
+        with renters in a secure and transparent environment.
+      </Text>
 
-    <Text style={legalStyles.text}>
-      MUVCAR is a product of CarConnect Ltd. By accessing or using the MUVCAR
-      mobile application, you agree to comply with these Terms of Use.
-    </Text>
+      <Text style={legalStyles.text}>
+        MUVCAR is a product of CarConnect Ltd. By accessing or using the MUVCAR
+        mobile application, you agree to comply with these Terms of Use.
+      </Text>
 
-    <Text style={legalStyles.subtitle}>1. User Responsibilities</Text>
-    <Text style={legalStyles.text}>
-      Users must provide accurate information and maintain the security of
-      their accounts. Any misuse of the platform may result in suspension.
-    </Text>
+      <Text style={legalStyles.subtitle}>1. User Responsibilities</Text>
+      <Text style={legalStyles.text}>
+        Users must provide accurate information and maintain the security of
+        their accounts. Any misuse of the platform may result in suspension.
+      </Text>
 
-    <Text style={legalStyles.subtitle}>2. Rentals & Payments</Text>
-    <Text style={legalStyles.text}>
-      MUVCAR facilitates car rental agreements but does not own vehicles listed
-      on the platform.
-    </Text>
+      <Text style={legalStyles.subtitle}>2. Rentals & Payments</Text>
+      <Text style={legalStyles.text}>
+        MUVCAR facilitates car rental agreements but does not own vehicles listed
+        on the platform.
+      </Text>
 
-    <Text style={legalStyles.subtitle}>3. Liability</Text>
-    <Text style={legalStyles.text}>
-      CarConnect Ltd shall not be liable for damages arising from misuse of the
-      platform or third-party actions.
-    </Text>
+      <Text style={legalStyles.subtitle}>3. Liability</Text>
+      <Text style={legalStyles.text}>
+        CarConnect Ltd shall not be liable for damages arising from misuse of the
+        platform or third-party actions.
+      </Text>
 
-    <Text style={legalStyles.footer}>
-      © {new Date().getFullYear()} CarConnect Ltd. All rights reserved.
-    </Text>
-  </>
-)
-const PrivacyContent = () => (
-  <>
-    <Text style={legalStyles.title}>MUVCAR Privacy Policy</Text>
+      <Text style={legalStyles.footer}>
+        © {new Date().getFullYear()} CarConnect Ltd. All rights reserved.
+      </Text>
+    </>
+  )
+  const PrivacyContent = () => (
+    <>
+      <Text style={legalStyles.title}>MUVCAR Privacy Policy</Text>
 
-    <Text style={legalStyles.text}>
-      This Privacy Policy explains how MUVCAR, a product of CarConnect Ltd,
-      collects, uses, and protects your personal information.
-    </Text>
+      <Text style={legalStyles.text}>
+        This Privacy Policy explains how MUVCAR, a product of CarConnect Ltd,
+        collects, uses, and protects your personal information.
+      </Text>
 
-    <Text style={legalStyles.subtitle}>1. Information We Collect</Text>
-    <Text style={legalStyles.text}>
-      We collect personal data such as name, contact details, and usage data to
-      provide and improve our services.
-    </Text>
+      <Text style={legalStyles.subtitle}>1. Information We Collect</Text>
+      <Text style={legalStyles.text}>
+        We collect personal data such as name, contact details, and usage data to
+        provide and improve our services.
+      </Text>
 
-    <Text style={legalStyles.subtitle}>2. Data Security</Text>
-    <Text style={legalStyles.text}>
-      We use industry-standard security measures to protect your information.
-    </Text>
+      <Text style={legalStyles.subtitle}>2. Data Security</Text>
+      <Text style={legalStyles.text}>
+        We use industry-standard security measures to protect your information.
+      </Text>
 
-    <Text style={legalStyles.subtitle}>3. Third-Party Services</Text>
-    <Text style={legalStyles.text}>
-      MUVCAR may integrate with third-party services such as payment providers.
-    </Text>
+      <Text style={legalStyles.subtitle}>3. Third-Party Services</Text>
+      <Text style={legalStyles.text}>
+        MUVCAR may integrate with third-party services such as payment providers.
+      </Text>
 
-    <Text style={legalStyles.footer}>
-      © {new Date().getFullYear()} CarConnect Ltd. All rights reserved.
-    </Text>
-  </>
-)
+      <Text style={legalStyles.footer}>
+        © {new Date().getFullYear()} CarConnect Ltd. All rights reserved.
+      </Text>
+    </>
+  )
 
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        
+
         <View style={styles.modalContainer}>
           {/* Header */}
           <View style={styles.modalHeader}>
@@ -270,20 +302,20 @@ const PrivacyContent = () => (
             </View>
           </View>
 
-<ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
             {/* Profile Section */}
             <View style={styles.section}>
               <View style={styles.profileSection}>
                 <TouchableOpacity onPress={handleImagePicker} style={styles.profileImageContainer}>
-                <Image
-  source={{
-    uri:
-      profileImageUrl ||
-      "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-  }}
-  style={styles.profileImage}
-/>
+                  <Image
+                    source={{
+                      uri:
+                        profileImageUrl ||
+                        "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                    }}
+                    style={styles.profileImage}
+                  />
                   <View style={styles.cameraOverlay}>
                     <Icon name="camera" size={20} color="white" />
                   </View>
@@ -305,8 +337,8 @@ const PrivacyContent = () => (
               </View>
               <Icon name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
-          
-         
+
+
 
             {/* Help */}
             <TouchableOpacity style={styles.settingItem} onPress={() => setShowHelpModal(true)}>
@@ -316,37 +348,48 @@ const PrivacyContent = () => (
               </View>
               <Icon name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
-{/* Terms of Use */}
-<TouchableOpacity
-  style={styles.settingItem}
-  onPress={() => {
-    setLegalType("terms")
-    setShowLegalModal(true)
-  }}
->
+            {/* Terms of Use */}
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => {
+                setLegalType("terms")
+                setShowLegalModal(true)
+              }}
+            >
 
-  <View style={styles.settingLeft}>
-    <Icon name="document-text" size={24} color="#007EFD" />
-    <Text style={styles.settingText}>Terms of Use</Text>
-  </View>
-  <Icon name="chevron-forward" size={20} color="#666" />
-</TouchableOpacity>
+              <View style={styles.settingLeft}>
+                <Icon name="document-text" size={24} color="#007EFD" />
+                <Text style={styles.settingText}>{I18n.t("termsOfUse")}</Text>
+              </View>
+              <Icon name="chevron-forward" size={20} color="#666" />
+            </TouchableOpacity>
 
-{/* Privacy Policy */}
-<TouchableOpacity
-  style={styles.settingItem}
-  onPress={() => {
-    setLegalType("privacy")
-    setShowLegalModal(true)
-  }}
->
+            {/* Privacy Policy */}
+            <TouchableOpacity
+              style={styles.settingItem}
+              onPress={() => {
+                setLegalType("privacy")
+                setShowLegalModal(true)
+              }}
+            >
 
-  <View style={styles.settingLeft}>
-    <Icon name="shield-checkmark" size={24} color="#007EFD" />
-    <Text style={styles.settingText}>Privacy Policy</Text>
-  </View>
-  <Icon name="chevron-forward" size={20} color="#666" />
-</TouchableOpacity>
+              <View style={styles.settingLeft}>
+                <Icon name="shield-checkmark" size={24} color="#007EFD" />
+                <Text style={styles.settingText}>{I18n.t("privacyPolicy")}</Text>
+              </View>
+              <Icon name="chevron-forward" size={20} color="#666" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.settingItem, { marginTop: 10 }]}
+              onPress={handleDeleteAccount}
+            >
+              <View style={styles.settingLeft}>
+                <Icon name="trash" size={24} color="#FF3B30" />
+                <Text style={[styles.settingText, { color: "#FF3B30" }]}>
+                  Delete Account
+                </Text>
+              </View>
+            </TouchableOpacity>
 
             {/* Logout */}
             <TouchableOpacity style={[styles.settingItem, styles.logoutItem]} onPress={handleLogout}>
@@ -358,139 +401,139 @@ const PrivacyContent = () => (
           </ScrollView>
         </View>
 
-      <Modal visible={showLegalModal} transparent animationType="slide">
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalContainer}>
+        <Modal visible={showLegalModal} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
 
-      {/* Header */}
-      <View style={styles.modalHeader}>
-        <View style={styles.headerIndicator} />
-        <View style={styles.headerContent}>
-          <Text style={styles.modalTitle}>
-            {legalType === "terms" ? "Terms of Use" : "Privacy Policy"}
-          </Text>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <View style={styles.headerIndicator} />
+                <View style={styles.headerContent}>
+                  <Text style={styles.modalTitle}>
+                    {legalType === "terms" ? I18n.t("termsOfUse") : I18n.t("privacyPolicy")}
+                  </Text>
 
-          <TouchableOpacity onPress={() => setShowLegalModal(false)}>
-            <Icon name="close" size={24} color="#333" />
-          </TouchableOpacity>
-        </View>
-      </View>
+                  <TouchableOpacity onPress={() => setShowLegalModal(false)}>
+                    <Icon name="close" size={24} color="#333" />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-      {/* Content */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-  contentContainerStyle={{ paddingHorizontal: 20 }}
-      >
-        {/* Logo */}
-  <View style={legalStyles.legalLogoContainer}>
-  <Image
-    source={{
-      uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1766088439/logocarconect_f0dhta.png",
-    }}
-    style={legalStyles.legalLogo}
-    resizeMode="contain"
-  />
-  
-</View>
+              {/* Content */}
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20 }}
+              >
+                {/* Logo */}
+                <View style={legalStyles.legalLogoContainer}>
+                  <Image
+                    source={{
+                      uri: "https://res.cloudinary.com/def0cjmh2/image/upload/v1766088439/logocarconect_f0dhta.png",
+                    }}
+                    style={legalStyles.legalLogo}
+                    resizeMode="contain"
+                  />
+
+                </View>
 
 
-        {/* Text */}
-        {legalType === "terms" ? <TermsContent /> : <PrivacyContent />}
-      </ScrollView>
+                {/* Text */}
+                {legalType === "terms" ? <TermsContent /> : <PrivacyContent />}
+              </ScrollView>
 
-    </View>
-  </View>
-</Modal>
-
-{/* Personal Info Modal */}
-<Modal
-  visible={showPersonalInfo}
-  transparent
-  animationType="slide"
-  onRequestClose={() => setShowPersonalInfo(false)}
->
-  <KeyboardAvoidingView
-    style={{ flex: 1 }}
-    behavior={Platform.OS === "ios" ? "padding" : "height"}
-  >
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContainer, { maxHeight: height * 0.6 }]}>
-          {/* Header */}
-          <View style={styles.modalHeader}>
-            <View style={styles.headerIndicator} />
-            <View style={styles.headerContent}>
-              <Text style={styles.modalTitle}>{I18n.t("personalInfo")}</Text>
-              <TouchableOpacity onPress={() => setShowPersonalInfo(false)} style={styles.closeButton}>
-                <Icon name="close" size={24} color="#333" />
-              </TouchableOpacity>
             </View>
           </View>
+        </Modal>
 
-          <ScrollView
-            style={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+        {/* Personal Info Modal */}
+        <Modal
+          visible={showPersonalInfo}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowPersonalInfo(false)}
+        >
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
           >
-            <View style={styles.formSection}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>{I18n.t("name")}</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={tempProfile.name}
-                  onChangeText={(text) => setTempProfile({ ...tempProfile, name: text })}
-                  placeholder={I18n.t("enterName")}
-                  returnKeyType="next"
-                />
-              </View>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={styles.modalOverlay}>
+                <View style={[styles.modalContainer, { maxHeight: height * 0.6 }]}>
+                  {/* Header */}
+                  <View style={styles.modalHeader}>
+                    <View style={styles.headerIndicator} />
+                    <View style={styles.headerContent}>
+                      <Text style={styles.modalTitle}>{I18n.t("personalInfo")}</Text>
+                      <TouchableOpacity onPress={() => setShowPersonalInfo(false)} style={styles.closeButton}>
+                        <Icon name="close" size={24} color="#333" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>{I18n.t("email")}</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={tempProfile.email}
-                  onChangeText={(text) => setTempProfile({ ...tempProfile, email: text })}
-                  keyboardType="email-address"
-                  placeholder={I18n.t("enterEmail")}
-                  returnKeyType="next"
-                />
-              </View>
+                  <ScrollView
+                    style={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    <View style={styles.formSection}>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>{I18n.t("name")}</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          value={tempProfile.name}
+                          onChangeText={(text) => setTempProfile({ ...tempProfile, name: text })}
+                          placeholder={I18n.t("enterName")}
+                          returnKeyType="next"
+                        />
+                      </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>{I18n.t("phone")}</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={tempProfile.phone}
-                  onChangeText={(text) => setTempProfile({ ...tempProfile, phone: text })}
-                  keyboardType="phone-pad"
-                  placeholder={I18n.t("enterPhone")}
-                  returnKeyType="done"
-                />
-              </View>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>{I18n.t("email")}</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          value={tempProfile.email}
+                          onChangeText={(text) => setTempProfile({ ...tempProfile, email: text })}
+                          keyboardType="email-address"
+                          placeholder={I18n.t("enterEmail")}
+                          returnKeyType="next"
+                        />
+                      </View>
 
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={handleSaveProfile}
-                disabled={isUpdating}
-              >
-                <Text style={styles.saveButtonText}>
-                  {isUpdating ? I18n.t("saving") + "..." : I18n.t("save")}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </View>
-    </TouchableWithoutFeedback>
-  </KeyboardAvoidingView>
-</Modal>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>{I18n.t("phone")}</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          value={tempProfile.phone}
+                          onChangeText={(text) => setTempProfile({ ...tempProfile, phone: text })}
+                          keyboardType="phone-pad"
+                          placeholder={I18n.t("enterPhone")}
+                          returnKeyType="done"
+                        />
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.saveButton}
+                        onPress={handleSaveProfile}
+                        disabled={isUpdating}
+                      >
+                        <Text style={styles.saveButtonText}>
+                          {isUpdating ? I18n.t("saving") + "..." : I18n.t("save")}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </ScrollView>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </Modal>
         <Modal visible={showHelpModal} transparent={true} animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>
               <View style={styles.modalHeader}>
                 <View style={styles.headerIndicator} />
                 <View style={styles.headerContent}>
-                  <Text style={styles.modalTitle}>Help & Support</Text>
+                  <Text style={styles.modalTitle}>{I18n.t("help")}</Text>
                   <TouchableOpacity onPress={() => setShowHelpModal(false)} style={styles.closeButton}>
                     <Icon name="close" size={24} color="#333" />
                   </TouchableOpacity>
@@ -504,28 +547,28 @@ const PrivacyContent = () => (
                     <Image source={require("../../assets/logo.png")} style={styles.helpLogo} resizeMode="contain" />
                   </View>
 
-                  <Text style={styles.helpTitle}>Contact Us</Text>
+                  <Text style={styles.helpTitle}>{I18n.t("contactUs")}</Text>
                   <Text style={styles.helpSubtitle}>We're here to help you 24/7</Text>
-{/* Contact Options */}
-<View style={styles.contactOptions}>
-        <TouchableOpacity style={styles.contactOption} onPress={handleWhatsAppContact}>
-          <Icon name="logo-whatsapp" size={30} color="#25D366" />
-          <Text style={styles.contactText}>WhatsApp</Text>
-          {showNumber && <Text style={styles.contactNumber}>{phoneNumber}</Text>}
-        </TouchableOpacity>
+                  {/* Contact Options */}
+                  <View style={styles.contactOptions}>
+                    <TouchableOpacity style={styles.contactOption} onPress={handleWhatsAppContact}>
+                      <Icon name="logo-whatsapp" size={30} color="#25D366" />
+                      <Text style={styles.contactText}>WhatsApp</Text>
+                      {showNumber && <Text style={styles.contactNumber}>{phoneNumber}</Text>}
+                    </TouchableOpacity>
 
-        <TouchableOpacity style={styles.contactOption} onPress={handlePhoneContact}>
-          <Icon name="call" size={30} color="#007EFD" />
-          <Text style={styles.contactText}>Phone Call</Text>
-          {showNumber && <Text style={styles.contactNumber}>{phoneNumber}</Text>}
-        </TouchableOpacity>
+                    <TouchableOpacity style={styles.contactOption} onPress={handlePhoneContact}>
+                      <Icon name="call" size={30} color="#007EFD" />
+                      <Text style={styles.contactText}>Phone Call</Text>
+                      {showNumber && <Text style={styles.contactNumber}>{phoneNumber}</Text>}
+                    </TouchableOpacity>
 
-        <TouchableOpacity style={styles.contactOption} onPress={handleMessageContact}>
-          <Icon name="chatbubble" size={30} color="#007EFD" />
-          <Text style={styles.contactText}>SMS</Text>
-          {showNumber && <Text style={styles.contactNumber}>{phoneNumber}</Text>}
-        </TouchableOpacity>
-      </View>
+                    <TouchableOpacity style={styles.contactOption} onPress={handleMessageContact}>
+                      <Icon name="chatbubble" size={30} color="#007EFD" />
+                      <Text style={styles.contactText}>SMS</Text>
+                      {showNumber && <Text style={styles.contactNumber}>{phoneNumber}</Text>}
+                    </TouchableOpacity>
+                  </View>
 
                 </View>
               </ScrollView>
@@ -537,11 +580,11 @@ const PrivacyContent = () => (
   )
 }
 const legalStyles = StyleSheet.create({
-legalLogoContainer: {
-  alignItems: "center",
-  marginTop: 5,
-  marginBottom: 10,   // 🔥 more space below
-},
+  legalLogoContainer: {
+    alignItems: "center",
+    marginTop: 5,
+    marginBottom: 10,   // 🔥 more space below
+  },
 
 
   legalLogo: {
@@ -582,12 +625,12 @@ legalLogoContainer: {
     fontSize: 13,
     color: "#888",
     textAlign: "center",
-     marginBottom: 56,
+    marginBottom: 56,
   },
 })
 
 const styles = StyleSheet.create({
-  
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -633,7 +676,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   section: {
-    marginBottom: 30,
+    marginBottom: 5,
   },
   profileSection: {
     flexDirection: "row",
@@ -689,7 +732,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 13,
+    paddingVertical: 11,
     paddingHorizontal: 5,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
@@ -699,12 +742,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  
+
   settingText: {
     fontSize: 16,
     color: "#333",
     marginLeft: 15,
-    
+
   },
   settingValue: {
     fontSize: 14,
@@ -714,7 +757,7 @@ const styles = StyleSheet.create({
   logoutItem: {
     borderBottomWidth: 0,
     marginTop: 0,
-    
+
   },
   logoutText: {
     color: "#FF3B30",

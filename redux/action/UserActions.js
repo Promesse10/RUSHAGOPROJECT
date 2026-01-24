@@ -100,6 +100,17 @@ export const updateUserAction = createAsyncThunk(
       }
     }
   );
+  export const deleteAccountAction = createAsyncThunk(
+    "user/deleteAccount",
+    async (_, { rejectWithValue }) => {
+      try {
+        const res = await axiosInstance.delete("/users/delete-account")
+        return res.data
+      } catch (error) {
+        return rejectWithValue(error.response?.data?.message || "Delete failed")
+      }
+    }
+  )
   
   
   

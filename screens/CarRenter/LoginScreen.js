@@ -21,13 +21,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useDispatch, useSelector } from "react-redux"
 import { loginAction } from "../../redux/action/LoginActions"
 import { clearLoginState } from "../../redux/slices/loginSlice"
-
+import { googleAuthApi } from "../../services/authService";
+import { useGoogleAuth } from "../../utils/googleAuth";
+import I18n from "../../utils/i18n"
 const { width, height } = Dimensions.get("window")
 
 const LoginScreen = ({ navigation , route  }) => {
    const recoveredEmail = route?.params?.recoveredEmail
   const dispatch = useDispatch()
   const { isLoading, isLoginSuccess, isLoginFailed, error, user } = useSelector((state) => state.auth || {})
+  const { response, promptAsync } = useGoogleAuth();
+const [selectedRole, setSelectedRole] = useState(null);
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -80,6 +84,13 @@ useEffect(() => {
     setEmailError("")
     setPasswordError("")
   }, [userType])
+useEffect(() => {
+  if (response?.type === "success") {
+    const idToken = response.authentication.idToken;
+
+    handleGoogleSignIn(idToken);
+  }
+}, [response]);
 
   useEffect(() => {
     if (isLoginSuccess && user) {
@@ -135,6 +146,31 @@ useEffect(() => {
 
 
   }
+const handleGoogleSignIn= async (idToken) => {
+  try {
+    const payload = {
+      idToken,
+      userType: selectedRole || undefined, // only first time
+    };
+
+    const res = await googleAuthApi(payload);
+
+    const { token, user } = res.data;
+
+    // save token (AsyncStorage / SecureStore)
+    await saveToken(token);
+
+    // navigate based on role
+    if (user.role === "owner") {
+      navigation.replace("OwnerHome");
+    } else {
+      navigation.replace("RenterHome");
+    }
+  } catch (err) {
+    console.log("Google login error:", err.response?.data || err.message);
+    alert(err.response?.data?.message || "Google login failed");
+  }
+};
 
   const toggleSecureTextEntry = () => {
     setSecureTextEntry(!secureTextEntry)
@@ -152,9 +188,7 @@ useEffect(() => {
     navigation.navigate("ForgotPasswordScreen")
   }
 
-  const handleGoogleSignIn = () => {
-    Alert.alert("Google Sign In", "Google Sign In functionality will be implemented soon.")
-  }
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -173,7 +207,7 @@ useEffect(() => {
 
           {/* Bottom Login Section */}
           <View style={styles.bottomSection}>
-            <Text style={styles.signInHeading}>Choose To Sign In Us:</Text>
+            <Text style={styles.signInHeading}>{I18n.t("chooseToSignInUs")}</Text>
 
             <View style={styles.userTypeContainer}>
               <TouchableOpacity
@@ -181,7 +215,7 @@ useEffect(() => {
                 onPress={() => setUserType("renter")}
               >
                 <Text style={[styles.userTypeText, userType === "renter" && styles.activeUserTypeText]}>
-                  Car Renter
+                  {I18n.t("carRenter")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -189,7 +223,7 @@ useEffect(() => {
                 onPress={() => setUserType("owner")}
               >
                 <Text style={[styles.userTypeText, userType === "owner" && styles.activeUserTypeText]}>
-                  Car Owner
+                  {I18n.t("carOwner")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -198,7 +232,7 @@ useEffect(() => {
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[styles.input, emailError && styles.inputError]}
-                  placeholder={userType === "renter" ? "Enter renter email" : "Enter owner email"}
+                  placeholder={userType === "renter" ? I18n.t("enterRenterEmail") : I18n.t("enterOwnerEmail")}
                   placeholderTextColor="#999"
                   value={email}
                   onChangeText={setEmail}
@@ -212,7 +246,7 @@ useEffect(() => {
                 <View style={[styles.passwordInputContainer, passwordError && styles.inputError]}>
                   <TextInput
                     style={styles.passwordInput}
-                    placeholder={userType === "renter" ? "Enter renter password" : "Enter owner password"}
+                    placeholder={userType === "renter" ? I18n.t("enterRenterPassword") : I18n.t("enterOwnerPassword")}
                     placeholderTextColor="#999"
                     secureTextEntry={secureTextEntry}
                     value={password}
@@ -230,32 +264,37 @@ useEffect(() => {
                   <View style={[styles.customCheckbox, rememberMe && styles.checkedCheckbox]}>
                     {rememberMe && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
                   </View>
-                  <Text style={styles.rememberText}>Remember me</Text>
+                  <Text style={styles.rememberText}>{I18n.t("rememberMe")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleForgotPassword}>
-                  <Text style={styles.forgotText}>Forgot Email or Password?</Text>
+                  <Text style={styles.forgotText}>{I18n.t("forgotEmailOrPassword")}</Text>
                 </TouchableOpacity>
               </View>
 
               <TouchableOpacity style={styles.signInButton} onPress={handleSignIn} disabled={isLoading}>
-                <Text style={styles.signInButtonText}>{isLoading ? "Signing In..." : "Sign In"}</Text>
+                <Text style={styles.signInButtonText}>{isLoading ? I18n.t("signingIn") : I18n.t("signIn")}</Text>
               </TouchableOpacity>
 
               <View style={styles.orContainer}>
                 <View style={styles.divider} />
-                <Text style={styles.orText}>OR</Text>
+                <Text style={styles.orText}>{I18n.t("or")}</Text>
                 <View style={styles.divider} />
               </View>
 
-              <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
+<TouchableOpacity
+  style={styles.googleButton}
+  onPress={() => promptAsync()}
+>
+
+
                 <Image source={require("../../assets/google-logo.png")} style={styles.googleIcon} />
-                <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                <Text style={styles.googleButtonText}>{I18n.t("signInWithGoogle")}</Text>
               </TouchableOpacity>
 
               <View style={styles.signupContainer}>
-                <Text style={styles.noAccountText}>Don't have an account? </Text>
+                <Text style={styles.noAccountText}>{I18n.t("dontHaveAccount")} </Text>
                 <TouchableOpacity onPress={handleSignUp}>
-                  <Text style={styles.signupText}>Signup</Text>
+                  <Text style={styles.signupText}>{I18n.t("signUp")}</Text>
                 </TouchableOpacity>
               </View>
             </View>

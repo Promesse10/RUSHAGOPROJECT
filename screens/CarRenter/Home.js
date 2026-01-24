@@ -28,7 +28,7 @@ import Icon from "react-native-vector-icons/Ionicons"
 import * as Location from "expo-location"
 import { useDispatch, useSelector } from "react-redux"
 import { getApprovedCarsAction, updateCarViewsAction } from "../../redux/action/CarActions"
-import { useTranslation } from 'react-i18next';
+import AsyncStorage from "@react-native-async-storage/async-storage"
 // add near other redux/action imports
 import { getCurrentUserAction } from "../../redux/action/UserActions"
 import SettingsModal from "../../screens/CarRenter/SettingsModal"
@@ -45,6 +45,7 @@ import {
 
 import { useRoute, useFocusEffect } from "@react-navigation/native"
 import NotificationBottomSheet from "../../components/NotificationBottomSheet"
+import { useTranslation } from 'react-i18next';
 // Constants
 const screenDimensions = Dimensions.get("window")
 const { width, height } = screenDimensions
@@ -202,7 +203,7 @@ const HomeScreen = ({ navigation }) => {
   const [locationSubscription, setLocationSubscription] = useState(null)
   const [nearestCars, setNearestCars] = useState([])
   const [nearestCar, setNearestCar] = useState(null)
-  const [currentLanguage, setCurrentLanguage] = useState("rw")
+  const [currentLanguage, setCurrentLanguage] = useState("en") // default to en, will be updated
   
   const [mapType, setMapType] = useState("standard")
   const [isTracking, setIsTracking] = useState(false)
@@ -352,6 +353,20 @@ useEffect(() => {
 
   useEffect(() => {
     initializeApp()
+  }, [])
+
+  useEffect(() => {
+    const loadLanguage = async () => {
+      try {
+        const savedLang = await AsyncStorage.getItem('userLanguage')
+        if (savedLang) {
+          setCurrentLanguage(savedLang)
+        }
+      } catch (error) {
+        console.error('Error loading language:', error)
+      }
+    }
+    loadLanguage()
   }, [])
 
   useEffect(() => {

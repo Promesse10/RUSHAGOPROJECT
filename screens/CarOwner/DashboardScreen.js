@@ -167,7 +167,7 @@ const DashboardScreen = () => {
       dispatch(fetchNotifications())
     }, [dispatch])
   const [expandedNotifications, setExpandedNotifications] = useState({})
-  const [currentLanguage, setCurrentLanguage] = useState("rw")
+  const [currentLanguage, setCurrentLanguage] = useState("en")
   const [hasNewNotifications, setHasNewNotifications] = useState(true)
 
   const languages = [
@@ -291,19 +291,19 @@ useEffect(() => {
 
   const loadSavedLanguage = async () => {
     try {
-      const savedLanguage = await AsyncStorage.getItem("user_language")
+      const savedLanguage = await AsyncStorage.getItem("userLanguage")
       if (savedLanguage) {
         setCurrentLanguage(savedLanguage)
         i18n.changeLanguage(savedLanguage)
       } else {
-        setCurrentLanguage("rw")
-        i18n.changeLanguage("rw")
-        await AsyncStorage.setItem("user_language", "rw")
+        setCurrentLanguage("en")
+        i18n.changeLanguage("en")
+        await AsyncStorage.setItem("userLanguage", "en")
       }
     } catch (error) {
       console.log("Error loading language:", error)
-      setCurrentLanguage("rw")
-      i18n.changeLanguage("rw")
+      setCurrentLanguage("en")
+      i18n.changeLanguage("en")
     }
   }
 

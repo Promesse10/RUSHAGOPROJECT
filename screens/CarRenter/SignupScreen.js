@@ -26,6 +26,7 @@ import {
   sendVerificationCodeAction,
  verifyEmailOtpAction,
 } from "../../redux/action/verificationAction"
+import I18n from "../../utils/i18n"
 
 
 const privacyItems = [
@@ -173,7 +174,7 @@ const [acceptedTerms, setAcceptedTerms] = useState(false)
       proceedWithSignup()
     } catch (error) {
       console.error('Error in handleSignUp:', error)
-      Alert.alert('Error', 'An unexpected error occurred during sign up')
+      Alert.alert(I18n.t("error"), I18n.t("unexpectedError"))
     }
   }
 
@@ -200,7 +201,7 @@ const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   useEffect(() => {
     if (isSignupFailed && error) {
-      Alert.alert("Signup Failed", typeof error === 'string' ? error : "An error occurred")
+      Alert.alert(I18n.t("signupFailed"), typeof error === 'string' ? error : I18n.t("pleaseFillAllRequiredFields"))
     }
   }, [isSignupFailed, error])
 
@@ -224,7 +225,7 @@ const [acceptedTerms, setAcceptedTerms] = useState(false)
 })
 
     .catch((err) => {
-      Alert.alert("Error", err?.error || "Could not send verification code")
+      Alert.alert(I18n.t("error"), err?.error || I18n.t("couldNotSendVerificationCode"))
     })
 }
 
@@ -233,7 +234,7 @@ const [acceptedTerms, setAcceptedTerms] = useState(false)
       setShowCaptchaModal(false)
       proceedWithSignup()
     } else {
-      Alert.alert("Error", "Incorrect captcha. Please try again.")
+      Alert.alert(I18n.t("error"), I18n.t("incorrectCaptcha"))
       setCaptchaInput('')
     }
   }
@@ -243,39 +244,39 @@ const [acceptedTerms, setAcceptedTerms] = useState(false)
     const newErrors = {}
 
     if (!inputs.name.trim()) {
-      newErrors.name = "Name is required"
+      newErrors.name = I18n.t("invalidName")
       isValid = false
     }
     if (!inputs.email.trim()) {
-      newErrors.email = "Email is required"
+      newErrors.email = I18n.t("invalidEmail")
       isValid = false
     } else if (!validateEmail(inputs.email)) {
-      newErrors.email = "Enter a valid email address"
+      newErrors.email = I18n.t("invalidEmail")
       isValid = false
     }
     if (!inputs.phone.trim()) {
-      newErrors.phone = "Phone number is required"
+      newErrors.phone = I18n.t("invalidPhone")
       isValid = false
     } else if (!validatePhone(inputs.phone)) {
-      newErrors.phone = "Enter a valid 9-digit phone number"
+      newErrors.phone = I18n.t("invalidPhone")
       isValid = false
     }
     if (!inputs.password.trim()) {
-      newErrors.password = "Password is required"
+      newErrors.password = I18n.t("passwordIsRequired")
       isValid = false
     } else if (inputs.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters"
+      newErrors.password = I18n.t("passwordMinLength")
       isValid = false
     }
     if (!inputs.confirmPassword.trim()) {
-      newErrors.confirmPassword = "Confirm password is required"
+      newErrors.confirmPassword = I18n.t("confirmPasswordIsRequired")
       isValid = false
     } else if (inputs.confirmPassword !== inputs.password) {
-      newErrors.confirmPassword = "Passwords do not match"
+      newErrors.confirmPassword = I18n.t("passwordsDoNotMatch")
       isValid = false
     }
 if (!acceptedTerms) {
-  newErrors.terms = "You must accept Terms & Privacy Policy"
+  newErrors.terms = I18n.t("acceptTermsRequired")
   isValid = false
 }
 
@@ -285,13 +286,13 @@ if (!acceptedTerms) {
 
 const handleVerifyEmail = () => {
   if (otp.length !== OTP_LENGTH) {
-    setErrors({ ...errors, verification: `Please enter the ${OTP_LENGTH}-digit code` })
+    setErrors({ ...errors, verification: I18n.t("enterOtpCode") })
 
     return
   }
 
   if (!fullPhone || fullPhone.trim() === '') {
-    setErrors({ ...errors, verification: "Phone number is required" })
+    setErrors({ ...errors, verification: I18n.t("invalidPhone") })
     return
   }
 
@@ -322,13 +323,13 @@ const handleVerifyEmail = () => {
         navigation.navigate("LoginScreen")
       } catch (navError) {
         console.error('Navigation error:', navError)
-        Alert.alert('Error', 'Failed to navigate after signup')
+        Alert.alert(I18n.t("error"), I18n.t("failedToNavigate"))
       }
     })
     .catch((err) => {
       setErrors(prev => ({
   ...prev,
-  verification: err?.error || "Invalid verification code",
+  verification: err?.error || I18n.t("invalidVerificationCode"),
 }));
 
     })
@@ -351,11 +352,11 @@ const handleVerifyEmail = () => {
   setErrors({ ...errors, verification: "" })
   setTimeLeft(300)
   setCanResend(false)
-  Alert.alert("Success", "New verification code sent!")
+  Alert.alert(I18n.t("success"), I18n.t("newVerificationCodeSent"))
 })
 
     .catch(() => {
-      Alert.alert("Error", "Could not resend verification code")
+      Alert.alert(I18n.t("error"), I18n.t("couldNotResendCode"))
     })
 }
 
@@ -376,7 +377,7 @@ const handleVerifyEmail = () => {
           <TouchableWithoutFeedback>
             <View style={styles.bottomSheet}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Terms & Privacy Policy</Text>
+                <Text style={styles.modalTitle}>{I18n.t("termsAndPrivacyPolicy")}</Text>
                 <TouchableOpacity onPress={() => setShowTermsModal(false)}>
                   <Ionicons name="close" size={24} color="#000" />
                 </TouchableOpacity>
@@ -389,7 +390,7 @@ const handleVerifyEmail = () => {
                   </View>
                 ))}
                 <TouchableOpacity style={styles.confirmButton} onPress={() => { setAcceptedTerms(true); setShowTermsModal(false); }}>
-                  <Text style={styles.confirmButtonText}>I Agree</Text>
+                  <Text style={styles.confirmButtonText}>{I18n.t("iAgreeButton")}</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
@@ -406,7 +407,7 @@ const handleVerifyEmail = () => {
           <TouchableWithoutFeedback>
             <View style={styles.bottomSheet}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>FAQ</Text>
+                <Text style={styles.modalTitle}>{I18n.t("faq")}</Text>
                 <TouchableOpacity onPress={() => setShowPrivacyModal(false)}>
                   <Ionicons name="close" size={24} color="#000" />
                 </TouchableOpacity>
@@ -419,7 +420,7 @@ const handleVerifyEmail = () => {
                   </View>
                 ))}
                 <TouchableOpacity style={styles.confirmButton} onPress={() => setShowPrivacyModal(false)}>
-                  <Text style={styles.confirmButtonText}>Got it</Text>
+                  <Text style={styles.confirmButtonText}>{I18n.t("gotIt")}</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
@@ -433,22 +434,22 @@ const handleVerifyEmail = () => {
     <Modal visible={showCaptchaModal} animationType="fade" transparent>
       <View style={styles.captchaModalContainer}>
         <View style={styles.captchaModalContent}>
-          <Text style={styles.captchaTitle}>Verify You're Human</Text>
-          <Text style={styles.captchaInstruction}>Please type the word below to continue:</Text>
+          <Text style={styles.captchaTitle}>{I18n.t("verifyYouAreHuman")}</Text>
+          <Text style={styles.captchaInstruction}>{I18n.t("typeTheWordBelow")}</Text>
           <Text style={styles.captchaText}>{captchaText}</Text>
           <TextInput
             style={styles.captchaInput}
             value={captchaInput}
             onChangeText={setCaptchaInput}
-            placeholder="Type the word here"
+            placeholder={I18n.t("typeTheWordHere")}
             autoCapitalize="none"
           />
           <View style={styles.captchaButtons}>
             <TouchableOpacity style={styles.captchaButton} onPress={() => setShowCaptchaModal(false)}>
-              <Text style={styles.captchaButtonText}>Cancel</Text>
+              <Text style={styles.captchaButtonText}>{I18n.t("cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.captchaButton, styles.captchaSubmitButton]} onPress={handleCaptchaSubmit}>
-              <Text style={styles.captchaSubmitButtonText}>Submit</Text>
+              <Text style={styles.captchaSubmitButtonText}>{I18n.t("submit")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -462,7 +463,7 @@ const handleVerifyEmail = () => {
         <TextInput
         
           style={[styles.input, errors.name && styles.inputError]}
-          placeholder="Full name"
+          placeholder={I18n.t("fullName")}
           placeholderTextColor="#999"
           value={inputs.name}
           onChangeText={(value) => setInputs({ ...inputs, name: value })}
@@ -472,7 +473,7 @@ const handleVerifyEmail = () => {
       <View style={styles.inputContainer}>
         <TextInput
           style={[styles.input, errors.email && styles.inputError]}
-          placeholder="Email"
+          placeholder={I18n.t("email")}
           placeholderTextColor="#999"
           value={inputs.email}
           onChangeText={(value) => setInputs({ ...inputs, email: value })}
@@ -492,7 +493,7 @@ const handleVerifyEmail = () => {
           textContainerStyle={styles.phoneTextContainer}
           textInputProps={{
             maxLength: 9,
-            placeholder: "Phone number",
+            placeholder: I18n.t("phoneNumber"),
           }}
           textInputStyle={styles.phoneInput}
         />
@@ -504,7 +505,7 @@ const handleVerifyEmail = () => {
         <View style={[styles.passwordInputContainer, errors.password && styles.inputError]}>
           <TextInput
             style={styles.passwordInput}
-            placeholder="Create password"
+            placeholder={I18n.t("createPassword")}
             placeholderTextColor="#999"
             secureTextEntry={secureTextEntry}
             value={inputs.password}
@@ -523,7 +524,7 @@ const handleVerifyEmail = () => {
         <View style={[styles.passwordInputContainer, errors.confirmPassword && styles.inputError]}>
           <TextInput
             style={styles.passwordInput}
-            placeholder="Confirm password"
+            placeholder={I18n.t("confirmPassword")}
             placeholderTextColor="#999"
             secureTextEntry={secureConfirmTextEntry}
             value={inputs.confirmPassword}
@@ -547,13 +548,13 @@ const handleVerifyEmail = () => {
   </TouchableOpacity>
 
   <Text style={styles.termsText}>
-    I agree to the{" "}
+    {I18n.t("iAgree")}{" "}
     <Text style={styles.linkText} onPress={() => setShowTermsModal(true)}>
-      Terms
+      {I18n.t("terms")}
     </Text>{" "}
-    and{" "}
+    {I18n.t("and")}{" "}
     <Text style={styles.linkText} onPress={() => setShowPrivacyModal(true)}>
-      Privacy Policy
+      {I18n.t("privacyPolicy")}
     </Text>
   </Text>
 </View>
@@ -564,7 +565,7 @@ const handleVerifyEmail = () => {
         {isLoading || isSending ? (
           <ActivityIndicator color="#fff" size="small" />
         ) : (
-          <Text style={styles.signUpButtonText}>Sign Up</Text>
+          <Text style={styles.signUpButtonText}>{I18n.t("signUp")}</Text>
         )}
       </TouchableOpacity>
     </View>
@@ -575,10 +576,10 @@ const handleVerifyEmail = () => {
       <View style={styles.verificationModalContainer}>
         <View style={styles.verificationModalContent}>
           <Ionicons name="mail" size={40} color="#007EFD" style={{ marginBottom: 10 }} />
-          <Text style={styles.verificationTitle}>Check your email</Text>
+          <Text style={styles.verificationTitle}>{I18n.t("checkYourEmail")}</Text>
           <Text style={styles.emailDisplay}>{inputs.email}</Text>
           <Text style={styles.timerText}>
-            {timeLeft > 0 ? `Code expires in ${formatTime(timeLeft)}` : "Code expired"}
+            {timeLeft > 0 ? `${I18n.t("codeExpiresIn")} ${formatTime(timeLeft)}` : I18n.t("codeExpired")}
           </Text>
     <TextInput
   value={otp}
@@ -600,14 +601,14 @@ const handleVerifyEmail = () => {
             style={[styles.resendContainer, !canResend && { opacity: 0.5 }]}
           >
             <Text style={styles.resendText}>
-              {canResend ? "Resend code" : `Resend in ${formatTime(timeLeft)}`}
+              {canResend ? I18n.t("resendCode") : `${I18n.t("resendIn")} ${formatTime(timeLeft)}`}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyEmail} disabled={isVerifying}>
             {isVerifying ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.verifyButtonText}>Verify email</Text>
+              <Text style={styles.verifyButtonText}>{I18n.t("verifyEmail")}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -624,26 +625,26 @@ const handleVerifyEmail = () => {
             <Image source={require("../../assets/Group 15.jpg")} style={styles.backgroundImage} />
           </View>
           <View style={styles.bottomSection}>
-            <Text style={styles.signUpHeading}>Choose To Sign Up As:</Text>
+            <Text style={styles.signUpHeading}>{I18n.t("signUpHeading")}</Text>
             <View style={styles.userTypeContainer}>
               <TouchableOpacity
                 style={[styles.userTypeButton, userType === "renter" && styles.activeUserTypeButton]}
                 onPress={() => setUserType("renter")}
               >
-                <Text style={[styles.userTypeText, userType === "renter" && styles.activeUserTypeText]}>Car Renter</Text>
+                <Text style={[styles.userTypeText, userType === "renter" && styles.activeUserTypeText]}>{I18n.t("renter")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.userTypeButton, userType === "owner" && styles.activeUserTypeButton]}
                 onPress={() => setUserType("owner")}
               >
-                <Text style={[styles.userTypeText, userType === "owner" && styles.activeUserTypeText]}>Car Owner</Text>
+                <Text style={[styles.userTypeText, userType === "owner" && styles.activeUserTypeText]}>{I18n.t("owner")}</Text>
               </TouchableOpacity>
             </View>
             {renderForm()}
             <View style={styles.signinContainer}>
-              <Text style={styles.haveAccountText}>Already have an account? </Text>
+              <Text style={styles.haveAccountText}>{I18n.t("alreadyHaveAccount")} </Text>
               <TouchableOpacity onPress={handleSignIn}>
-                <Text style={styles.signinText}>Sign In</Text>
+                <Text style={styles.signinText}>{I18n.t("signIn")}</Text>
               </TouchableOpacity>
             </View>
           </View>

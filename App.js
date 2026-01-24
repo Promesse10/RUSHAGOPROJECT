@@ -6,6 +6,7 @@ import AppNavigator from './navigation/AppNavigator';
 import { AppRegistry } from 'react-native';
 import { Provider } from 'react-redux';
 import { store } from './redux/store';
+import './utils/i18n'; // Import i18n to initialize it
 
 // Ensure all dependencies are installed and linked
 console.log('🔍 Verifying React Native runtime dependencies...');

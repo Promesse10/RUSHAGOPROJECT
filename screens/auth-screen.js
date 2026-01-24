@@ -15,6 +15,7 @@ import {
   Platform,
 } from "react-native"
 import { useFocusEffect } from "@react-navigation/native"
+import I18n from "../utils/i18n"
 
 const { width, height } = Dimensions.get("window")
 
@@ -98,18 +99,18 @@ useFocusEffect(
                 transform: [{ translateY: slideAnimation }],
               }}
             >
-              <Text style={styles.helloText}>HELLO</Text>
-              <Text style={styles.subtitleText}>Welcome to MUVCAR</Text>
+              <Text style={styles.helloText}>{I18n.t("hello")}</Text>
+              <Text style={styles.subtitleText}>{I18n.t("welcomeToMuvcar")}</Text>
             </Animated.View>
 
             {/* Buttons Container */}
             <Animated.View style={[styles.buttonsContainer, { opacity: buttonFadeIn }]}>
               <TouchableOpacity style={styles.signInButton} onPress={handleSignIn} activeOpacity={0.8}>
-                <Text style={styles.signInText}>Sign In</Text>
+                <Text style={styles.signInText}>{I18n.t("signIn")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp} activeOpacity={0.8}>
-                <Text style={styles.signUpText}>Sign Up</Text>
+                <Text style={styles.signUpText}>{I18n.t("signUp")}</Text>
               </TouchableOpacity>
             </Animated.View>
           </View>

@@ -200,7 +200,39 @@ const SettingsScreen = () => {
       }
     }
   }
-
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This will deactivate your account. You will not be able to log in again. Are you sure?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await dispatch(deleteAccountAction()).unwrap()
+  
+              Alert.alert(
+                "Account Deleted",
+                "Your account has been deleted. You must sign up again to continue."
+              )
+  
+              // Clear auth & redirect
+              dispatch(logoutAction())
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "AuthScreen" }],
+              })
+            } catch (error) {
+              Alert.alert("Error", error || "Failed to delete account")
+            }
+          },
+        },
+      ]
+    )
+  }
+  
   const handleLogout = () => {
     Alert.alert(t("logout", "Logout"), t("logoutConfirm", "Are you sure you want to logout?"), [
       { text: t("cancel", "Cancel"), style: "cancel" },
@@ -447,6 +479,17 @@ const profileImageUrl =
           </View>
         </TouchableOpacity>
       </ScrollView>
+      <TouchableOpacity
+  style={[styles.settingItem, { marginTop: 10 }]}
+  onPress={handleDeleteAccount}
+>
+  <View style={styles.settingLeft}>
+    <Icon name="trash" size={24} color="#FF3B30" />
+    <Text style={[styles.settingText, { color: "#FF3B30" }]}>
+      Delete Account
+    </Text>
+  </View>
+</TouchableOpacity>
 
       {/* Personal Info Modal */}
       <Modal
