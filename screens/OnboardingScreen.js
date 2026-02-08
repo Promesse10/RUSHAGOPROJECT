@@ -109,9 +109,14 @@ const OnboardingScreen = ({ navigation }) => {
     ])
 
     animationSequence.start(() => {
-      setTimeout(() => {
-        setIsLoading(false)
-        setShowLanguageModal(true)
+      setTimeout(async () => {
+        const hasSeen = await AsyncStorage.getItem(ONBOARDING_KEY)
+        if (hasSeen === "true") {
+          navigation.replace("AuthScreen")
+        } else {
+          setIsLoading(false)
+          setShowLanguageModal(true)
+        }
       }, 200)
     })
 
@@ -119,7 +124,7 @@ const OnboardingScreen = ({ navigation }) => {
       carPosition.setValue(-width)
       carScale.setValue(1)
     }
-  }, [])
+  }, [navigation])
 
   const renderLoadingScreen = () => {
     return (

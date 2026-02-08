@@ -17,6 +17,7 @@ import {
   markAllNotificationsAsRead,
   deleteNotification,
 } from "../redux/action/notificationActions"
+import { Image } from "react-native"
 
 const { width, height } = Dimensions.get("window")
 
@@ -113,13 +114,26 @@ const NotificationBottomSheet = ({ visible, onClose }) => {
             </View>
 
             <View style={styles.notificationContent}>
+              {item.icon && item.icon.startsWith("http") && (
+  <Image
+    source={{ uri: item.icon }}
+    style={{
+      width: "100%",
+      height: 160,
+      borderRadius: 12,
+      marginBottom: 8,
+    }}
+    resizeMode="cover"
+  />
+)}
               <Text
                 style={[
                   styles.notificationTitle,
                   isUnread && styles.unreadNotificationTitle,
                 ]}
                 numberOfLines={1}
-              >
+              > 
+
                 {item.title}
               </Text>
               <Text style={styles.notificationMessage} numberOfLines={2}>

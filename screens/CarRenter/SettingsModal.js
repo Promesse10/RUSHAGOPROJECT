@@ -379,17 +379,7 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
               </View>
               <Icon name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.settingItem, { marginTop: 10 }]}
-              onPress={handleDeleteAccount}
-            >
-              <View style={styles.settingLeft}>
-                <Icon name="trash" size={24} color="#FF3B30" />
-                <Text style={[styles.settingText, { color: "#FF3B30" }]}>
-                  Delete Account
-                </Text>
-              </View>
-            </TouchableOpacity>
+         
 
             {/* Logout */}
             <TouchableOpacity style={[styles.settingItem, styles.logoutItem]} onPress={handleLogout}>
@@ -519,6 +509,13 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
                         <Text style={styles.saveButtonText}>
                           {isUpdating ? I18n.t("saving") + "..." : I18n.t("save")}
                         </Text>
+                      </TouchableOpacity>
+                      {/* Delete account placed directly under Save for security */}
+                      <TouchableOpacity
+                        style={[styles.saveButton, { backgroundColor: "#fff", borderWidth: 1, borderColor: "#FF3B30", marginTop: 12 }]}
+                        onPress={handleDeleteAccount}
+                      >
+                        <Text style={[styles.saveButtonText, { color: "#FF3B30" }]}>Delete Account</Text>
                       </TouchableOpacity>
                     </View>
                   </ScrollView>

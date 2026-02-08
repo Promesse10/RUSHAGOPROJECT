@@ -38,6 +38,7 @@ class ErrorBoundary extends React.Component {
 }
 
 const App = () => {
+  console.log('🚀 App component rendered');
   return (
     <ErrorBoundary>
       <Provider store={store}>

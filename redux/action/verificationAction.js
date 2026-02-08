@@ -5,11 +5,19 @@ export const sendVerificationCodeAction = createAsyncThunk(
   "verification/sendCode",
   async ({ email, userName }, { rejectWithValue }) => {
     try {
-      console.log("Sending verification code to:", email);
-      const res = await axiosInstance.post(
-        "/email/send-verification-code",
-        { email, userName }
-      );
+      const trimmedEmail = email.trim();
+      const trimmedUserName = userName.trim();
+      console.log("Sending verification code to:", trimmedEmail, "userName:", trimmedUserName);
+      console.log("Payload being sent:", { email: trimmedEmail, userName: trimmedUserName });
+    const res = await axiosInstance.post(
+  "/email/send-verification-code",
+  {
+    email: trimmedEmail,
+    userName: trimmedUserName,
+  },
+  { timeout: 90000 }
+);
+
       console.log("Send verification response:", res.data);
 
       if (res.data.success) {
@@ -33,27 +41,41 @@ export const sendVerificationCodeAction = createAsyncThunk(
       })
     }
   }
+
 )
 export const verifyEmailOtpAction = createAsyncThunk(
   "verification/verifyOtp",
   async ({ email, otp }, { rejectWithValue }) => {
     try {
-      console.log("Verifying OTP for email:", email, "OTP:", otp);
+      console.log("🔍 Verifying OTP for:", email);
+
       const res = await axiosInstance.post(
-        "/auth/verify-otp",
-        { email, otp: otp.trim()
- }
+        "/email/verify-otp",
+        {
+          email,
+          otp: otp.trim(),
+        }
       );
-      console.log("Verify response:", res.data);
+
+      console.log("✅ Verify response:", res.data);
 
       if (res.data.success) {
         return true;
       }
 
-      return rejectWithValue(res.data.error || "Invalid OTP");
+      return rejectWithValue(res.data.error || "INVALID_OTP");
     } catch (err) {
-      console.log("Verify OTP error:", err.response?.status, err.response?.data, err.message);
-      return rejectWithValue(err.response?.data?.error || err.message);
+      console.log(
+        "❌ Verify OTP error:",
+        err.response?.status,
+        err.response?.data,
+        err.message
+      );
+
+      return rejectWithValue(
+        err.response?.data?.error || "NETWORK_ERROR"
+      );
     }
   }
 );
+

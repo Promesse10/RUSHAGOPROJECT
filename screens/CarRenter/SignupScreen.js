@@ -27,6 +27,7 @@ import {
  verifyEmailOtpAction,
 } from "../../redux/action/verificationAction"
 import I18n from "../../utils/i18n"
+import CaptchaImage from "../../components/CaptchaImage";
 
 
 const privacyItems = [
@@ -142,6 +143,17 @@ const SignupScreen = ({ navigation }) => {
   const [canResend, setCanResend] = useState(false)
   const [otp, setOtp] = useState("");
   const OTP_LENGTH = 6
+  const [otpAttempts, setOtpAttempts] = useState(0)
+const [captchaToken, setCaptchaToken] = useState(null)
+
+const generateCaptcha = (length = 6) => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+  let result = ""
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
+}
 
 
   const { isLoading, isSignupSuccess, isSignupFailed, error } = useSelector((state) => state.signup || {})
@@ -157,43 +169,28 @@ const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   const dispatch = useDispatch()
 
-  const handleSignUp = () => {
-    try {
-      if (!validateForm()) return
+const handleSignUp = () => {
+  if (!validateForm()) return
+  proceedWithSignup()
+}
 
-      // Randomly show captcha (30% chance)
-      if (Math.random() < 0.3) {
-        const words = ['human', 'robot', 'verify', 'check', 'confirm']
-        const randomWord = words[Math.floor(Math.random() * words.length)]
-        setCaptchaText(randomWord)
-        setCaptchaInput('')
-        setShowCaptchaModal(true)
-        return
+useEffect(() => {
+  if (!showVerificationModal) return
+
+  const interval = setInterval(() => {
+    setTimeLeft(prev => {
+      if (prev <= 1) {
+        setCanResend(true)
+        clearInterval(interval)
+        return 0
       }
+      return prev - 1
+    })
+  }, 1000)
 
-      proceedWithSignup()
-    } catch (error) {
-      console.error('Error in handleSignUp:', error)
-      Alert.alert(I18n.t("error"), I18n.t("unexpectedError"))
-    }
-  }
+  return () => clearInterval(interval)
+}, [showVerificationModal])
 
-  // Countdown timer effect
-  useEffect(() => {
-    let interval = null
-    if (showVerificationModal && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            setCanResend(true)
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    }
-    return () => clearInterval(interval)
-  }, [showVerificationModal, timeLeft])
 
 
 
@@ -209,35 +206,50 @@ const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   const validateEmail = (email) => /\S+@\S+\.\S+/.test(email)
 
-  const proceedWithSignup = () => {
-  dispatch(
+  const proceedWithSignup = async () => {
+  const result = await dispatch(
     sendVerificationCodeAction({
       email: inputs.email,
       userName: inputs.name,
+      captchaInput,
+      captchaToken,
     })
   )
-    .unwrap()
-   .then(() => {
-  setOtp("")
-  setShowVerificationModal(true)
-  setTimeLeft(300)
-  setCanResend(false)
-})
 
-    .catch((err) => {
-      Alert.alert(I18n.t("error"), err?.error || I18n.t("couldNotSendVerificationCode"))
-    })
+  // 🔐 Backend says CAPTCHA required
+  if (result.payload?.requireCaptcha) {
+    setCaptchaText(generateCaptcha())
+    setCaptchaInput("")
+    setCaptchaToken(result.payload.captchaToken)
+    setShowCaptchaModal(true)
+    return
+  }
+
+  if (sendVerificationCodeAction.fulfilled.match(result)) {
+    setOtp("")
+    setShowVerificationModal(true)
+    setTimeLeft(300)
+    setCanResend(false)
+  } else {
+    Alert.alert(
+      I18n.t("error"),
+      result.payload?.error || I18n.t("couldNotSendVerificationCode")
+    )
+  }
 }
 
-  const handleCaptchaSubmit = () => {
-    if (captchaInput.toLowerCase() === captchaText.toLowerCase()) {
-      setShowCaptchaModal(false)
-      proceedWithSignup()
-    } else {
-      Alert.alert(I18n.t("error"), I18n.t("incorrectCaptcha"))
-      setCaptchaInput('')
-    }
+
+const handleCaptchaSubmit = () => {
+  if (captchaInput.trim().toUpperCase() === captchaText) {
+    setShowCaptchaModal(false)
+    proceedWithSignup()
+  } else {
+    Alert.alert("Error", "CAPTCHA does not match")
+    setCaptchaText(generateCaptcha())
+    setCaptchaInput("")
   }
+}
+
 
   const validateForm = () => {
     let isValid = true
@@ -284,56 +296,57 @@ if (!acceptedTerms) {
     return isValid
   }
 
-const handleVerifyEmail = () => {
+const handleVerifyEmail = async () => {
   if (otp.length !== OTP_LENGTH) {
     setErrors({ ...errors, verification: I18n.t("enterOtpCode") })
-
-    return
-  }
-
-  if (!fullPhone || fullPhone.trim() === '') {
-    setErrors({ ...errors, verification: I18n.t("invalidPhone") })
     return
   }
 
   setIsVerifying(true)
 
-  dispatch(
-    verifyEmailOtpAction({
-      email: inputs.email,
-      otp,
-    })
-  )
-    .unwrap()
-    .then(() => {
-      return dispatch(
-        signupAction({
-          role: userType,
-          name: inputs.name,
-          email: inputs.email,
-          phone: fullPhone,
-          password: inputs.password,
-        })
-      ).unwrap()
-    })
-    .then(() => {
-      setShowVerificationModal(false)
-      console.log("Signup successful, navigating to LoginScreen")
-      try {
-        navigation.navigate("LoginScreen")
-      } catch (navError) {
-        console.error('Navigation error:', navError)
-        Alert.alert(I18n.t("error"), I18n.t("failedToNavigate"))
-      }
-    })
-    .catch((err) => {
-      setErrors(prev => ({
-  ...prev,
-  verification: err?.error || I18n.t("invalidVerificationCode"),
-}));
+  try {
+    const verifyResult = await dispatch(
+      verifyEmailOtpAction({
+        email: inputs.email,
+        otp,
+      })
+    )
 
-    })
-    .finally(() => setIsVerifying(false))
+    if (!verifyEmailOtpAction.fulfilled.match(verifyResult)) {
+      throw new Error(
+        verifyResult.payload?.error || I18n.t("invalidVerificationCode")
+      )
+    }
+
+    const signupResult = await dispatch(
+      signupAction({
+        role: userType,
+        name: inputs.name,
+        email: inputs.email,
+        phone: fullPhone,
+        password: inputs.password,
+      })
+    )
+
+    if (!signupAction.fulfilled.match(signupResult)) {
+      throw new Error(
+        signupResult.payload?.error || I18n.t("signupFailed")
+      )
+    }
+
+    setShowVerificationModal(false)
+    navigation.navigate("LoginScreen")
+  } catch (err) {
+  setOtpAttempts(prev => prev + 1)
+
+  setErrors(prev => ({
+    ...prev,
+    verification: err.message,
+  }))
+}
+ finally {
+    setIsVerifying(false)
+  }
 }
 
 
@@ -431,31 +444,41 @@ const handleVerifyEmail = () => {
   )
 
   const renderCaptchaModal = () => (
-    <Modal visible={showCaptchaModal} animationType="fade" transparent>
-      <View style={styles.captchaModalContainer}>
-        <View style={styles.captchaModalContent}>
-          <Text style={styles.captchaTitle}>{I18n.t("verifyYouAreHuman")}</Text>
-          <Text style={styles.captchaInstruction}>{I18n.t("typeTheWordBelow")}</Text>
-          <Text style={styles.captchaText}>{captchaText}</Text>
-          <TextInput
-            style={styles.captchaInput}
-            value={captchaInput}
-            onChangeText={setCaptchaInput}
-            placeholder={I18n.t("typeTheWordHere")}
-            autoCapitalize="none"
-          />
-          <View style={styles.captchaButtons}>
-            <TouchableOpacity style={styles.captchaButton} onPress={() => setShowCaptchaModal(false)}>
-              <Text style={styles.captchaButtonText}>{I18n.t("cancel")}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.captchaButton, styles.captchaSubmitButton]} onPress={handleCaptchaSubmit}>
-              <Text style={styles.captchaSubmitButtonText}>{I18n.t("submit")}</Text>
-            </TouchableOpacity>
-          </View>
+  <Modal visible={showCaptchaModal} animationType="fade" transparent>
+    <View style={styles.captchaModalContainer}>
+      <View style={styles.captchaModalContent}>
+        <Text style={styles.captchaTitle}>Verify you’re human</Text>
+
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <CaptchaImage text={captchaText} />
+
+          <TouchableOpacity
+            onPress={() => setCaptchaText(generateCaptcha())}
+            style={{ marginLeft: 10 }}
+          >
+            <Ionicons name="refresh" size={24} color="#007EFD" />
+          </TouchableOpacity>
         </View>
+
+        <TextInput
+          style={styles.captchaInput}
+          value={captchaInput}
+          onChangeText={setCaptchaInput}
+          placeholder="Enter CAPTCHA"
+          autoCapitalize="characters"
+        />
+
+        <TouchableOpacity
+          style={styles.captchaSubmitButton}
+          onPress={handleCaptchaSubmit}
+        >
+          <Text style={{ color: "#fff", fontWeight: "600" }}>Submit</Text>
+        </TouchableOpacity>
       </View>
-    </Modal>
-  )
+    </View>
+  </Modal>
+)
+
 
   const renderForm = () => (
     <View style={styles.form}>
@@ -597,7 +620,7 @@ const handleVerifyEmail = () => {
           {errors.verification && <Text style={styles.verificationErrorText}>{errors.verification}</Text>}
           <TouchableOpacity
             onPress={handleResendCode}
-            disabled={!canResend}
+            disabled={!canResend || otpAttempts >= 2}
             style={[styles.resendContainer, !canResend && { opacity: 0.5 }]}
           >
             <Text style={styles.resendText}>

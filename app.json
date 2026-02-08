@@ -1,18 +1,20 @@
 {
   "expo": {
-    "name": "MUVCAR",
+    "name": "Muv Car",
     "slug": "muvcar",
-    "schema": "muvar",
-    "icon": "./assets/icon.png",
-    "platforms": [
-      "ios",
-      "android"
-    ],
     "version": "1.0.0",
+
+    "scheme": "muvar",
+
+    "icon": "./assets/Icon.png",
+
+    "platforms": ["ios", "android"],
+
     "plugins": [
       "expo-asset",
       "expo-secure-store",
       "expo-font",
+      "expo-web-browser",
       [
         "expo-build-properties",
         {
@@ -22,8 +24,44 @@
           }
         }
       ],
-      "expo-web-browser"
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging"
     ],
+
+    "android": {
+      "package": "com.muvar.app",
+      "versionCode": 2,
+
+      "googleServicesFile": "./android/app/google-services.json",
+
+      "usesCleartextTraffic": true,
+
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "INTERNET",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECORD_AUDIO",
+        "VIBRATE"
+      ],
+
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/IconForeground.png",
+        "backgroundColor": "#FFFFFF"
+      },
+
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDcBy9gu32ST0M7kROJqnXbe0BOC-mJKw4"
+        }
+      },
+
+      "runtimeVersion": "1.0.0",
+      "newArchEnabled": true
+    },
+
     "ios": {
       "bundleIdentifier": "com.muvar.app",
       "supportsTablet": true,
@@ -34,35 +72,24 @@
       },
       "config": {
         "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+          "apiKey": "AIzaSyDcBy9gu32ST0M7kROJqnXbe0BOC-mJKw4"
         }
       }
     },
-    "android": {
-      "package": "com.muvar.app",
-      "versionCode": 2,
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "monochromeImage": "./assets/icon.png",
-        "backgroundColor": "#FFFFFF"
-      },
-      "runtimeVersion": "1.0.0",
-      "newArchEnabled": true,
-      "config": {
-        "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
-        }
-      }
-    },
+
     "web": {
-      "favicon": "./assets/icon.png"
+      "favicon": "./assets/Icon.png"
     },
+
     "extra": {
-        "apiUrl": "https://rushagoadmin-api.onrender.com/api",
+      "googleWebClientId": "896374568035-k7ro2dsi82oak7p1shapq8ldpokngd4h.apps.googleusercontent.com",
+      "googleAndroidClientId": "896374568035-rpa001jbpkuivercdcorh8p3ufekbqs3.apps.googleusercontent.com",
+      "googleIosClientId": "896374568035-aqplco71u87hi7t5olfd0iq3ujburamu.apps.googleusercontent.com",
       "eas": {
         "projectId": "5915e19e-60c2-4bd0-afdc-e383612f8f0d"
       }
     },
+
     "owner": "carconnect02"
   }
 }

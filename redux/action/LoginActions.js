@@ -2,42 +2,67 @@ import { createAsyncThunk } from "@reduxjs/toolkit"
 import axios from "axios"
 import * as SecureStore from "expo-secure-store"
 import axiosInstance from "../../utils/axios"
-
-const API_URL = `${process.env.EXPO_PUBLIC_API_URL}/auth/login`
-
-export const loginAction = createAsyncThunk("auth/loginUser", async (credentials, { rejectWithValue }) => {
+import messaging from '@react-native-firebase/messaging'
+const registerFCMToken = async (userId, authToken) => {
   try {
-    console.log("🔐 Attempting login with:", credentials.email)
+    // Request permission (Android 13+ safe)
+    const authStatus = await messaging().requestPermission()
+    const enabled =
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL
 
-    const response = await axios.post(API_URL, credentials, {
-      headers: { "Content-Type": "application/json" },
-    })
-
-    const { token, user } = response.data
-
-    if (!token || !user) {
-      return rejectWithValue("Login failed: Missing token or user.")
+    if (!enabled) {
+      console.log("🔕 Notification permission denied")
+      return
     }
 
-    await SecureStore.setItemAsync("token", token)
-    await SecureStore.setItemAsync("user", JSON.stringify(user))
+    // Get token
+    const fcmToken = await messaging().getToken()
+    console.log("📲 FCM TOKEN:", fcmToken)
 
-    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`
-
-    // Optional dashboard test
-    try {
-      const dashboard = await axiosInstance.get("/dashboard")
-      console.log("✅ Dashboard response:", dashboard.data)
-    } catch (err) {
-      console.log("⚠️ Dashboard error:", err.message)
-    }
-
-    return { token, user }
+    // Send to backend
+    await axiosInstance.post(
+      "/users/fcm-token",
+      { fcmToken },
+      {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      }
+    )
   } catch (err) {
-    console.error("❌ Login error:", err)
-    return rejectWithValue(err.response?.data?.message || "Login failed.")
+    console.log("❌ FCM register error:", err.message)
   }
-})
+}
+
+
+
+export const loginAction = createAsyncThunk(
+  "auth/loginUser",
+  async (credentials, { rejectWithValue }) => {
+    try {
+      console.log("🔐 Attempting login with:", credentials.email);
+
+      const res = await axiosInstance.post("/auth/login", credentials);
+
+      const { token, user } = res.data;
+
+      if (!token || !user) {
+        return rejectWithValue("Login failed: missing token or user");
+      }
+
+      await SecureStore.setItemAsync("token", token);
+      await SecureStore.setItemAsync("user", JSON.stringify(user));
+     await registerFCMToken(user._id || user.id, token);
+      return { token, user };
+    } catch (err) {
+      console.error("❌ Login error:", err.response?.data || err.message);
+      return rejectWithValue(
+        err.response?.data?.message || "Network error"
+      );
+    }
+  }
+);
 
 export const loadAuthFromStorage = createAsyncThunk("auth/loadFromStorage", async (_, { rejectWithValue }) => {
   try {

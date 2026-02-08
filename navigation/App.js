@@ -8,7 +8,7 @@ import store from "../redux/store"
 import { loadAuthFromStorage } from "../redux/action/LoginActions"
 import * as Linking from "expo-linking"
 import { NavigationContainer } from "@react-navigation/native"
-
+import messaging from '@react-native-firebase/messaging'
 // ✅ Define deep linking prefixes (for Expo Go + your website + custom URI)
 const prefix = Linking.createURL("/") // works for Expo Go
 const linking = {
@@ -27,6 +27,23 @@ const linking = {
 
 const Startup = () => {
   const dispatch = useDispatch()
+useEffect(() => {
+  // App opened from killed state by notification
+  messaging()
+    .getInitialNotification()
+    .then(remoteMessage => {
+      if (remoteMessage) {
+        console.log('Opened from quit state:', remoteMessage);
+      }
+    });
+
+  // App opened from background by notification
+  const unsubscribe = messaging().onNotificationOpenedApp(remoteMessage => {
+    console.log('Opened from background:', remoteMessage);
+  });
+
+  return unsubscribe;
+}, []);
 
   useEffect(() => {
     dispatch(loadAuthFromStorage())

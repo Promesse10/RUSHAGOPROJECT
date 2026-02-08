@@ -36,101 +36,109 @@ const CarListing = ({ navigation, route }) => {
   const [showCarDetails, setShowCarDetails] = useState(false)
   const [userLocation, setUserLocation] = useState(null)
 
-  // Fallback cars data if Redux is empty
+  // Fallback cars data if Redux is empty - matches MongoDB schema structure
   const fallbackCars = [
     {
       _id: "1",
+      title: "BMW i3 2023 - Electric Luxury Car",
       brand: "BMW",
-      make: "BMW",
       model: "i3",
-      year: "2023",
+      year: 2023,
       type: "Electric",
       transmission: "Automatic",
-      fuel_type: "Electric",
-      seatings: "4",
-      features: ["GPS", "Bluetooth", "AC", "USB Charging"],
-      owner: {
-        name: "Jean Claude Uwimana",
-        phone: "788123456",
-        type: "individual",
-      },
-      ownerType: "individual",
-      ownerName: "Jean Claude Uwimana",
-      countryCode: "+250",
-      ownerPhone: "788123456",
-      province: "Kigali",
-      district: "Nyarugenge",
-      sector: "Nyamirambo",
+      fuelType: "Electric",
+      seatings: 4,
+      plate_number: "RAJ001E",
+      mileage: 5000,
+      color: "Pearl White",
+      description: "Luxurious electric vehicle perfect for city driving with premium features.",
+      features: ["GPS", "Bluetooth", "AC", "USB Charging", "Electric Windows", "Leather Seats"],
+      category: "Luxury",
+      price: 3500,
+      dailyRate: 3500,
+      weeklyDiscount: 10,
+      monthlyDiscount: 20,
+      currency: "FRW",
       location: "KG 15 Ave, Nyarugenge",
-      address: "KG 15 Ave, Nyarugenge",
-      country: "Rwanda",
       coordinates: {
         latitude: -1.9441,
         longitude: 30.0619,
       },
-      latitude: -1.9441,
-      longitude: 30.0619,
-      price: "3500",
-      base_price: "3500",
-      dailyRate: "3500",
-      currency: "FRW",
-      weekly_discount: "10",
-      monthly_discount: "20",
+      province: "Kigali",
+      district: "Nyarugenge",
+      sector: "Nyamirambo",
       available: true,
+      status: "approved",
+      views: 0,
+      owner: {
+        userId: "owner1",
+        name: "Jean Claude Uwimana",
+        email: "jean@example.com",
+        phone: "788123456",
+        type: "individual",
+      },
       images: [
         "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400",
         "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400",
         "https://images.unsplash.com/photo-1549924231-f129b911e442?w=400",
         "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=400",
       ],
+      isPaid: true,
+      paymentWarningSent: false,
+      trialEndDate: null,
       rating: 4.8,
-      category: "Luxury",
+      createdAt: new Date("2024-01-15"),
+      updatedAt: new Date("2024-01-15"),
     },
     {
       _id: "2",
+      title: "Toyota Camry 2022 - Premium Sedan",
       brand: "Toyota",
-      make: "Toyota",
       model: "Camry",
-      year: "2022",
+      year: 2022,
       type: "Sedan",
       transmission: "Automatic",
-      fuel_type: "Gasoline",
-      seatings: "5",
-      features: ["GPS", "Bluetooth", "AC", "Backup Camera"],
-      owner: {
-        name: "Marie Uwimana",
-        phone: "788987654",
-        type: "individual",
-      },
-      ownerType: "individual",
-      ownerName: "Marie Uwimana",
-      countryCode: "+250",
-      ownerPhone: "788987654",
-      province: "Kigali",
-      district: "Nyarugenge",
-      sector: "Muhima",
+      fuelType: "Gasoline",
+      seatings: 5,
+      plate_number: "RWA002A",
+      mileage: 15000,
+      color: "Silver",
+      description: "Reliable and comfortable sedan ideal for business meetings and daily commute.",
+      features: ["GPS", "Bluetooth", "AC", "Backup Camera", "Cruise Control", "Power Steering"],
+      category: "Economy",
+      price: 3000,
+      dailyRate: 3000,
+      weeklyDiscount: 12,
+      monthlyDiscount: 22,
+      currency: "FRW",
       location: "KG 21 Ave, Nyarugenge",
-      address: "KG 21 Ave, Nyarugenge",
-      country: "Rwanda",
       coordinates: {
         latitude: -1.9456,
         longitude: 30.0598,
       },
-      latitude: -1.9456,
-      longitude: 30.0598,
-      price: "3000",
-      base_price: "3000",
-      dailyRate: "3000",
-      currency: "FRW",
-      weekly_discount: "12",
-      monthly_discount: "22",
+      province: "Kigali",
+      district: "Nyarugenge",
+      sector: "Muhima",
       available: false,
+      status: "approved",
+      views: 0,
+      owner: {
+        userId: "owner2",
+        name: "Marie Uwimana",
+        email: "marie@example.com",
+        phone: "788987654",
+        type: "individual",
+      },
       images: [
         "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=400",
         "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400",
       ],
+      isPaid: true,
+      paymentWarningSent: false,
+      trialEndDate: null,
       rating: 4.5,
-      category: "Economy",
+      createdAt: new Date("2024-01-10"),
+      updatedAt: new Date("2024-01-10"),
     },
   ]
   useEffect(() => {
@@ -175,7 +183,8 @@ const CarListing = ({ navigation, route }) => {
   const allCars =
     route?.params?.cars || route?.params?.filteredCars || (reduxCars && reduxCars.length > 0 ? reduxCars : fallbackCars)
 
-  const categories = ["All", "Economy", "Luxury", "SUV", "Electric", "Family", "Adventure"]
+  // Categories must match MongoDB schema enum
+  const categories = ["All", "Economy", "Compact", "Mid-Size", "Full-Size", "Premium", "Luxury", "Sports", "Family", "Business", "Wedding", "Airport Transfer", "Off-Road", "Commercial"]
 
   // Fetch cars on component mount if Redux is empty
   useEffect(() => {
@@ -188,42 +197,93 @@ const CarListing = ({ navigation, route }) => {
     filterCars()
   }, [searchText, selectedCategory, allCars])
 
-  // Normalize car data to handle different property names
+  // Normalize car data to handle different property names and match MongoDB schema
   const normalizeCar = (car) => {
     if (!car) return null
 
     return {
-      ...car,
+      // Primary identifiers
+      _id: car._id,
       id: car._id || car.id,
-      make: car.brand || car.make || "Unknown",
-      brand: car.brand || car.make || "Unknown",
-      model: car.model || "Unknown",
-      year: car.year || "N/A",
-      type: car.type || "Standard",
+      
+      // Core car information from schema
+      title: car.title || `${car.brand || ""} ${car.model || ""}`.trim(),
+      brand: car.brand || "",
+      make: car.brand || "",
+      model: car.model || "",
+      year: car.year || new Date().getFullYear(),
+      type: car.type || "",
+      
+      // Engine & transmission
       transmission: car.transmission || "Manual",
-      fuel_type: car.fuelType || car.fuel_type || "petrol",
-      seatings: car.seatings || "4",
+      fuelType: car.fuelType || "Gasoline",
+      fuel_type: car.fuelType || "Gasoline",
+      
+      // Vehicle specs
+      seatings: car.seatings || 4,
+      plate_number: car.plate_number || "",
+      mileage: car.mileage || 0,
+      color: car.color || "",
+      description: car.description || "",
+      
+      // Features and images
       features: car.features || [],
-      ownerName: car.owner?.name || car.ownerName || "Owner",
-      ownerPhone: car.owner?.phone || car.ownerPhone || "",
-      ownerType: car.owner?.type || car.ownerType || "individual",
-      countryCode: car.countryCode || "+250",
-      district: car.district || "Unknown",
-      sector: car.sector || "Unknown",
-      location: car.location || car.address || "Unknown Location",
-      address: car.location || car.address || "Unknown Location",
-      latitude: car.coordinates?.latitude || car.latitude || -1.9441,
-      longitude: car.coordinates?.longitude || car.longitude || 30.0619,
-      price: car.price || car.base_price || car.dailyRate || "0",
-      base_price: car.price || car.base_price || car.dailyRate || "0",
-      currency: car.currency || "FRW",
-      available: car.available !== undefined ? car.available : true,
       images:
         car.images && car.images.length > 0
           ? car.images.length >= 4
             ? [car.images[1], car.images[2], car.images[3], car.images[0]] // front, side, rear, interior
             : car.images
           : ["https://images.unsplash.com/photo-1555215695-3004980ad54e?w=400"],
+      
+      // Pricing
+      price: car.price || 0,
+      dailyRate: car.dailyRate || 0,
+      base_price: car.price || 0,
+      weeklyDiscount: car.weeklyDiscount || 0,
+      monthlyDiscount: car.monthlyDiscount || 0,
+      currency: car.currency || "FRW",
+      
+      // Category
+      category: car.category || "Economy",
+      
+      // Location data
+      location: car.location || car.address || "",
+      address: car.location || car.address || "",
+      coordinates: car.coordinates || { latitude: -1.9441, longitude: 30.0619 },
+      latitude: car.coordinates?.latitude || car.latitude || -1.9441,
+      longitude: car.coordinates?.longitude || car.longitude || 30.0619,
+      province: car.province || "",
+      district: car.district || "",
+      sector: car.sector || "",
+      
+      // Availability
+      available: car.available !== undefined ? car.available : true,
+      status: car.status || "pending",
+      views: car.views || 0,
+      
+      // Owner information from schema
+      owner: {
+        userId: car.owner?.userId || "",
+        name: car.owner?.name || "",
+        email: car.owner?.email || "",
+        phone: car.owner?.phone || "",
+        type: car.owner?.type || "individual",
+      },
+      ownerName: car.owner?.name || car.ownerName || "",
+      ownerPhone: car.owner?.phone || car.ownerPhone || "",
+      ownerType: car.owner?.type || car.ownerType || "individual",
+      countryCode: car.countryCode || "+250",
+      
+      // Payment & trial
+      trialEndDate: car.trialEndDate || null,
+      isPaid: car.isPaid || false,
+      paymentWarningSent: car.paymentWarningSent || false,
+      
+      // Timestamps
+      createdAt: car.createdAt || new Date(),
+      updatedAt: car.updatedAt || new Date(),
+      
+      // Additional fields
       rating: car.rating || 4.0,
     }
   }
@@ -257,7 +317,13 @@ const CarListing = ({ navigation, route }) => {
 
   const getCarCategory = (car) => {
     if (!car) return "Economy"
+    
+    // Use category from database if available
+    if (car.category) {
+      return car.category
+    }
 
+    // Fallback to calculation if category not in database
     if (car.type === "SUV" && car.features?.includes("4WD")) return "Adventure"
     if (car.type === "Electric") return "Electric"
     if (car.type === "Luxury" || car.make === "BMW") return "Luxury"
@@ -323,13 +389,13 @@ const CarListing = ({ navigation, route }) => {
         </View>
 
         <View style={styles.carInfo}>
-          <Text style={styles.carName}>
-            {normalizedCar.make} {normalizedCar.model} ({normalizedCar.year})
+          <Text style={styles.carName} numberOfLines={2}>
+            {normalizedCar.make || "Car"} {normalizedCar.model || ""} ({normalizedCar.year || ""})
           </Text>
-          <Text style={styles.carLocation}>
-            {normalizedCar.sector}, {normalizedCar.district}
+          <Text style={styles.carLocation} numberOfLines={1}>
+            {[normalizedCar.location, normalizedCar.province].filter(Boolean).join(", ")}
           </Text>
-          <Text style={styles.carCategory}>{getCarCategory(normalizedCar)}</Text>
+          <Text style={styles.carCategory}>{getCarCategory(normalizedCar) || "Economy"}</Text>
 
           <View style={styles.carFooter}>
             <Text style={styles.carPrice}>

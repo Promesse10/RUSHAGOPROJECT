@@ -31,7 +31,7 @@ import {
   updateUserProfileAction,
   loadAuthFromStorage,
 } from "../../redux/action/LoginActions"
-import { uploadProfileImageAction } from "../../redux/action/UserActions"
+import { uploadProfileImageAction, deleteAccountAction } from "../../redux/action/UserActions"
 import { updateUserSettings, fetchUserProfile } from "../../redux/actions/settingAction"
 import { loadDrafts, deleteDraft } from "../../redux/action/draftsActions"
 import * as ImagePicker from "expo-image-picker"
@@ -480,16 +480,14 @@ const profileImageUrl =
         </TouchableOpacity>
       </ScrollView>
       <TouchableOpacity
-  style={[styles.settingItem, { marginTop: 10 }]}
-  onPress={handleDeleteAccount}
->
-  <View style={styles.settingLeft}>
-    <Icon name="trash" size={24} color="#FF3B30" />
-    <Text style={[styles.settingText, { color: "#FF3B30" }]}>
-      Delete Account
-    </Text>
-  </View>
-</TouchableOpacity>
+        style={[styles.settingItem, { marginTop: 10 }]}
+        onPress={handleDeleteAccount}
+      >
+        <View style={styles.settingLeft}>
+          <Ionicons name="trash-outline" size={24} color="#FF3B30" />
+          <Text style={[styles.settingText, { color: "#FF3B30" }]}>Delete Account</Text>
+        </View>
+      </TouchableOpacity>
 
       {/* Personal Info Modal */}
       <Modal

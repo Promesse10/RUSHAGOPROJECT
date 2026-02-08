@@ -23,6 +23,8 @@ import { loginAction } from "../../redux/action/LoginActions"
 import { clearLoginState } from "../../redux/slices/loginSlice"
 import { googleAuthApi } from "../../services/authService";
 import { useGoogleAuth } from "../../utils/googleAuth";
+import messaging from '@react-native-firebase/messaging'
+
 import I18n from "../../utils/i18n"
 const { width, height } = Dimensions.get("window")
 
@@ -84,6 +86,37 @@ useEffect(() => {
     setEmailError("")
     setPasswordError("")
   }, [userType])
+  const registerFCMToken = async (token) => {
+  try {
+    const authStatus = await messaging().requestPermission()
+    const enabled =
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL
+
+    if (!enabled) {
+      console.log("🔕 Notifications not allowed")
+      return
+    }
+
+    const fcmToken = await messaging().getToken()
+    console.log("📲 FCM TOKEN:", fcmToken)
+
+    await fetch(
+      `${process.env.EXPO_PUBLIC_API_URL}/users/fcm-token`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ fcmToken }),
+      }
+    )
+  } catch (err) {
+    console.log("❌ FCM register error:", err)
+  }
+}
+
 useEffect(() => {
   if (response?.type === "success") {
     const idToken = response.authentication.idToken;
@@ -146,31 +179,31 @@ useEffect(() => {
 
 
   }
-const handleGoogleSignIn= async (idToken) => {
+const handleGoogleSignIn = async (idToken) => {
   try {
     const payload = {
       idToken,
-      userType: selectedRole || undefined, // only first time
-    };
+      userType: selectedRole || undefined,
+    }
 
-    const res = await googleAuthApi(payload);
+    const res = await googleAuthApi(payload)
+    const { token, user } = res.data
 
-    const { token, user } = res.data;
+    await saveToken(token)
 
-    // save token (AsyncStorage / SecureStore)
-    await saveToken(token);
+    // 🔔 REGISTER FCM HERE
+    await registerFCMToken(token)
 
-    // navigate based on role
     if (user.role === "owner") {
-      navigation.replace("OwnerHome");
+      navigation.replace("OwnerHome")
     } else {
-      navigation.replace("RenterHome");
+      navigation.replace("RenterHome")
     }
   } catch (err) {
-    console.log("Google login error:", err.response?.data || err.message);
-    alert(err.response?.data?.message || "Google login failed");
+    console.log("Google login error:", err.response?.data || err.message)
+    alert(err.response?.data?.message || "Google login failed")
   }
-};
+}
 
   const toggleSecureTextEntry = () => {
     setSecureTextEntry(!secureTextEntry)
