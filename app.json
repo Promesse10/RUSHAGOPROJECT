@@ -32,7 +32,7 @@
     "android": {
       "package": "com.muvar.app",
       "versionCode": 2,
-      "googleServicesFile": "./android/app/google-services.json",
+     "googleServicesFile": "GOOGLE_SERVICES_JSON",
 
       "permissions": [
         "POST_NOTIFICATIONS",
