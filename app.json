@@ -20,8 +20,8 @@
         "expo-build-properties",
         {
           "android": {
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34
           }
         }
       ],
@@ -32,7 +32,7 @@
     "android": {
       "package": "com.muvar.app",
       "versionCode": 2,
- "googleServicesFile": "./google-services.json",
+"googleServicesFile": "./android/app/google-services.json",
 
       "permissions": [
         "POST_NOTIFICATIONS",
