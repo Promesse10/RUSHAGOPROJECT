@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "417762574605",
+    "project_id": "muvcar-a8620",
+    "storage_bucket": "muvcar-a8620.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:417762574605:android:f26c496ad00711416bf044",
+        "android_client_info": {
+          "package_name": "com.muvar.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8XOvvL3nR7gxrM3uA7250IcbTEnAI7h8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
