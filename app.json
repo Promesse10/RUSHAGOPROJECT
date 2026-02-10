@@ -3,12 +3,13 @@
     "name": "Muv Car",
     "slug": "muvcar",
     "version": "1.0.0",
-
     "scheme": "muvar",
 
-    "icon": "./assets/Icon.png",
+    "icon": "./assets/icon.png",
 
     "platforms": ["ios", "android"],
+
+    "runtimeVersion": "1.0.0",
 
     "plugins": [
       "expo-asset",
@@ -31,10 +32,7 @@
     "android": {
       "package": "com.muvar.app",
       "versionCode": 2,
-
       "googleServicesFile": "./android/app/google-services.json",
-
-      "usesCleartextTraffic": true,
 
       "permissions": [
         "POST_NOTIFICATIONS",
@@ -58,31 +56,23 @@
         }
       },
 
-      "runtimeVersion": "1.0.0",
-      "newArchEnabled": true
+      "newArchEnabled": false
     },
 
     "ios": {
       "bundleIdentifier": "com.muvar.app",
       "supportsTablet": true,
-      "runtimeVersion": "1.0.0",
       "newArchEnabled": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      },
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDcBy9gu32ST0M7kROJqnXbe0BOC-mJKw4"
-        }
       }
     },
 
     "web": {
-      "favicon": "./assets/Icon.png"
+      "favicon": "./assets/icon.png"
     },
 
     "extra": {
-      "googleWebClientId": "896374568035-k7ro2dsi82oak7p1shapq8ldpokngd4h.apps.googleusercontent.com",
       "googleAndroidClientId": "896374568035-rpa001jbpkuivercdcorh8p3ufekbqs3.apps.googleusercontent.com",
       "googleIosClientId": "896374568035-aqplco71u87hi7t5olfd0iq3ujburamu.apps.googleusercontent.com",
       "eas": {

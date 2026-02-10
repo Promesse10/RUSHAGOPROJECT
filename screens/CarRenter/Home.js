@@ -201,6 +201,7 @@ const HomeScreen = ({ navigation }) => {
   const [selectedCar, setSelectedCar] = useState(null)
   const [userLocation, setUserLocation] = useState({ latitude: -1.9441, longitude: 30.0619 })
   const [locationSubscription, setLocationSubscription] = useState(null)
+  const [hasCenteredOnUser, setHasCenteredOnUser] = useState(false)
   const [nearestCars, setNearestCars] = useState([])
   const [nearestCar, setNearestCar] = useState(null)
   const [currentLanguage, setCurrentLanguage] = useState("en") // default to en, will be updated
@@ -595,6 +596,26 @@ const closeNotificationBottomSheet = () => {
       setUserLocation(defaultLocation)
     }
   }, [])
+
+  // Auto-center map on user's location once after it's obtained
+  useEffect(() => {
+    if (!hasCenteredOnUser && userLocation && mapRef.current) {
+      try {
+        mapRef.current.animateToRegion(
+          {
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
+            latitudeDelta: 0.012,
+            longitudeDelta: 0.012,
+          },
+          800,
+        )
+      } catch (err) {
+        // ignore animate errors
+      }
+      setHasCenteredOnUser(true)
+    }
+  }, [userLocation, hasCenteredOnUser])
 
   // Marker press: draw route + show popup + filter cards to selected car
   const handleCarMarkerPress = async (car) => {
@@ -1257,6 +1278,9 @@ Alert.alert(
         if (event && event.persist) event.persist()
         handleCarMarkerPress(car)
       }}
+      anchor={{ x: 0.5, y: 1 }}
+      tracksViewChanges={false}
+      zIndex={isSelected ? 999 : 1}
     >
       <Animated.View
         style={{
@@ -1691,6 +1715,8 @@ notificationDot: {
 },
 pinWrapper: {
   alignItems: "center",
+  overflow: "visible",
+  paddingBottom: 4,
 },
 
 pinCircle: {
@@ -1703,6 +1729,7 @@ pinCircle: {
   borderWidth: 2,
   borderColor: "#007EFD",
   elevation: 5,
+  overflow: "visible",
 },
 
 pinLogo: {

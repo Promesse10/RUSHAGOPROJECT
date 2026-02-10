@@ -22,6 +22,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native"
+
 import { Ionicons } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
@@ -479,15 +480,6 @@ const profileImageUrl =
           </View>
         </TouchableOpacity>
       </ScrollView>
-      <TouchableOpacity
-        style={[styles.settingItem, { marginTop: 10 }]}
-        onPress={handleDeleteAccount}
-      >
-        <View style={styles.settingLeft}>
-          <Ionicons name="trash-outline" size={24} color="#FF3B30" />
-          <Text style={[styles.settingText, { color: "#FF3B30" }]}>Delete Account</Text>
-        </View>
-      </TouchableOpacity>
 
       {/* Personal Info Modal */}
       <Modal
@@ -560,6 +552,14 @@ const profileImageUrl =
                       onPress={handleSaveProfile}
                     >
                       <Text style={styles.saveButtonText}>{t("save", "Save")}</Text>
+                    </TouchableOpacity>
+
+                    {/* Delete Account Button */}
+                    <TouchableOpacity
+                      style={[styles.saveButton, { backgroundColor: "#fff", borderWidth: 1, borderColor: "#FF3B30", marginTop: 12, marginBottom: 40 }]}
+                      onPress={handleDeleteAccount}
+                    >
+                      <Text style={[styles.saveButtonText, { color: "#FF3B30" }]}>{t("deleteAccount", "Delete Account")}</Text>
                     </TouchableOpacity>
                   </View>
                 </ScrollView>

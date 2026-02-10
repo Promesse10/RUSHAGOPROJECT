@@ -215,15 +215,13 @@ useEffect(() => {
       captchaToken,
     })
   )
-
-  // 🔐 Backend says CAPTCHA required
-  if (result.payload?.requireCaptcha) {
-    setCaptchaText(generateCaptcha())
-    setCaptchaInput("")
-    setCaptchaToken(result.payload.captchaToken)
-    setShowCaptchaModal(true)
-    return
-  }
+if (result.payload?.requireCaptcha) {
+  setCaptchaText(result.payload.captchaText); // 👈 USE BACKEND TEXT
+  setCaptchaInput("");
+  setCaptchaToken(result.payload.captchaToken);
+  setShowCaptchaModal(true);
+  return;
+}
 
   if (sendVerificationCodeAction.fulfilled.match(result)) {
     setOtp("")
@@ -245,7 +243,7 @@ const handleCaptchaSubmit = () => {
     proceedWithSignup()
   } else {
     Alert.alert("Error", "CAPTCHA does not match")
-    setCaptchaText(generateCaptcha())
+   
     setCaptchaInput("")
   }
 }
@@ -453,7 +451,7 @@ const handleVerifyEmail = async () => {
           <CaptchaImage text={captchaText} />
 
           <TouchableOpacity
-            onPress={() => setCaptchaText(generateCaptcha())}
+            onPress={() => proceedWithSignup()}
             style={{ marginLeft: 10 }}
           >
             <Ionicons name="refresh" size={24} color="#007EFD" />

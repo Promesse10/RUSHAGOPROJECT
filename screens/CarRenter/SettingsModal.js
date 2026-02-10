@@ -25,6 +25,7 @@ import I18n from "../../utils/i18n"
 import { useDispatch, useSelector } from "react-redux"
 import { getCurrentUserAction, updateUserAction, uploadProfileImageAction } from "../../redux/action/UserActions"
 import { updateUserProfileAction, updateUserSettings, fetchUserProfile } from "../../redux/actions/settingAction"
+import { sendVerificationCodeAction, verifyEmailOtpAction } from "../../redux/action/verificationAction"
 import axiosInstance from "../../utils/axios"
 
 const { width, height } = Dimensions.get("window")
@@ -40,6 +41,11 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
 
 
   const [showPersonalInfo, setShowPersonalInfo] = useState(false)
+  const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false)
+  const [emailVerificationOtp, setEmailVerificationOtp] = useState("")
+  const [newEmailForVerification, setNewEmailForVerification] = useState("")
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false)
+  const [originalEmail, setOriginalEmail] = useState("")
 
   const [showLegalModal, setShowLegalModal] = useState(false)
   const [legalType, setLegalType] = useState("terms") // or "privacy"
@@ -132,19 +138,81 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
     }
   }, [notifications])
 
-  // ✅ Update profile info (name, email, phone)
+  // ✅ Check if email changed and trigger verification if needed
   const handleSaveProfile = async () => {
     if (!tempProfile.name || !tempProfile.email || !tempProfile.phone) {
       return Alert.alert("Error", "Please fill all required fields")
     }
 
+    // Check if email has changed
+    const emailChanged = tempProfile.email.toLowerCase() !== currentUser?.email?.toLowerCase()
+
+    if (emailChanged) {
+      // Store values for verification process
+      setNewEmailForVerification(tempProfile.email)
+      setOriginalEmail(currentUser?.email || tempProfile.email)
+      setEmailVerificationOtp("")
+      
+      // Send OTP to new email
+      try {
+        setIsVerifyingEmail(true)
+        const result = await dispatch(
+          sendVerificationCodeAction({
+            email: tempProfile.email,
+            userName: tempProfile.name,
+          })
+        ).unwrap()
+        
+        setShowEmailVerificationModal(true)
+        Alert.alert("Success", "Verification code sent to your new email address")
+      } catch (error) {
+        Alert.alert("Error", error?.error || "Failed to send verification code")
+      } finally {
+        setIsVerifyingEmail(false)
+      }
+    } else {
+      // Email not changed, save directly
+      try {
+        await dispatch(updateUserProfileAction(tempProfile)).unwrap()
+        Alert.alert("Success", "Profile updated successfully")
+        setShowPersonalInfo(false)
+        dispatch(fetchUserProfile())
+      } catch (error) {
+        Alert.alert("Error", error || "Failed to update profile")
+      }
+    }
+  }
+
+  // ✅ Verify OTP and update email
+  const handleVerifyAndUpdateEmail = async () => {
+    if (!emailVerificationOtp.trim()) {
+      return Alert.alert("Error", "Please enter the verification code")
+    }
+
     try {
+      setIsVerifyingEmail(true)
+      
+      // Verify OTP
+      await dispatch(
+        verifyEmailOtpAction({
+          email: newEmailForVerification,
+          otp: emailVerificationOtp,
+        })
+      ).unwrap()
+
+      // OTP verified, now update the profile with new email
       await dispatch(updateUserProfileAction(tempProfile)).unwrap()
-      Alert.alert("Success", "Profile updated successfully")
+      
+      Alert.alert("Success", "Email updated successfully. You can now login with your new email.")
+      setShowEmailVerificationModal(false)
       setShowPersonalInfo(false)
-      dispatch(fetchUserProfile()) // Refresh after save
+      setEmailVerificationOtp("")
+      setNewEmailForVerification("")
+      dispatch(fetchUserProfile())
     } catch (error) {
-      Alert.alert("Error", error || "Failed to update profile")
+      Alert.alert("Error", error || "Failed to verify email. Please try again.")
+    } finally {
+      setIsVerifyingEmail(false)
     }
   }
 
@@ -512,7 +580,7 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
                       </TouchableOpacity>
                       {/* Delete account placed directly under Save for security */}
                       <TouchableOpacity
-                        style={[styles.saveButton, { backgroundColor: "#fff", borderWidth: 1, borderColor: "#FF3B30", marginTop: 12 }]}
+                        style={[styles.saveButton, { backgroundColor: "#fff", borderWidth: 1, borderColor: "#FF3B30", marginTop: 12, marginBottom: 40 }]}
                         onPress={handleDeleteAccount}
                       >
                         <Text style={[styles.saveButtonText, { color: "#FF3B30" }]}>Delete Account</Text>
@@ -524,6 +592,86 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
             </TouchableWithoutFeedback>
           </KeyboardAvoidingView>
         </Modal>
+
+        {/* Email Verification OTP Modal */}
+        <Modal
+          visible={showEmailVerificationModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => !isVerifyingEmail && setShowEmailVerificationModal(false)}
+        >
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={styles.modalOverlay}>
+                <View style={[styles.modalContainer, { maxHeight: height * 0.5 }]}>
+                  <View style={styles.modalHeader}>
+                    <View style={styles.headerIndicator} />
+                    <View style={styles.headerContent}>
+                      <Text style={styles.modalTitle}>Verify Email</Text>
+                      <TouchableOpacity
+                        onPress={() => !isVerifyingEmail && setShowEmailVerificationModal(false)}
+                        style={styles.closeButton}
+                      >
+                        <Icon name="close" size={24} color="#333" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <ScrollView
+                    style={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    <View style={styles.formSection}>
+                      <Text style={{ fontSize: 16, color: "#333", marginBottom: 12 }}>
+                        We sent a verification code to:
+                      </Text>
+                      <Text style={{ fontSize: 14, color: "#007EFD", fontWeight: "bold", marginBottom: 20 }}>
+                        {newEmailForVerification}
+                      </Text>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Verification Code</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          value={emailVerificationOtp}
+                          onChangeText={setEmailVerificationOtp}
+                          placeholder="Enter 6-digit code"
+                          keyboardType="number-pad"
+                          maxLength={6}
+                          returnKeyType="done"
+                          editable={!isVerifyingEmail}
+                        />
+                      </View>
+
+                      <TouchableOpacity
+                        style={[styles.saveButton, isVerifyingEmail && { opacity: 0.7 }]}
+                        onPress={handleVerifyAndUpdateEmail}
+                        disabled={isVerifyingEmail}
+                      >
+                        <Text style={styles.saveButtonText}>
+                          {isVerifyingEmail ? "Verifying..." : "Verify & Update Email"}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.saveButton, { backgroundColor: "#fff", borderWidth: 1, borderColor: "#ddd", marginTop: 12 }]}
+                        onPress={() => setShowEmailVerificationModal(false)}
+                        disabled={isVerifyingEmail}
+                      >
+                        <Text style={[styles.saveButtonText, { color: "#333" }]}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </ScrollView>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </Modal>
+
         <Modal visible={showHelpModal} transparent={true} animationType="slide">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContainer}>

@@ -6,18 +6,17 @@ WebBrowser.maybeCompleteAuthSession();
 
 export const useGoogleAuth = () => {
   const {
-    googleWebClientId,
     googleAndroidClientId,
     googleIosClientId,
   } = Constants.expoConfig.extra;
 
-  const [request, response, promptAsync] =
-    Google.useIdTokenAuthRequest({
-      expoClientId: googleWebClientId,     // 🔥 REQUIRED
-      androidClientId: googleAndroidClientId,
-      iosClientId: googleIosClientId,
-      scopes: ["profile", "email"],
-    });
+ const [request, response, promptAsync] =
+  Google.useIdTokenAuthRequest({
+    androidClientId: googleAndroidClientId,
+    iosClientId: googleIosClientId,
+    scopes: ["profile", "email"],
+  });
+
 
   return { request, response, promptAsync };
 };
