@@ -24,16 +24,12 @@
             "targetSdkVersion": 34
           }
         }
-      ],
-      "@react-native-firebase/app",
-      "@react-native-firebase/messaging"
+      ]
     ],
 
     "android": {
       "package": "com.muvar.app",
       "versionCode": 2,
-"googleServicesFile": "./android/app/google-services.json",
-
       "permissions": [
         "POST_NOTIFICATIONS",
         "ACCESS_COARSE_LOCATION",
