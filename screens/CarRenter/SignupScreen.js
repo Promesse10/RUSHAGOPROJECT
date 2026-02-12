@@ -795,6 +795,10 @@ checkbox: {
   eyeIcon: {
     padding: 10,
   },
+  linkText: {
+    color: "#007EFD",
+    textDecorationLine: "underline",
+  },
   signUpButton: {
     backgroundColor: "#007EFD",
     height: 50,

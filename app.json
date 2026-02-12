@@ -6,7 +6,12 @@
     "scheme": "muvar",
 
     "icon": "./assets/icon.png",
-
+"splash": {
+  "image": "./assets/logo.png",
+  "resizeMode": "contain",
+  "backgroundColor": "#FFFFFF"
+}
+,
     "platforms": ["ios", "android"],
 
     "runtimeVersion": "1.0.0",
@@ -70,7 +75,9 @@
 
     "extra": {
       "googleAndroidClientId": "896374568035-rpa001jbpkuivercdcorh8p3ufekbqs3.apps.googleusercontent.com",
-      "googleIosClientId": "896374568035-aqplco71u87hi7t5olfd0iq3ujburamu.apps.googleusercontent.com",
+      
+  "googleIosClientId": "896374568035-aqplco71u87hi7t5olfd0iq3ujburamu.apps.googleusercontent.com",
+      "googleWebClientId": "896374568035-k7ro2dsi82oak7p1shapq8ldpokngd4h.apps.googleusercontent.com",
       "eas": {
         "projectId": "5915e19e-60c2-4bd0-afdc-e383612f8f0d"
       }

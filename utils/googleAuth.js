@@ -8,15 +8,16 @@ export const useGoogleAuth = () => {
   const {
     googleAndroidClientId,
     googleIosClientId,
+    googleWebClientId,   // 👈 ADD THIS
   } = Constants.expoConfig.extra;
 
- const [request, response, promptAsync] =
-  Google.useIdTokenAuthRequest({
-    androidClientId: googleAndroidClientId,
-    iosClientId: googleIosClientId,
-    scopes: ["profile", "email"],
-  });
-
+  const [request, response, promptAsync] =
+    Google.useIdTokenAuthRequest({
+      androidClientId: googleAndroidClientId,
+      iosClientId: googleIosClientId,
+      webClientId: googleWebClientId,   // 👈 VERY IMPORTANT
+      scopes: ["profile", "email"],
+    });
 
   return { request, response, promptAsync };
 };

@@ -300,7 +300,7 @@ const handleGoogleSignIn = async (idToken) => {
                   <Text style={styles.rememberText}>{I18n.t("rememberMe")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleForgotPassword}>
-                  <Text style={styles.forgotText}>{I18n.t("forgotEmailOrPassword")}</Text>
+                  <Text style={styles.forgotText}>{I18n.t("forgotEmailOr Password")}</Text>
                 </TouchableOpacity>
               </View>
 

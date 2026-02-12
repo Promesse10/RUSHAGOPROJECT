@@ -247,7 +247,7 @@ const LanguageModal = ({ visible, onSelectLanguage }) => {
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.languageModalOverlay}>
         <View style={styles.languageModalContainer}>
-          <Text style={styles.languageModalTitle}>{I18n.t("chooseLanguage")}</Text>
+          <Text style={styles.languageModalTitle}>{"chooseLanguage"}</Text>
           {languages.map((lang) => (
             <TouchableOpacity
               key={lang.code}
@@ -255,7 +255,7 @@ const LanguageModal = ({ visible, onSelectLanguage }) => {
               onPress={() => onSelectLanguage(lang.code)}
             >
               <Image source={{ uri: lang.flag }} style={styles.languageFlag} />
-              <Text style={styles.languageText}>{I18n.t(lang.name)}</Text>
+              <Text style={styles.languageText}>{(lang.name)}</Text>
             </TouchableOpacity>
           ))}
         </View>

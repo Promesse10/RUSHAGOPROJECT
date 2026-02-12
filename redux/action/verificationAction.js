@@ -15,7 +15,8 @@ export const sendVerificationCodeAction = createAsyncThunk(
     email: trimmedEmail,
     userName: trimmedUserName,
   },
-  { timeout: 90000 }
+  // remove timeout override completely
+
 );
 
       console.log("Send verification response:", res.data);
