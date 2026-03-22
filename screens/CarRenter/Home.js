@@ -14,7 +14,7 @@ import {
   Animated,
   Modal,
   Alert,
-  
+  ActivityIndicator,
   Keyboard,
   TouchableWithoutFeedback,
   RefreshControl,
@@ -214,6 +214,7 @@ const HomeScreen = ({ navigation }) => {
   const [showNoResultsModal, setShowNoResultsModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isNavigatingToCarListing, setIsNavigatingToCarListing] = useState(false)
   const { t, i18n } = useTranslation();
 const unreadCount = Array.isArray(notifications)
   ? notifications.filter(n => !n.isRead).length
@@ -877,9 +878,10 @@ const handleSearchSubmit = useCallback(
     [userLocation, dispatch],
   )
 
-  const handleLanguageChange = useCallback((language) => {
+  const handleLanguageChange = useCallback(async (language) => {
     setCurrentLanguage(language)
-    i18n.changeLanguage(currentLanguage);
+    await i18n.changeLanguage(language)
+    await AsyncStorage.setItem("userLanguage", language)
     setShowLanguageDropdown(false)
   }, [])
 
@@ -1493,9 +1495,18 @@ Alert.alert(
         <View style={styles.bottomNav}>
           <TouchableOpacity
             style={styles.navButton}
-            onPress={() => navigation.navigate("CarListing", { cars: actualApprovedCars })}
+            onPress={() => {
+              setIsNavigatingToCarListing(true);
+              navigation.navigate("CarListing", { cars: actualApprovedCars });
+              setTimeout(() => setIsNavigatingToCarListing(false), 1000); // Reset after navigation
+            }}
+            disabled={isNavigatingToCarListing}
           >
-            <Icon name="car" size={28} color="#007EFD" />
+            {isNavigatingToCarListing ? (
+              <ActivityIndicator size="small" color="#007EFD" />
+            ) : (
+              <Icon name="car" size={28} color="#007EFD" />
+            )}
           </TouchableOpacity>
 <View style={styles.fabWrapper}>
   <TouchableOpacity style={styles.fabButton} onPress={handleTrackNearestCar}>

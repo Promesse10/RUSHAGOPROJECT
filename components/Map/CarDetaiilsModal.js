@@ -359,7 +359,7 @@ const CarDetailsModal = ({ car, visible, onClose, hideBottomNav }) => {
         >
           {isLoading ? (
             <View style={styles.imageSkeleton}>
-              <ActivityIndicator size="large" color="#4B4DFF" />
+              <ActivityIndicator size="large" color="#007EFD" />
             </View>
           ) : (
             <View>

@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Modal,
+  ActivityIndicator,
 } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import I18n from "../utils/i18n"

@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "scheme": "muvar",
 
-    "icon": "./assets/icon.png",
+    "icon": "./assets/Icon.png",
 "splash": {
   "image": "./assets/logo.png",
   "resizeMode": "contain",
@@ -25,8 +25,8 @@
         "expo-build-properties",
         {
           "android": {
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
           }
         }
       ]

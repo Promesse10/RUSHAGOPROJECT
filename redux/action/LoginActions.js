@@ -2,28 +2,24 @@ import { createAsyncThunk } from "@reduxjs/toolkit"
 import axios from "axios"
 import * as SecureStore from "expo-secure-store"
 import axiosInstance from "../../utils/axios"
-import messaging from '@react-native-firebase/messaging'
+import * as Notifications from 'expo-notifications'
 const registerFCMToken = async (userId, authToken) => {
   try {
-    // Request permission (Android 13+ safe)
-    const authStatus = await messaging().requestPermission()
-    const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL
-
-    if (!enabled) {
+    // Request permission
+    const { status } = await Notifications.requestPermissionsAsync()
+    if (status !== 'granted') {
       console.log("🔕 Notification permission denied")
       return
     }
 
     // Get token
-    const fcmToken = await messaging().getToken()
-    console.log("📲 FCM TOKEN:", fcmToken)
+    const token = (await Notifications.getDevicePushTokenAsync()).data
+    console.log("📲 FCM TOKEN:", token)
 
     // Send to backend
     await axiosInstance.post(
       "/users/fcm-token",
-      { fcmToken },
+      { fcmToken: token },
       {
         headers: {
           Authorization: `Bearer ${authToken}`,

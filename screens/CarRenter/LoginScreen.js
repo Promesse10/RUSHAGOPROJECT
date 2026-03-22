@@ -15,6 +15,7 @@ import {
   Alert,
   Image,
   Dimensions,
+  ActivityIndicator,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import AsyncStorage from "@react-native-async-storage/async-storage"
@@ -23,7 +24,7 @@ import { loginAction } from "../../redux/action/LoginActions"
 import { clearLoginState } from "../../redux/slices/loginSlice"
 import { googleAuthApi } from "../../services/authService";
 import { useGoogleAuth } from "../../utils/googleAuth";
-import messaging from '@react-native-firebase/messaging'
+import * as Notifications from 'expo-notifications'
 
 import I18n from "../../utils/i18n"
 const { width, height } = Dimensions.get("window")
@@ -88,17 +89,13 @@ useEffect(() => {
   }, [userType])
   const registerFCMToken = async (token) => {
   try {
-    const authStatus = await messaging().requestPermission()
-    const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL
-
-    if (!enabled) {
+    const { status } = await Notifications.requestPermissionsAsync()
+    if (status !== 'granted') {
       console.log("🔕 Notifications not allowed")
       return
     }
 
-    const fcmToken = await messaging().getToken()
+    const fcmToken = (await Notifications.getDevicePushTokenAsync()).data
     console.log("📲 FCM TOKEN:", fcmToken)
 
     await fetch(
@@ -300,12 +297,16 @@ const handleGoogleSignIn = async (idToken) => {
                   <Text style={styles.rememberText}>{I18n.t("rememberMe")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleForgotPassword}>
-                  <Text style={styles.forgotText}>{I18n.t("forgotEmailOr Password")}</Text>
+                  <Text style={styles.forgotText}>{I18n.t("forgotEmailOrPassword")}</Text>
                 </TouchableOpacity>
               </View>
 
               <TouchableOpacity style={styles.signInButton} onPress={handleSignIn} disabled={isLoading}>
-                <Text style={styles.signInButtonText}>{isLoading ? I18n.t("signingIn") : I18n.t("signIn")}</Text>
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.signInButtonText}>{I18n.t("signIn")}</Text>
+                )}
               </TouchableOpacity>
 
               <View style={styles.orContainer}>

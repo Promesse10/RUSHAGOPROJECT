@@ -1,6 +1,6 @@
 // app/screens/ResetPasswordScreen.js
 import React, { useState, useEffect } from "react"
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native"
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native"
 import { useDispatch, useSelector } from "react-redux"
 import * as Linking from "expo-linking"
 import { resetPasswordAction } from "../redux/action/AuthRecoveryActions"
@@ -69,7 +69,11 @@ const ResetPasswordScreen = ({ route, navigation }) => {
         onChangeText={setConfirmPassword}
       />
       <TouchableOpacity style={styles.btn} onPress={handleReset} disabled={isLoading}>
-        <Text style={styles.btnText}>{isLoading ? "Resetting..." : "Reset Password"}</Text>
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#FFF" />
+        ) : (
+          <Text style={styles.btnText}>Reset Password</Text>
+        )}
       </TouchableOpacity>
       {error && <Text style={styles.error}>{error}</Text>}
     </View>

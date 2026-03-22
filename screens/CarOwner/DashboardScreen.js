@@ -13,6 +13,7 @@ import {
   TouchableWithoutFeedback,
   Dimensions,
   Animated,
+  ActivityIndicator,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
@@ -40,6 +41,7 @@ const DashboardScreen = () => {
 
   // ✅ Get authenticated user data from correct slice
   const { user, isAuthenticated } = useSelector((state) => state.auth || {})
+  const userId = user?.id
   const {
     totalListings,
     activeListings,
@@ -49,15 +51,13 @@ const DashboardScreen = () => {
     error: dashboardError,
   } = useSelector((state) => state.dashboard || {})
 
-  const { notifications, isLoadingNotifications, errorNotifications } = useSelector((state) => ({
-    notifications: state.notifications?.notifications ?? [],
-    isLoadingNotifications: state.notifications?.isLoading ?? false,
-    errorNotifications: state.notifications?.error ?? null,
-  }))
+  const notifications = useSelector((state) => state.notifications?.notifications ?? [])
+  const isLoadingNotifications = useSelector((state) => state.notifications?.isLoading ?? false)
+  const errorNotifications = useSelector((state) => state.notifications?.error ?? null)
 
   const [stats, setStats] = useState([])
   const [activities, setActivities] = useState([])
-  const socket = io(`${process.env.EXPO_PUBLIC_API_URL}`)
+  const socketRef = useRef(null)
 
   const [currentCarIndex, setCurrentCarIndex] = useState(0)
   const fadeAnim = useRef(new Animated.Value(1)).current
@@ -66,19 +66,33 @@ const DashboardScreen = () => {
 
   const unreadCount = Array.isArray(notifications) ? notifications.filter(n => n && !n.isRead).length : 0
 
-  // Fetch notifications on mount
+  // Fetch notifications on mount (when authenticated) and set up socket updates.
   useEffect(() => {
+    if (!isAuthenticated || !userId) return
+
     dispatch(fetchNotifications())
-  }, [dispatch])
 
-  // Polling for notifications
-  useEffect(() => {
-    const interval = setInterval(() => {
-      dispatch(fetchNotifications())
-    }, 30000) // every 30 seconds
+    // Setup socket connection once
+    if (!socketRef.current) {
+      const socket = io(`${process.env.EXPO_PUBLIC_API_URL}`)
+      socketRef.current = socket
 
-    return () => clearInterval(interval)
-  }, [dispatch])
+      socket.on("notification", () => {
+        dispatch(fetchNotifications())
+      })
+
+      socket.on("carUpdated", () => {
+        dispatch(fetchDashboardStats())
+      })
+    }
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect()
+        socketRef.current = null
+      }
+    }
+  }, [dispatch, isAuthenticated, userId])
 
   const carBrands = [
     // Japanese Brands
@@ -162,10 +176,6 @@ const DashboardScreen = () => {
 
   const [showLanguageOptions, setShowLanguageOptions] = useState(false)
   const [showNotificationBottomSheet, setShowNotificationBottomSheet] = useState(false)
-    // Fetch notifications on mount
-    useEffect(() => {
-      dispatch(fetchNotifications())
-    }, [dispatch])
   const [expandedNotifications, setExpandedNotifications] = useState({})
   const [currentLanguage, setCurrentLanguage] = useState("en")
   const [hasNewNotifications, setHasNewNotifications] = useState(true)
@@ -237,43 +247,14 @@ const DashboardScreen = () => {
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    socket.on("connect", () => {
-      console.log("✅ Connected to socket.io server")
-    })
-
-    socket.on("carUpdated", (data) => {
-      console.log("📡 Real-time update received:", data)
-      dispatch(fetchDashboardStats())
-    })
-
-    return () => {
-      socket.off("carUpdated")
-      socket.disconnect()
-    }
-  }, [dispatch])
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      dispatch(fetchNotifications());
-    }
-  }, [dispatch, isAuthenticated, user]);
-  // 🔁 Poll for new notifications every 30 seconds
-useEffect(() => {
-  if (!isAuthenticated || !user) return;
-  const interval = setInterval(() => {
-    dispatch(fetchNotifications());
-  }, 30000); // every 30 seconds
-
-  return () => clearInterval(interval);
-}, [dispatch, isAuthenticated, user]);
-
+  // Notifications are loaded when the user is authenticated via the socket-aware effect above.
   useEffect(() => {
     if (!isAuthenticated || !user) {
-      console.log("❌ User not authenticated, should redirect to login...")
+      if (__DEV__) console.log("❌ User not authenticated, should redirect to login...")
       return
     }
 
-    console.log("✅ User authenticated:", user.name)
+    if (__DEV__) console.log("✅ User authenticated:", user.name)
     loadSavedLanguage()
     dispatch(fetchDashboardStats())
   }, [isAuthenticated, user, dispatch])
@@ -281,7 +262,7 @@ useEffect(() => {
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
       if (isAuthenticated && user) {
-        console.log("🔄 Dashboard focused, refetching stats...")
+        if (__DEV__) console.log("🔄 Dashboard focused, refetching stats...")
         dispatch(fetchDashboardStats())
       }
     })
@@ -301,20 +282,16 @@ useEffect(() => {
         await AsyncStorage.setItem("userLanguage", "en")
       }
     } catch (error) {
-      console.log("Error loading language:", error)
+      if (__DEV__) console.log("Error loading language:", error)
       setCurrentLanguage("en")
       i18n.changeLanguage("en")
     }
   }
 
-  useEffect(() => {
-    dispatch(fetchNotifications())
-  }, [dispatch])
-
   // ✅ UPDATED: Process real dashboard data from API with better stats
   useEffect(() => {
     if (!dashboardLoading) {
-      console.log("📈 Processing dashboard data:", { totalListings, activeListings, pendingListings })
+      if (__DEV__) console.log("📈 Processing dashboard data:", { totalListings, activeListings, pendingListings })
 
       // Calculate additional stats
       const verifiedCars = activeListings || 0
@@ -509,14 +486,14 @@ const handleNotificationDelete = (notificationId) => {
     try {
       setCurrentLanguage(lng)
       await i18n.changeLanguage(lng)
-      await AsyncStorage.setItem("user_language", lng)
+      await AsyncStorage.setItem("userLanguage", lng)
       setShowLanguageOptions(false)
 
       setTimeout(() => {
         dispatch(fetchDashboardStats())
       }, 100)
     } catch (error) {
-      console.log("Error changing language:", error)
+      if (__DEV__) console.log("Error changing language:", error)
     }
   }
 

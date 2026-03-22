@@ -15,6 +15,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
+import I18n from "./utils/i18n";
 
 const AuthScreen = () => {
   const navigation = useNavigation();
@@ -135,16 +136,16 @@ const AuthScreen = () => {
 
       <Image source={require("../MUVCARApp/assets/logo.png")} style={styles.logo} />
 
-      <Text style={styles.title}>{isSignup ? "Sign Up" : "Login"}</Text>
+      <Text style={styles.title}>{isSignup ? I18n.t("signUp") : I18n.t("signIn")}</Text>
       <Text style={styles.subtitle}>
-        {isSignup ? "Create Your Account" : "Welcome Back"}
+        {isSignup ? I18n.t("signUpHeading") : I18n.t("welcomeBack")}
       </Text>
 
       <View style={styles.inputContainer}>
         <Feather name="user" size={20} color="#666" style={styles.inputIcon} />
         <TextInput
           style={styles.input}
-          placeholder="Full Name"
+          placeholder={I18n.t("fullName")}
           value={fullName}
           onChangeText={setFullName}
           placeholderTextColor="#666"
@@ -156,7 +157,7 @@ const AuthScreen = () => {
         <Feather name="mail" size={20} color="#666" style={styles.inputIcon} />
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder={I18n.t("email")}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
@@ -168,7 +169,7 @@ const AuthScreen = () => {
         <Feather name="lock" size={20} color="#666" style={styles.inputIcon} />
         <TextInput
           style={styles.input}
-          placeholder="Password"
+          placeholder={I18n.t("createPassword")}
           value={password}
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
@@ -188,7 +189,7 @@ const AuthScreen = () => {
 
       {!isSignup && (
         <TouchableOpacity style={styles.forgotPassword}>
-          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          <Text style={styles.forgotPasswordText}>{I18n.t("forgotEmailOrPassword")}</Text>
         </TouchableOpacity>
       )}
 

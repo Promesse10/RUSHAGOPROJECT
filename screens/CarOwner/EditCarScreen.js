@@ -17,6 +17,7 @@ import {
   Dimensions,
   FlatList,
   Platform,
+  ActivityIndicator,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
@@ -139,7 +140,7 @@ const carId = carData?._id || carData?.id;
   const [showAllSuggestions, setShowAllSuggestions] = useState(false)
   const [isCustomModel, setIsCustomModel] = useState(false)
  const [showExitPrompt, setShowExitPrompt] = useState(false)
-
+  const [showExitModal, setShowExitModal] = useState(false)
   // ✅ NEW: Owner autocomplete states
   const [showOwnerSuggestions, setShowOwnerSuggestions] = useState(false)
   const [ownerSearchQuery, setOwnerSearchQuery] = useState("")
@@ -161,7 +162,7 @@ const carId = carData?._id || carData?.id;
 const [showSaveDraftPrompt, setShowSaveDraftPrompt] = useState(false);
 
   // Local draft saving function
- const saveDraftLocally = async (draftData) => {
+ const saveDraftLocally = async (draftData, { showAlert = true } = {}) => {
   try {
     const existing = await AsyncStorage.getItem("carDrafts");
     const drafts = existing ? JSON.parse(existing) : [];
@@ -171,33 +172,41 @@ const [showSaveDraftPrompt, setShowSaveDraftPrompt] = useState(false);
 
     await AsyncStorage.setItem("carDrafts", JSON.stringify(filtered));
 
-    Alert.alert(t("Success"), t("Draft saved successfully!"));
-
+    if (showAlert) {
+      Alert.alert(t("Success"), t("Draft saved successfully!"));
+    }
   } catch (e) {
-    Alert.alert(t("Error"), t("Failed to save draft"));
+    if (showAlert) {
+      Alert.alert(t("Error"), t("Failed to save draft"));
+    }
   }
 };
 
 
-  // Handle save as draft
+  // Handle save as draft (called when user chooses to save or exit)
   const handleSaveAsDraft = async () => {
-    try {
-      const draftData = {
-        id: isEditing ? editingCarId : `draft_${Date.now()}`,
-        formData,
-        currentStep,
-        isEditing,
-        editingCarId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
+    const draftData = {
+      id: isEditing ? editingCarId : `draft_${Date.now()}`,
+      formData,
+      currentStep,
+      isEditing,
+      editingCarId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
 
+    try {
       const response = await axios.post("/listings/draft", draftData)
       console.log("💾 Draft saved to server:", response.data)
+      await saveDraftLocally(draftData, { showAlert: false })
       Alert.alert(t("Success"), t("Draft saved successfully!"))
     } catch (error) {
       console.error('❌ Failed to save draft:', error)
-      Alert.alert(t("Error"), error.response?.data?.message || "Failed to save draft")
+      await saveDraftLocally(draftData, { showAlert: false })
+      Alert.alert(
+        t("Success"),
+        t("Draft saved locally. Server sync failed. You can retry later."),
+      )
     }
   }
   const [paymentCompleted, setPaymentCompleted] = useState(false)
@@ -326,6 +335,16 @@ const [showSaveDraftPrompt, setShowSaveDraftPrompt] = useState(false);
       }).catch(err => console.log('❌ Error loading drafts:', err))
     }
   }, [isEditing])
+
+  // Auto-save draft on form changes
+  useEffect(() => {
+    if (hasChanges) {
+      const timeoutId = setTimeout(() => {
+        handleSaveAsDraft();
+      }, 2000); // Save after 2 seconds of no changes
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData, hasChanges]);
 
   // ✅ NEW: Handle owner name search for autocomplete
   const handleOwnerNameSearch = (text) => {
@@ -517,7 +536,7 @@ useEffect(() => {
     }
   }, [isUpdateFailed, updateError, dispatch, t])
 
-  // Auto-save draft
+  // Auto-save draft (silent, local only)
   useEffect(() => {
     if (currentStep > 1 && !isEditing && Object.keys(formData).some(key => formData[key] !== initialFormData[key])) {
       const draftData = {
@@ -527,7 +546,7 @@ useEffect(() => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
-      saveDraftLocally(draftData)
+      saveDraftLocally(draftData, { showAlert: false })
     }
   }, [currentStep, formData, isEditing])
 
@@ -814,8 +833,8 @@ useEffect(() => {
   }
 
 const handleBackPress = () => {
-  if (isEditing && hasChanges) {
-    setShowExitPrompt(true)
+  if (currentStep < 6) {
+    setShowExitModal(true)
   } else {
     navigation.goBack()
   }
@@ -983,10 +1002,16 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
           })
           const cloudData = await cloudRes.json()
 
-          if (cloudData.secure_url) {
-            uploadedImages.push(cloudData.secure_url)
-            console.log(`✅ ${key} image uploaded successfully`)
-          } else {
+      if (cloudData.secure_url) {
+  const originalUrl = cloudData.secure_url
+
+  const blurredUrl = originalUrl.replace(
+    "/upload/",
+    "/upload/e_blur_region:2000,g_auto:license_plate/"
+  )
+
+  uploadedImages.push(blurredUrl)
+} else {
             throw new Error(`Failed to upload ${key} image`)
           }
         }
@@ -1936,6 +1961,39 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
             <Text style={styles.mapInstructionsText}>{t("Tap on the map to select your car's location")}</Text>
           </View>
         </SafeAreaView>
+      </Modal>
+
+      {/* Exit Modal */}
+      <Modal visible={showExitModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.draftModal}>
+            <Text style={styles.draftTitle}>{t("saveDraft", "Save Draft?")}</Text>
+            <Text style={styles.draftMessage}>
+              {t("exitMessage", "You haven't completed editing the car. Save as draft to continue later?")}
+            </Text>
+            <View style={styles.draftButtons}>
+              <TouchableOpacity
+                style={styles.loadDraftButton}
+                onPress={async () => {
+                  await handleSaveAsDraft();
+                  setShowExitModal(false);
+                  navigation.goBack();
+                }}
+              >
+                <Text style={styles.loadDraftText}>{t("saveDraft", "Save Draft")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.newCarButton}
+                onPress={() => {
+                  setShowExitModal(false);
+                  navigation.goBack();
+                }}
+              >
+                <Text style={styles.newCarText}>{t("exit", "Exit")}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {showCountryCodeDropdown && (

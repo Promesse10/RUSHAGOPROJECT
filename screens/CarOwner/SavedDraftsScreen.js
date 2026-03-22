@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import {
   View,
   Text,
@@ -25,6 +25,14 @@ const SavedDraftsScreen = () => {
 
   // Redux state
   const { drafts, loading, error } = useSelector((state) => state.drafts || { drafts: [], loading: false, error: null })
+  const [page, setPage] = useState(1)
+  const DRAFTS_PER_PAGE = 10
+
+  const displayedDrafts = drafts.slice(0, page * DRAFTS_PER_PAGE)
+
+  useEffect(() => {
+    setPage(1)
+  }, [drafts])
 
   useEffect(() => {
     dispatch(loadDrafts())
@@ -114,7 +122,7 @@ const SavedDraftsScreen = () => {
         </View>
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {drafts.map((draft) => (
+          {displayedDrafts.map((draft) => (
             <View key={draft.id} style={styles.draftCard}>
               <View style={styles.draftHeader}>
                 {getCarImage(draft) && <Image source={getCarImage(draft)} style={styles.carImage} />}
@@ -152,6 +160,12 @@ const SavedDraftsScreen = () => {
               </View>
             </View>
           ))}
+
+          {drafts.length > displayedDrafts.length && (
+            <TouchableOpacity style={styles.loadMoreButton} onPress={() => setPage((prev) => prev + 1)}>
+              <Text style={styles.loadMoreText}>{t("loadMore", "Load more")}</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -316,6 +330,18 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 6,
     backgroundColor: "#FEF2F2",
+  },
+  loadMoreButton: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: "#E2E8F0",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  loadMoreText: {
+    fontSize: 16,
+    color: "#1E293B",
+    fontWeight: "600",
   },
 })
 

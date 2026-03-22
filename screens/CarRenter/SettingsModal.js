@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useTranslation } from 'react-i18next'
 import {
   View,
   Text,
@@ -32,6 +33,7 @@ const { width, height } = Dimensions.get("window")
 
 const SettingsModal = ({ visible, onClose, navigation }) => {
   const dispatch = useDispatch()
+  const { t } = useTranslation()
   const { user: currentUser, isLoading: isUpdating } = useSelector((state) => state.auth || {})
   const notifications = useSelector((state) => state.settings?.notifications || {})
   const profileImageUrl =
@@ -287,68 +289,61 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
   }
   const TermsContent = () => (
     <>
-      <Text style={legalStyles.title}>MUVCAR Terms of Use</Text>
+      <Text style={legalStyles.title}>{t('termsTitle')}</Text>
 
       <Text style={legalStyles.text}>
-        MUVCAR is a digital car rental platform designed to connect vehicle owners
-        with renters in a secure and transparent environment.
+        {t('termsText1')}
       </Text>
 
       <Text style={legalStyles.text}>
-        MUVCAR is a product of CarConnect Ltd. By accessing or using the MUVCAR
-        mobile application, you agree to comply with these Terms of Use.
+        {t('termsText2')}
       </Text>
 
-      <Text style={legalStyles.subtitle}>1. User Responsibilities</Text>
+      <Text style={legalStyles.subtitle}>{t('termsSubtitle1')}</Text>
       <Text style={legalStyles.text}>
-        Users must provide accurate information and maintain the security of
-        their accounts. Any misuse of the platform may result in suspension.
+        {t('termsText3')}
       </Text>
 
-      <Text style={legalStyles.subtitle}>2. Rentals & Payments</Text>
+      <Text style={legalStyles.subtitle}>{t('termsSubtitle2')}</Text>
       <Text style={legalStyles.text}>
-        MUVCAR facilitates car rental agreements but does not own vehicles listed
-        on the platform.
+        {t('termsText4')}
       </Text>
 
-      <Text style={legalStyles.subtitle}>3. Liability</Text>
+      <Text style={legalStyles.subtitle}>{t('termsSubtitle3')}</Text>
       <Text style={legalStyles.text}>
-        CarConnect Ltd shall not be liable for damages arising from misuse of the
-        platform or third-party actions.
+        {t('termsText5')}
       </Text>
 
       <Text style={legalStyles.footer}>
-        © {new Date().getFullYear()} CarConnect Ltd. All rights reserved.
+        {t('termsFooter').replace('2024', new Date().getFullYear())}
       </Text>
     </>
   )
   const PrivacyContent = () => (
     <>
-      <Text style={legalStyles.title}>MUVCAR Privacy Policy</Text>
+      <Text style={legalStyles.title}>{t('privacyTitle')}</Text>
 
       <Text style={legalStyles.text}>
-        This Privacy Policy explains how MUVCAR, a product of CarConnect Ltd,
-        collects, uses, and protects your personal information.
+        {t('privacyText1')}
       </Text>
 
-      <Text style={legalStyles.subtitle}>1. Information We Collect</Text>
+      <Text style={legalStyles.subtitle}>{t('privacySubtitle1')}</Text>
       <Text style={legalStyles.text}>
-        We collect personal data such as name, contact details, and usage data to
-        provide and improve our services.
+        {t('privacyText2')}
       </Text>
 
-      <Text style={legalStyles.subtitle}>2. Data Security</Text>
+      <Text style={legalStyles.subtitle}>{t('privacySubtitle2')}</Text>
       <Text style={legalStyles.text}>
-        We use industry-standard security measures to protect your information.
+        {t('privacyText3')}
       </Text>
 
-      <Text style={legalStyles.subtitle}>3. Third-Party Services</Text>
+      <Text style={legalStyles.subtitle}>{t('privacySubtitle3')}</Text>
       <Text style={legalStyles.text}>
-        MUVCAR may integrate with third-party services such as payment providers.
+        {t('privacyText4')}
       </Text>
 
       <Text style={legalStyles.footer}>
-        © {new Date().getFullYear()} CarConnect Ltd. All rights reserved.
+        {t('termsFooter').replace('2024', new Date().getFullYear())}
       </Text>
     </>
   )

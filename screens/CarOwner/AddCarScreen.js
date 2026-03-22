@@ -15,6 +15,7 @@ import {
   Dimensions,
   FlatList,
   Platform,
+  ActivityIndicator,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
@@ -28,6 +29,7 @@ import carIcon from "../../assets/car-marker.png"
 import { rwandaLocations, searchLocations, getProvinceCoordinates } from "../../utils/rwandaLocations"
 import { createCarAction, updateCarAction, checkPlateUniquenessAction } from "../../redux/action/CarActions"
 import { getCurrentUserAction, searchUsersAction } from "../../redux/action/UserActions"
+import { saveDraft, deleteDraft, loadDrafts } from "../../redux/action/draftsActions"
 import { clearSearchResults } from "../../redux/slices/userSlice"
 import { clearCreateState, clearUpdateState } from "../../redux/slices/carSlice"
 import { carMakes, carModels, carTypes, transmissionTypes, fuelTypes, seatOptions } from "../../utils/carData"
@@ -80,6 +82,10 @@ const initialFormData = {
   plateNumber: "",
 }
 
+const generateDraftId = () => {
+  return `draft_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`
+}
+
 const AddCarScreen = () => {
   const dispatch = useDispatch()
   const navigation = useNavigation()
@@ -110,9 +116,8 @@ const AddCarScreen = () => {
   } = useSelector((state) => state.cars || {})
 
   const [isEditing, setIsEditing] = useState(route.params?.draftData?.isEditing || false)
+  const [isDraft, setIsDraft] = useState(route.params?.isDraft || false)
   const [editingCarId, setEditingCarId] = useState(route.params?.draftData?.id)
-
-  console.log("🚗 AddCarScreen - isEditing:", isEditing, "editingCarId:", editingCarId)
 
   const [currentStep, setCurrentStep] = useState(1)
   const [showMakeDropdown, setShowMakeDropdown] = useState(false)
@@ -150,48 +155,65 @@ const AddCarScreen = () => {
 
   // Draft prompt states
   const [showDraftPrompt, setShowDraftPrompt] = useState(false)
+  const [showExitModal, setShowExitModal] = useState(false)
   const [draftData, setDraftData] = useState(null)
+  const [draftId, setDraftId] = useState(route.params?.draftData?.id || generateDraftId())
 
-  // Local draft saving function
-  const saveDraftLocally = async (draftData) => {
+  // Local draft saving function (fallback when API/redux fails)
+  const saveDraftLocally = async (draftData, { showAlert = true } = {}) => {
     try {
-      console.log("💾 Saving draft locally:", draftData)
-      const existingDrafts = await AsyncStorage.getItem('carDrafts')
+      const userId = user?.id || user?._id || user?.userId || "user123"
+      const storageKey = `drafts_${userId}`
+      const existingDrafts = await AsyncStorage.getItem(storageKey)
       const drafts = existingDrafts ? JSON.parse(existingDrafts) : []
-      
-      // Remove existing draft for this car if editing
-      const filteredDrafts = drafts.filter(d => d.id !== draftData.id)
+
+      // Remove existing draft for this id
+      const filteredDrafts = drafts.filter((d) => d.id !== draftData.id)
       filteredDrafts.push(draftData)
-      
-      await AsyncStorage.setItem('carDrafts', JSON.stringify(filteredDrafts))
-      console.log("💾 Draft saved successfully")
-      Alert.alert(t("Success"), t("Draft saved successfully!"))
+
+      await AsyncStorage.setItem(storageKey, JSON.stringify(filteredDrafts))
+      if (showAlert) {
+        Alert.alert(t("Success"), t("Draft saved successfully!"))
+      }
     } catch (error) {
       console.error('❌ Failed to save draft:', error)
-      Alert.alert(t("Error"), t("Failed to save draft"))
+      if (showAlert) {
+        Alert.alert(t("Error"), t("Failed to save draft"))
+      }
     }
   }
 
-  // Handle save as draft
-  const handleSaveAsDraft = async () => {
-    try {
-      const draftData = {
-        id: isEditing ? editingCarId : `draft_${Date.now()}`,
-        formData,
-        currentStep,
-        isEditing,
-        editingCarId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
+  // Handle save as draft (called when user intentionally saves or exits)
+  const handleSaveAsDraft = async ({ showAlert = true } = {}) => {
+    const finalDraftId = draftData?.id || draftId || generateDraftId()
+    setDraftId(finalDraftId)
 
-      const response = await axios.post("/listings/draft", draftData)
-      console.log("💾 Draft saved to server:", response.data)
-      Alert.alert(t("Success"), t("Draft saved successfully!"))
-    } catch (error) {
-      console.error('❌ Failed to save draft:', error)
-      Alert.alert(t("Error"), error.response?.data?.message || "Failed to save draft")
+    const draftDataToSave = {
+      id: finalDraftId,
+      formData,
+      currentStep,
+      isEditing,
+      isDraft,
+      editingCarId,
+      createdAt: draftData?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
+
+    try {
+      // Save via Redux/actions (handles API + local storage fallback)
+      await dispatch(saveDraft(draftDataToSave)).unwrap()
+      // Refresh local drafts list so SavedDraftsScreen shows the latest
+      dispatch(loadDrafts())
+      if (showAlert) {
+        Alert.alert(t("Success"), t("Draft saved successfully!"))
+      }
+    } catch (error) {
+      // Fallback: save locally if server/redux fails
+      await saveDraftLocally(draftDataToSave, { showAlert })
+    }
+
+    setDraftData(draftDataToSave)
+    setIsDraft(true)
   }
   const [paymentCompleted, setPaymentCompleted] = useState(false)
   const [selectedImages, setSelectedImages] = useState([])
@@ -209,7 +231,6 @@ const AddCarScreen = () => {
   // ✅ FIXED: Fetch current user on component mount
   useEffect(() => {
     if (!user && authUser) {
-      console.log("🔄 Fetching current user profile...")
       dispatch(getCurrentUserAction())
     }
   }, [dispatch, user, authUser])
@@ -217,7 +238,6 @@ const AddCarScreen = () => {
   // ✅ FIXED: Auto-fill owner information when user is available
   useEffect(() => {
     if (user && !isEditing && !isManualEntry) {
-      console.log("👤 Auto-filling owner information:", user)
       setFormData((prev) => ({
         ...prev,
         ownerName: user.name || "",
@@ -226,9 +246,9 @@ const AddCarScreen = () => {
     }
   }, [user, isEditing, isManualEntry])
 
-  // ✅ FIXED: Reset form when not editing
+  // ✅ FIXED: Reset form when not editing and not loading a draft
   useEffect(() => {
-    if (!isEditing) {
+    if (!isEditing && !isDraft) {
       setFormData(initialFormData)
       setCurrentStep(1)
       setHasChanges(false)
@@ -244,13 +264,37 @@ const AddCarScreen = () => {
       setPaymentCompleted(false)
       setIsManualEntry(false)
     }
-  }, [isEditing])
+  }, [isEditing, isDraft])
+
+  // Ensure AddCar screen is reset when focused from other tabs/screens
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!isEditing && !isDraft && !route.params?.draftData) {
+        setDraftData(null)
+        setDraftId(generateDraftId())
+        setFormData(initialFormData)
+        setCurrentStep(1)
+        setHasChanges(false)
+        setOriginalData(initialFormData)
+        setCustomMake("")
+        setSelectedLocation(null)
+        setMapRegion({
+          latitude: -1.9441,
+          longitude: 30.0619,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        })
+        setPaymentCompleted(false)
+        setIsManualEntry(false)
+      }
+    }, [isEditing, isDraft, route.params?.draftData])
+  )
 
   // Handle back navigation prompt when editing
   useFocusEffect(
     React.useCallback(() => {
       const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-        if (!isEditing || !hasChanges) {
+        if (!hasChanges) {
           return
         }
 
@@ -263,7 +307,7 @@ const AddCarScreen = () => {
             {
               text: t('Save as Draft'),
               onPress: async () => {
-                await handleSaveAsDraft()
+                await handleSaveAsDraft({ showAlert: false })
                 navigation.dispatch(e.data.action)
               },
             },
@@ -284,31 +328,101 @@ const AddCarScreen = () => {
     }, [navigation, isEditing, hasChanges, t])
   )
 
-  // Check for drafts when adding new car
-useEffect(() => {
-  if (!isEditing) {
-    AsyncStorage.getItem('carDrafts')
-      .then(drafts => {
-        if (!drafts) return;
+  // Prompt when leaving via tab navigation/blur (e.g. home, my cars, settings)
+  useEffect(() => {
+    const blurSubscription = navigation.addListener('blur', () => {
+      if (!hasChanges) return
 
-        const parsed = JSON.parse(drafts);
+      Alert.alert(
+        t('Unsaved Changes'),
+        t('You have unsaved changes. Save as draft before leaving?'),
+        [
+          {
+            text: t('Save as Draft'),
+            onPress: async () => {
+              await handleSaveAsDraft({ showAlert: false })
+            },
+          },
+          {
+            text: t('Continue Editing'),
+            style: 'cancel',
+            onPress: () => {
+              navigation.navigate('AddCar')
+            },
+          },
+          {
+            text: t('Discard Changes'),
+            style: 'destructive',
+          },
+        ]
+      )
+    })
+
+    return blurSubscription
+  }, [navigation, hasChanges, t])
+
+  // Check for drafts when adding/editing a car
+  useEffect(() => {
+    const userId = user?.id || user?._id || user?.userId || "user123"
+    const storageKey = `drafts_${userId}`
+
+    AsyncStorage.getItem(storageKey)
+      .then((drafts) => {
+        if (!drafts) return
+
+        const parsed = JSON.parse(drafts) || []
 
         // Only show popup if a REAL draft exists
-        const validDraft = parsed?.find(
-          d =>
+        const validDrafts = parsed.filter(
+          (d) =>
             d?.formData &&
             Object.keys(d.formData).length > 0
-        );
+        )
 
-        if (validDraft) {
-          setDraftData(validDraft);
-          setShowDraftPrompt(true);
+        if (validDrafts.length > 0) {
+          let draftToShow = null
+
+          // If editing, prefer a draft matching the car being edited
+          if (isEditing && editingCarId) {
+            draftToShow = validDrafts.find((d) => d.id === editingCarId)
+          }
+
+          // Otherwise fall back to latest draft
+          if (!draftToShow) {
+            validDrafts.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
+            draftToShow = validDrafts[0]
+          }
+
+          if (draftToShow) {
+            setDraftData(draftToShow)
+            setDraftId(draftToShow.id)
+            setShowDraftPrompt(true)
+          }
         }
       })
-      .catch(err => console.log('❌ Error loading drafts:', err));
-  }
-}, [isEditing]);
+      .catch((err) => console.error('❌ Error loading drafts:', err))
+  }, [isEditing, editingCarId, user])
 
+  // Auto-save draft on form changes (silent, local only)
+  useEffect(() => {
+    const hasData = JSON.stringify(formData) !== JSON.stringify(initialFormData)
+    if (hasData) {
+      const timeoutId = setTimeout(() => {
+        const currentDraftId = draftData?.id || draftId || (isEditing ? editingCarId : generateDraftId())
+        setDraftId(currentDraftId)
+
+        const draftDataToSave = {
+          formData,
+          currentStep,
+          id: currentDraftId,
+          createdAt: draftData?.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+        saveDraftLocally(draftDataToSave, { showAlert: false })
+      }, 2000) // Save after 2 seconds of no changes
+      return () => clearTimeout(timeoutId)
+    }
+  }, [formData, currentStep, draftData, isEditing, editingCarId, draftId])
 
   // ✅ NEW: Handle owner name search for autocomplete
   const handleOwnerNameSearch = (text) => {
@@ -327,7 +441,6 @@ useEffect(() => {
 
   // ✅ NEW: Select user from autocomplete
   const selectOwnerFromSuggestions = (selectedUser) => {
-    console.log("👤 Selected user from suggestions:", selectedUser)
     setFormData({
       ...formData,
       ownerName: selectedUser.name,
@@ -364,17 +477,10 @@ useEffect(() => {
     }
   }
 
-  // Load existing data if editing
+  // Load existing data if editing or resuming a draft
   useEffect(() => {
-    console.log("🔍 useEffect for loading data - isEditing:", isEditing, "route.params:", route.params)
-    if (isEditing && route.params?.draftData?.formData) {
+    if ((isEditing || isDraft) && route.params?.draftData?.formData) {
       const existingData = route.params.draftData.formData
-      console.log("📝 Loading existing data for editing from route params:", existingData)
-      console.log("📝 Raw data fields:", Object.keys(existingData))
-      console.log("📝 Seating capacity raw:", existingData.seatings, existingData.seats)
-      console.log("📝 Address raw:", existingData.address, existingData.location?.address)
-      console.log("📝 Category raw:", existingData.category)
-      console.log("📝 Type raw:", existingData.type, existingData.carType)
 
       // Handle make/brand
       const brand = existingData.brand || existingData.make || ""
@@ -435,14 +541,6 @@ useEffect(() => {
         category: existingData.category || "",
       })
       
-      console.log("📝 Form data set with values:", {
-        type: existingData.type || existingData.carType || "",
-        seatings: existingData.seatings || existingData.seats || "",
-        address: existingData.location?.address || existingData.address || "",
-        category: existingData.category || "",
-        province: existingData.location?.province || existingData.province || "",
-      })
-
       if (!isStandardMake && brand) {
         setCustomMake(brand)
       }
@@ -466,7 +564,7 @@ useEffect(() => {
 
       setPaymentCompleted(!!existingData.thumbnail)
       setIsManualEntry(true) // Set to manual entry for editing
-      setCurrentStep(1) // Start at step 1 for editing so all fields are visible
+      setCurrentStep(route.params?.draftData?.currentStep ?? 1) // Restore step if editing a draft
       // setOriginalData will be set after formData is updated
     }
   }, [isEditing, route.params])
@@ -480,11 +578,9 @@ useEffect(() => {
 
   // Check for changes in form data
   useEffect(() => {
-    if (isEditing) {
-      const changed = JSON.stringify(formData) !== JSON.stringify(originalData)
-      setHasChanges(changed)
-    }
-  }, [formData, originalData, isEditing])
+    const changed = JSON.stringify(formData) !== JSON.stringify(originalData)
+    setHasChanges(changed)
+  }, [formData, originalData])
 
   // Handle Redux state changes
   useEffect(() => {
@@ -494,6 +590,11 @@ useEffect(() => {
           text: t("OK"),
           onPress: () => {
             dispatch(clearCreateState())
+            // Remove associated draft once listing is published
+            if (draftId) {
+              dispatch(deleteDraft(draftId))
+              setDraftId(generateDraftId())
+            }
             setFormData(initialFormData)
             setCurrentStep(1)
             navigation.navigate("MyCars")
@@ -501,7 +602,7 @@ useEffect(() => {
         },
       ])
     }
-  }, [isCreateSuccess, dispatch, navigation, t])
+  }, [isCreateSuccess, dispatch, navigation, t, draftId])
 
   useEffect(() => {
     if (isUpdateSuccess) {
@@ -510,12 +611,17 @@ useEffect(() => {
           text: t("OK"),
           onPress: () => {
             dispatch(clearUpdateState())
+            // Remove associated draft once listing is updated
+            if (draftId) {
+              dispatch(deleteDraft(draftId))
+              setDraftId(generateDraftId())
+            }
             navigation.navigate("MyCars")
           },
         },
       ])
     }
-  }, [isUpdateSuccess, dispatch, navigation, t])
+  }, [isUpdateSuccess, dispatch, navigation, t, draftId])
 
   useEffect(() => {
     if (isCreateFailed && createError) {
@@ -538,19 +644,8 @@ useEffect(() => {
     }
   }, [isUpdateFailed, updateError, dispatch, t])
 
-  // Auto-save draft
-  useEffect(() => {
-    if (currentStep > 1 && !isEditing && Object.keys(formData).some(key => formData[key] !== initialFormData[key])) {
-      const draftData = {
-        formData,
-        currentStep,
-        id: `draft_${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      saveDraftLocally(draftData)
-    }
-  }, [currentStep, formData, isEditing])
+  // Auto-save draft is handled by the debounced effect above.
+  // This effect was removed to avoid showing the "Draft saved successfully" alert on each step change.
 
   // Country codes with flags
   const countryCodes = [
@@ -835,7 +930,11 @@ useEffect(() => {
   }
 
   const handleBackPress = () => {
-    navigation.goBack()
+    if (currentStep < 6) {
+      setShowExitModal(true);
+    } else {
+      navigation.goBack();
+    }
   }
 
   const handleNext = () => {
@@ -853,8 +952,6 @@ useEffect(() => {
 
   // ✅ FIXED: Better error handling for user null
   const handleSaveChanges = async () => {
-    console.log("💾 Saving changes for editing...")
-
     if (!editingCarId) {
       console.error("❌ No editing car ID")
       return
@@ -867,8 +964,6 @@ useEffect(() => {
     }
 
     try {
-      console.log("🏗️ Preparing update data...")
-
       // For editing, use existing images (they are already URLs)
       const existingImages = []
       if (formData.images.exterior_front) existingImages.push(formData.images.exterior_front)
@@ -920,8 +1015,6 @@ useEffect(() => {
         status: "pending",
       }
 
-      console.log("📋 Update data prepared:", updateData)
-
       dispatch(updateCarAction({ carId: editingCarId, updatedData: updateData }))
     } catch (error) {
       console.error("❌ Save changes error:", error)
@@ -930,7 +1023,6 @@ useEffect(() => {
   }
 
   const handleSubmit = async () => {
-    console.log("🚀 Starting form submission...")
 
     // ✅ FIXED: Check if user exists before accessing _id
     if (!user || !user.id) {
@@ -945,38 +1037,25 @@ useEffect(() => {
     }
 
     if (!validateCurrentStep()) {
-      console.log("❌ Validation failed")
       return
     }
 if (isEditing && formData.plateNumber === originalData.plate_number) {
-  console.log("Plate unchanged — skipping uniqueness check");
+  // Plate number unchanged; skip uniqueness check
 } else {
-  const plateCheckResult = await dispatch(
-    checkPlateUniquenessAction(formData.plateNumber)
-  ).unwrap();
-
-  if (!plateCheckResult.isUnique) {
-    Alert.alert(t("Error"), t("Plate number already exists"));
-    return;
+  try {
+    const plateCheckResult = await dispatch(checkPlateUniquenessAction(formData.plateNumber)).unwrap()
+    if (!plateCheckResult.isUnique) {
+      Alert.alert(t("Error"), t("plateNumberAlreadyExists"))
+      return
+    }
+  } catch (error) {
+    console.error("❌ Plate check failed:", error)
+    Alert.alert(t("Error"), error || t("plateCheckFailed"))
+    return
   }
 }
 
-    // Check plate number uniqueness
-    console.log("🔍 Checking plate number uniqueness...")
     try {
-      const plateCheckResult = await dispatch(checkPlateUniquenessAction(formData.plateNumber)).unwrap()
-      if (!plateCheckResult.isUnique) {
-        Alert.alert(t("Error"), t("plateNumberAlreadyExists"))
-        return
-      }
-    } catch (error) {
-      console.error("❌ Plate check failed:", error)
-      Alert.alert(t("Error"), error || t("plateCheckFailed"))
-      return
-    }
-
-    try {
-      console.log("📤 Uploading images to Cloudinary...")
 
       // Upload all images to Cloudinary in specific order: front exterior first
       const uploadedImages = []
@@ -984,7 +1063,6 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
       for (const key of imageOrder) {
         const uri = formData.images[key]
         if (uri) {
-          console.log(`📸 Uploading ${key} image...`)
           const cloudForm = new FormData()
           cloudForm.append("file", {
             uri,
@@ -999,10 +1077,17 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
           })
           const cloudData = await cloudRes.json()
 
-          if (cloudData.secure_url) {
-            uploadedImages.push(cloudData.secure_url)
-            console.log(`✅ ${key} image uploaded successfully`)
-          } else {
+        if (cloudData.secure_url) {
+  const originalUrl = cloudData.secure_url
+
+  // Blur detected license plate automatically
+  const blurredUrl = originalUrl.replace(
+    "/upload/",
+    "/upload/e_blur_region:2000,g_auto:license_plate/"
+  )
+
+  uploadedImages.push(blurredUrl)
+} else {
             throw new Error(`Failed to upload ${key} image`)
           }
         }
@@ -1011,7 +1096,6 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
       // Upload thumbnail if present
       let uploadedThumbnail = null
       if (formData.thumbnail) {
-        console.log(`📸 Uploading thumbnail...`)
         const cloudForm = new FormData()
         cloudForm.append("file", {
           uri: formData.thumbnail,
@@ -1026,15 +1110,20 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
         })
         const cloudData = await cloudRes.json()
 
-        if (cloudData.secure_url) {
-          uploadedThumbnail = cloudData.secure_url
-          console.log(`✅ Thumbnail uploaded successfully`)
-        } else {
+       if (cloudData.secure_url) {
+  const originalUrl = cloudData.secure_url
+
+  const blurredUrl = originalUrl.replace(
+    "/upload/",
+    "/upload/e_blur_region:2000,g_auto:license_plate/"
+  )
+
+  uploadedThumbnail = blurredUrl
+} else {
           throw new Error(`Failed to upload thumbnail`)
         }
       }
 
-      console.log("🏗️ Preparing submission data...")
 
       const submitData = {
         brand: formData.make === "Other" ? customMake : formData.make,
@@ -1082,14 +1171,11 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
         status: "pending",
       }
 
-      console.log("📋 Submit data prepared:", submitData)
 
       if (isEditing) {
         submitData._id = editingCarId
-        console.log("✏️ Updating existing car...")
         dispatch(updateCarAction({ carId: editingCarId, updatedData: submitData }))
       } else {
-        console.log("🆕 Creating new car...")
         dispatch(createCarAction(submitData))
       }
     } catch (error) {
@@ -1849,9 +1935,13 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
             onPress={(isEditing && hasChanges) ? handleSaveChanges : handleSubmit}
             disabled={isCreating || isUpdating}
           >
-            <Text style={styles.submitButtonText}>
-              {isCreating || isUpdating ? t("Processing...") : (isEditing && hasChanges) ? t("saveChanges") : currentStep === 5 ? t("submit") : t("next")}
-            </Text>
+            {isCreating || isUpdating ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Text style={styles.submitButtonText}>
+                {(isEditing && hasChanges) ? t("saveChanges") : currentStep === 5 ? t("submit") : t("next")}
+              </Text>
+            )}
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={[styles.navButton, styles.nextButton]} onPress={(isEditing && hasChanges) ? handleSaveChanges : handleNext}>
@@ -1873,14 +1963,14 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
               <TouchableOpacity
                 style={styles.loadDraftButton}
                 onPress={() => {
-                  console.log("📝 Loading draft data:", draftData)
                   if (draftData) {
                     setFormData(draftData.formData || {})
                     setCurrentStep(draftData.currentStep || 1)
+                    setIsDraft(true)
                     setIsEditing(draftData.isEditing || false)
-                    setEditingCarId(draftData.id || null)
+                    setEditingCarId(draftData.editingCarId || draftData.id || null)
                     setOriginalData(draftData.formData || {})
-                    console.log("📝 Draft loaded successfully")
+                    setDraftId(draftData.id || generateDraftId())
                   }
                   setShowDraftPrompt(false)
                 }}
@@ -1891,10 +1981,52 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
                 style={styles.newCarButton}
                 onPress={() => {
                   setShowDraftPrompt(false)
-                  AsyncStorage.removeItem('carDrafts')
+                  const userId = user?.id || user?._id || user?.userId || "user123"
+                  AsyncStorage.removeItem(`drafts_${userId}`)
+                  setFormData(initialFormData)
+                  setCurrentStep(1)
+                  setHasChanges(false)
+                  setDraftData(null)
+                  setIsEditing(false)
+                  setIsDraft(false)
+                  setEditingCarId(null)
+                  setDraftId(generateDraftId())
                 }}
               >
                 <Text style={styles.newCarText}>{t("startNew", "Start New")}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Exit Modal */}
+      <Modal visible={showExitModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.draftModal}>
+            <Text style={styles.draftTitle}>{t("saveDraft", "Save Draft?")}</Text>
+            <Text style={styles.draftMessage}>
+              {t("exitMessage", "You haven't completed adding the car. Save as draft to continue later?")}
+            </Text>
+            <View style={styles.draftButtons}>
+              <TouchableOpacity
+                style={styles.loadDraftButton}
+                onPress={async () => {
+                  await handleSaveAsDraft();
+                  setShowExitModal(false);
+                  navigation.goBack();
+                }}
+              >
+                <Text style={styles.loadDraftText}>{t("saveDraft", "Save Draft")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.newCarButton}
+                onPress={() => {
+                  setShowExitModal(false);
+                  navigation.goBack();
+                }}
+              >
+                <Text style={styles.newCarText}>{t("exit", "Exit")}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -132,8 +132,7 @@ const AppNavigator = () => {
   const { i18n } = useTranslation()
 
   useEffect(() => {
-    // Default language
-    i18n.changeLanguage("rw")
+    // Language is handled in i18n.js
   }, [i18n])
 
   return (

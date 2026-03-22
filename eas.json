@@ -12,7 +12,7 @@
       "distribution": "internal",
       "env": {
       
-        "EXPO_PUBLIC_API_URL": "https://rushagoadmin-api.onrender.com/api",
+        "EXPO_PUBLIC_API_URL": "https://muvcar.api.isuzume.rw/api",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "896374568035-rpa001jbpkuivercdcorh8p3ufekbqs3.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "896374568035-aqplco71u87hi7t5olfd0iq3ujburamu.apps.googleusercontent.com"
       }
@@ -20,7 +20,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://rushagoadmin-api.onrender.com/api",
+        "EXPO_PUBLIC_API_URL": "https://muvcar.api.isuzume.rw/api",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "896374568035-rpa001jbpkuivercdcorh8p3ufekbqs3.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "896374568035-aqplco71u87hi7t5olfd0iq3ujburamu.apps.googleusercontent.com"
       }

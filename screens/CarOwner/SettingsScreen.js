@@ -645,18 +645,18 @@ const profileImageUrl =
               </View>
 
               <Text style={legalStyles.title}>
-                {legalType === "terms" ? "MUVCAR Terms of Use" : "MUVCAR Privacy Policy"}
+                {legalType === "terms" ? t('termsTitle') : t('privacyTitle')}
               </Text>
 
               <Text style={legalStyles.text}>
                 {legalType === "terms"
-                  ? "MUVCAR is a digital car rental platform designed to connect vehicle owners with renters in a secure and transparent environment. MUVCAR is a product of CarConnect Ltd. By accessing or using the MUVCAR mobile application, you agree to comply with these Terms of Use."
-                  : "This Privacy Policy explains how MUVCAR, a product of CarConnect Ltd, collects, uses, and protects your personal information. We collect personal data such as name, contact details, and usage data to provide and improve our services."
+                  ? t('termsText1') + ' ' + t('termsText2')
+                  : t('privacyText1') + ' ' + t('privacyText2')
                 }
               </Text>
 
               <Text style={legalStyles.footer}>
-                © {new Date().getFullYear()} CarConnect Ltd. All rights reserved.
+                {t('termsFooter').replace('2024', new Date().getFullYear())}
               </Text>
             </ScrollView>
           </View>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { Animated } from "react-native"
 import { useDispatch, useSelector } from "react-redux"
 import {
   View,
@@ -19,111 +20,105 @@ import {
   TouchableWithoutFeedback,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import AsyncStorage from "@react-native-async-storage/async-storage"
-import PhoneInput from 'react-native-phone-number-input'
+import PhoneNumberInput from "../../components/PhoneNumberInput"
 import { signupAction } from "../../redux/action/signupAction"
 import {
   sendVerificationCodeAction,
  verifyEmailOtpAction,
 } from "../../redux/action/verificationAction"
+import { useTranslation } from 'react-i18next'
 import I18n from "../../utils/i18n"
 import CaptchaImage from "../../components/CaptchaImage";
-
-
-const privacyItems = [
-  {
-    id: 1,
-    title: "1. What information do we collect?",
-    content:
-      "We obtain information about you through the means discussed below when we provide the Services. Please note that we need certain types of information to provide the Services to you. If you do not provide us with such information, or if you ask us to delete that information, you may no longer be able to access or use certain Services.\n\nWhen you register for MUVCAR, we collect your name, email, phone number, and location. For car owners, we collect vehicle information including make, model, year, license plate, and photos. For renters, we collect driver's license information and payment details. We also collect usage data such as rental history, reviews, and communication between users.",
-  },
-  {
-    id: 2,
-    title: "2. We Use Your Information For?",
-    content:
-      "We use your information to facilitate car rentals between owners and renters, process payments, verify identities, provide customer support, improve our services, send notifications about bookings and updates, and ensure compliance with our terms of service. We may also use your information for marketing purposes, but you can opt out at any time. Location data helps us show nearby available vehicles and optimize the rental experience.",
-  },
-  {
-    id: 3,
-    title: "3. How Do We Protect?",
-    content:
-      "MUVCAR employs industry-standard security measures to protect your personal information. We use encryption for all data transmissions, secure payment processing, and regular security audits. Access to user data is restricted to authorized personnel only. We implement multi-factor authentication for account access and continuously monitor our systems for potential vulnerabilities. However, no method of transmission over the Internet or electronic storage is 100% secure, so we cannot guarantee absolute security.",
-  },
-  {
-    id: 4,
-    title: "4. Online Analytics",
-    content:
-      "We use analytics tools to understand how users interact with our app. This helps us improve the user experience and develop new features. These tools collect information such as how often you use the app, which features you use, and performance data. We may share anonymous, aggregated data with third-party analytics providers. You can opt out of certain analytics tracking through your device settings.",
-  },
-  {
-    id: 5,
-    title: "5. Children's Privacy",
-    content:
-      "MUVCAR services are not intended for use by children under the age of 18. We do not knowingly collect personal information from children under 18. If we become aware that we have collected personal information from a child under 18 without verification of parental consent, we will take steps to remove that information from our servers. If you believe we might have any information from or about a child under 18, please contact us immediately.",
-  },
-  {
-    id: 6,
-    title: "6. Sharing Your Information",
-    content:
-      "We share your information with other users as necessary to facilitate rentals (e.g., car owners receive renter information and vice versa). We may share data with service providers who help us operate our platform, including payment processors, identity verification services, and cloud hosting providers. We may also disclose information when required by law or to protect our rights or the safety of users. We do not sell your personal information to third parties.",
-  },
-  {
-    id: 7,
-    title: "7. Your Rights and Choices",
-    content:
-      "You have the right to access, correct, or delete your personal information. You can update most information directly through your account settings. You can also request a copy of your data or ask us to delete your account by contacting our support team. Depending on your location, you may have additional rights under applicable privacy laws, such as the right to data portability or the right to restrict processing.",
-  },
-]
-
-const faqItems = [
-  {
-    id: 1,
-    question: 'What is MUVCAR?',
-    answer: 'MUVCAR is a platform that connects car owners with people who want to rent cars. We provide an app where car owners can list their vehicles and renters can browse and contact owners directly to arrange car rentals. Our platform enables seamless and secure car rentals between individuals.',
-    category: 'general',
-  },
-  {
-    id: 2,
-    question: 'How do I get in contact with MUVCAR support?',
-    answer: 'You can contact MUVCAR support through our email at support@MUVCAR.com or by phone at +250780114522.',
-    category: 'general',
-  },
-  {
-    id: 3,
-    question: 'Do you offer discounts?',
-    answer: 'MUVCAR itself doesn\'t offer discounts, but car owners can set their own prices and may offer discounts directly to renters during their negotiations through the app\'s contact feature.',
-    category: 'general',
-  },
-  {
-    id: 4,
-    question: 'Is MUVCAR hiring?',
-    answer: 'MUVCAR is always looking for talented individuals to join our team. Check our careers page at MUVCAR.com/careers for current openings.',
-    category: 'general',
-  },
-  {
-    id: 5,
-    question: 'How do I list my car on MUVCAR?',
-    answer: 'To list your car, create an account as a car owner, verify your identity, add your car details including photos, set your pricing and availability, and publish your listing. Renters can then contact you through the app to arrange a rental.',
-    category: 'general',
-  },
-  {
-    id: 6,
-    question: 'How do I rent a car on MUVCAR?',
-    answer: 'To rent a car, create an account as a renter, verify your identity, browse available cars in your area, select a car you like, and click the contact button to reach the car owner via call through the app to negotiate and finalize the rental deal.',
-    category: 'general',
-  },
-  {
-    id: 7,
-    question: 'How do car owners and renters connect?',
-    answer: 'Through the MUVCAR app, renters can choose a car they wish to rent and click the contact button, which initiates a call to the car owner. Both parties can then discuss and agree on the rental terms directly.',
-    category: 'general',
-  },
-]
 
 
 const { height } = Dimensions.get("window")
 
 const SignupScreen = ({ navigation }) => {
+  const { t } = useTranslation()
+
+  const privacyItems = [
+    {
+      id: 1,
+      title: t("privacyItem1Title"),
+      content: t("privacyItem1Content"),
+    },
+    {
+      id: 2,
+      title: t("privacyItem2Title"),
+      content: t("privacyItem2Content"),
+    },
+    {
+      id: 3,
+      title: t("privacyItem3Title"),
+      content: t("privacyItem3Content"),
+    },
+    {
+      id: 4,
+      title: t("privacyItem4Title"),
+      content: t("privacyItem4Content"),
+    },
+    {
+      id: 5,
+      title: t("privacyItem5Title"),
+      content: t("privacyItem5Content"),
+    },
+    {
+      id: 6,
+      title: t("privacyItem6Title"),
+      content: t("privacyItem6Content"),
+    },
+    {
+      id: 7,
+      title: t("privacyItem7Title"),
+      content: t("privacyItem7Content"),
+    },
+  ]
+
+  const faqItems = [
+    {
+      id: 1,
+      question: t("faqItem1Question"),
+      answer: t("faqItem1Answer"),
+      category: 'general',
+    },
+    {
+      id: 2,
+      question: t("faqItem2Question"),
+      answer: t("faqItem2Answer"),
+      category: 'general',
+    },
+    {
+      id: 3,
+      question: t("faqItem3Question"),
+      answer: t("faqItem3Answer"),
+      category: 'general',
+    },
+    {
+      id: 4,
+      question: t("faqItem4Question"),
+      answer: t("faqItem4Answer"),
+      category: 'general',
+    },
+    {
+      id: 5,
+      question: t("faqItem5Question"),
+      answer: t("faqItem5Answer"),
+      category: 'general',
+    },
+    {
+      id: 6,
+      question: t("faqItem6Question"),
+      answer: t("faqItem6Answer"),
+      category: 'general',
+    },
+    {
+      id: 7,
+      question: t("faqItem7Question"),
+      answer: t("faqItem7Answer"),
+      category: 'general',
+    },
+  ]
+
   const [userType, setUserType] = useState("renter")
   const [inputs, setInputs] = useState({
     name: "",
@@ -134,6 +129,9 @@ const SignupScreen = ({ navigation }) => {
   })
   const [errors, setErrors] = useState({})
   const [secureTextEntry, setSecureTextEntry] = useState(true)
+  const [passwordStrength, setPasswordStrength] = useState("poor")
+  const [showPasswordRequirementsModal, setShowPasswordRequirementsModal] = useState(false)
+const shakeAnimation = useRef(new Animated.Value(0)).current
   const [secureConfirmTextEntry, setSecureConfirmTextEntry] = useState(true)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showVerificationModal, setShowVerificationModal] = useState(false)
@@ -165,12 +163,26 @@ const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [showCaptchaModal, setShowCaptchaModal] = useState(false)
   const [captchaInput, setCaptchaInput] = useState('')
   const [captchaText, setCaptchaText] = useState('')
-  const phoneInputRef = useRef(null)
 
   const dispatch = useDispatch()
 
+const shake = () => {
+  Animated.sequence([
+    Animated.timing(shakeAnimation,{toValue:10,duration:50,useNativeDriver:true}),
+    Animated.timing(shakeAnimation,{toValue:-10,duration:50,useNativeDriver:true}),
+    Animated.timing(shakeAnimation,{toValue:0,duration:50,useNativeDriver:true})
+  ]).start()
+}
+
 const handleSignUp = () => {
+  if (passwordStrength === "poor") {
+    shake()
+    setShowPasswordRequirementsModal(true)
+    return
+  }
+
   if (!validateForm()) return
+
   proceedWithSignup()
 }
 
@@ -204,7 +216,58 @@ useEffect(() => {
 
   const validatePhone = (phone) => phone.length === 9 && /^\d+$/.test(phone)
 
-  const validateEmail = (email) => /\S+@\S+\.\S+/.test(email)
+  const getPasswordRequirementStatus = (password) => {
+    const requirements = [
+      {
+        key: "length",
+        label: "At least 8 characters",
+        example: "abcdefgh",
+        passed: password.length >= 8,
+      },
+      {
+        key: "lower",
+        label: "Lowercase letter",
+        example: "abc",
+        passed: /[a-z]/.test(password),
+      },
+      {
+        key: "upper",
+        label: "Uppercase letter",
+        example: "ABC",
+        passed: /[A-Z]/.test(password),
+      },
+      {
+        key: "digit",
+        label: "Number",
+        example: "123",
+        passed: /\d/.test(password),
+      },
+      {
+        key: "special",
+        label: "Special character",
+        example: "@#$",
+        passed: /[@$!%*?&]/.test(password),
+      },
+    ]
+
+    return requirements
+  }
+
+ const checkPasswordStrength = (password) => {
+  const strongRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/
+  const mediumRegex =
+    /^(?=.*[a-zA-Z])(?=.*\d).{6,}$/
+
+  if (strongRegex.test(password)) {
+    setPasswordStrength("strong")
+  } else if (mediumRegex.test(password)) {
+    setPasswordStrength("medium")
+  } else {
+    setPasswordStrength("poor")
+  }
+}
+const validateEmail = (email) => /^[A-Z][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(email)
 
   const proceedWithSignup = async () => {
   const result = await dispatch(
@@ -477,6 +540,53 @@ const handleVerifyEmail = async () => {
   </Modal>
 )
 
+  const renderPasswordRequirementsModal = () => {
+    const requirements = getPasswordRequirementStatus(inputs.password)
+
+    return (
+      <Modal visible={showPasswordRequirementsModal} animationType="fade" transparent>
+        <View style={styles.passwordModalOverlay}>
+          <TouchableWithoutFeedback onPress={() => setShowPasswordRequirementsModal(false)}>
+            <View style={styles.passwordModalBackdrop} />
+          </TouchableWithoutFeedback>
+          <View style={styles.passwordModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{I18n.t("weakPassword") || "Strong password needed"}</Text>
+              <TouchableOpacity onPress={() => setShowPasswordRequirementsModal(false)}>
+                <Ionicons name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.passwordModalSubtitle}>
+              {I18n.t("passwordRequirementsHint") || "Make sure your password contains:"}
+            </Text>
+            {requirements.map((req) => (
+              <View key={req.key} style={styles.passwordRequirementRow}>
+                <Ionicons
+                  name={req.passed ? "checkmark-circle" : "close-circle"}
+                  size={18}
+                  color={req.passed ? "#2ECC71" : "#E74C3C"}
+                />
+                <View style={styles.passwordRequirementTextContainer}>
+                  <Text style={[styles.passwordRequirementText, req.passed && styles.passwordRequirementTextPassed]}>
+                    {req.label}
+                  </Text>
+                  <Text style={[styles.passwordRequirementExample, req.passed && styles.passwordRequirementExamplePassed]}>
+                    {req.passed ? 
+                      `${I18n.t("done") || "Done"}: ${req.example}` :
+                      `${I18n.t("missing") || "Missing"}: ${req.example}`
+                    }
+                  </Text>
+                </View>
+              </View>
+            ))}
+            <TouchableOpacity style={styles.confirmButton} onPress={() => setShowPasswordRequirementsModal(false)}>
+              <Text style={styles.confirmButtonText}>{I18n.t("gotIt") || "Got it"}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    )
+  }
 
   const renderForm = () => (
     <View style={styles.form}>
@@ -504,33 +614,37 @@ const handleVerifyEmail = async () => {
       </View>
     <View style={styles.inputContainer}>
       <View style={[styles.phoneContainer, errors.phone && styles.inputError]}>
-        <PhoneInput
-          ref={phoneInputRef}
-          defaultCode="RW"
-          layout="first"
+        <PhoneNumberInput
+          value={inputs.phone}
           onChangeText={(text) => setInputs({ ...inputs, phone: text })}
           onChangeFormattedText={(text) => setFullPhone(text)}
+          defaultCountry="RW"
+          placeholder={I18n.t("phoneNumber")}
           containerStyle={styles.phoneInputContainer}
-          textContainerStyle={styles.phoneTextContainer}
-          textInputProps={{
-            maxLength: 9,
-            placeholder: I18n.t("phoneNumber"),
-          }}
-          textInputStyle={styles.phoneInput}
+          inputStyle={styles.phoneInput}
         />
       </View>
       {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
     </View>
 
-      <View style={styles.inputContainer}>
-        <View style={[styles.passwordInputContainer, errors.password && styles.inputError]}>
+    <View style={styles.inputContainer}>
+      <Animated.View
+        style={{
+          transform: [{ translateX: shakeAnimation }],
+        }}
+      />
+      <View style={[styles.passwordInputContainer, errors.password && styles.inputError]}>
+  
           <TextInput
             style={styles.passwordInput}
             placeholder={I18n.t("createPassword")}
             placeholderTextColor="#999"
             secureTextEntry={secureTextEntry}
             value={inputs.password}
-            onChangeText={(value) => setInputs({ ...inputs, password: value })}
+            onChangeText={(value) => {
+  setInputs({ ...inputs, password: value })
+  checkPasswordStrength(value)
+}}
              textContentType="none"
   autoComplete="off"
   importantForAutofill="no"
@@ -539,7 +653,29 @@ const handleVerifyEmail = async () => {
             <Ionicons name={secureTextEntry ? "eye-off-outline" : "eye-outline"} size={24} color="#888" />
           </TouchableOpacity>
         </View>
-        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+      {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+
+<View style={{flexDirection:"row",marginTop:5}}>
+<View style={{
+flex:1,
+height:5,
+marginRight:4,
+backgroundColor: passwordStrength==="poor"?"red":"#ddd"
+}}/>
+
+<View style={{
+flex:1,
+height:5,
+marginRight:4,
+backgroundColor: passwordStrength==="medium"?"orange":"#ddd"
+}}/>
+
+<View style={{
+flex:1,
+height:5,
+backgroundColor: passwordStrength==="strong"?"green":"#ddd"
+}}/>
+</View>
       </View>
       <View style={styles.inputContainer}>
         <View style={[styles.passwordInputContainer, errors.confirmPassword && styles.inputError]}>
@@ -584,7 +720,7 @@ const handleVerifyEmail = async () => {
 
       <TouchableOpacity style={[styles.signUpButton, !acceptedTerms && styles.disabledButton]} onPress={handleSignUp} disabled={isLoading || isSending || !acceptedTerms}>
         {isLoading || isSending ? (
-          <ActivityIndicator color="#fff" size="small" />
+          <ActivityIndicator color="#007EFD" size="small" />
         ) : (
           <Text style={styles.signUpButtonText}>{I18n.t("signUp")}</Text>
         )}
@@ -627,7 +763,7 @@ const handleVerifyEmail = async () => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyEmail} disabled={isVerifying}>
             {isVerifying ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color="#007EFD" size="small" />
             ) : (
               <Text style={styles.verifyButtonText}>{I18n.t("verifyEmail")}</Text>
             )}
@@ -675,6 +811,7 @@ const handleVerifyEmail = async () => {
       {renderTermsModal()}
       {renderPrivacyModal()}
       {renderCaptchaModal()}
+      {renderPasswordRequirementsModal()}
     </SafeAreaView>
   )
 }
@@ -819,16 +956,76 @@ checkbox: {
     backgroundColor: "#f5f5f5",
     borderRadius: 10,
   },
+  phoneContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  phoneTextContainer: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 10,
+  },
   phoneInputContainer: {
     backgroundColor: "#f5f5f5",
     borderRadius: 10,
-   
-   
   },
   phoneInput: {
+    flex: 1,
     fontSize: 16,
     color: "#000000",
-    
+  },
+  passwordModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  passwordModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  passwordModalContent: {
+    width: '85%',
+    maxWidth: 420,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+  },
+  passwordModalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  passwordRequirementRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  passwordRequirementTextContainer: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  passwordRequirementText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  passwordRequirementTextPassed: {
+    color: '#2ECC71',
+  },
+  passwordRequirementExample: {
+    fontSize: 12,
+    color: '#E74C3C',
+    marginTop: 2,
+  },
+  passwordRequirementExamplePassed: {
+    color: '#2ECC71',
   },
 
   signinContainer: {

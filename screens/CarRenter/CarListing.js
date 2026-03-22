@@ -12,6 +12,7 @@ import {
   StatusBar,
   Dimensions,
   FlatList,
+  ActivityIndicator,
 } from "react-native"
 import Icon from "react-native-vector-icons/Ionicons"
 import { useTranslation } from "react-i18next"
@@ -416,7 +417,7 @@ const CarListing = ({ navigation, route }) => {
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <Text style={styles.loadingText}>Loading cars...</Text>
+        <ActivityIndicator size="large" color="#007EFD" />
       </View>
     )
   }
