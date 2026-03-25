@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Image,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import { useNavigation } from "@react-navigation/native"
+import { useNavigation, useFocusEffect } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
 import { useDispatch, useSelector } from "react-redux"
 import { loadDrafts, deleteDraft } from "../../redux/action/draftsActions"
@@ -38,6 +38,13 @@ const SavedDraftsScreen = () => {
     dispatch(loadDrafts())
   }, [dispatch])
 
+  // Refresh drafts when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      dispatch(loadDrafts())
+    }, [dispatch])
+  )
+
   const handleEditDraft = (draft) => {
     navigation.navigate("AddCar", {
       draftData: draft,
@@ -48,7 +55,7 @@ const SavedDraftsScreen = () => {
   const handleDeleteDraft = (draftId) => {
     Alert.alert(
       t("deleteDraft", "Delete Draft"),
-      t("deleteDraftConfirm", "Are you sure you want to delete this draft?"),
+      t("deleteDraftConfirm", "Are you sure you want to delete this draft? This cannot be undone."),
       [
         {
           text: t("cancel", "Cancel"),
@@ -57,7 +64,18 @@ const SavedDraftsScreen = () => {
         {
           text: t("delete", "Delete"),
           style: "destructive",
-          onPress: () => dispatch(deleteDraft(draftId)),
+          onPress: async () => {
+            try {
+              await dispatch(deleteDraft(draftId))
+              // Refresh the list after deletion
+              setTimeout(() => {
+                dispatch(loadDrafts())
+              }, 500)
+            } catch (error) {
+              console.error('Error deleting draft:', error)
+              Alert.alert(t("Error"), t("Failed to delete draft. Please try again."))
+            }
+          },
         },
       ],
     )
@@ -80,6 +98,26 @@ const SavedDraftsScreen = () => {
       return { uri: draft.formData.images.exterior_front }
     }
     return null
+  }
+
+  const getDraftTitle = (draft) => {
+    const make = draft.formData?.make || ""
+    const model = draft.formData?.model || ""
+    const year = draft.formData?.year || ""
+
+    // Build title with available data
+    const parts = []
+    if (make && make !== "Other") parts.push(make)
+    if (model) parts.push(model)
+    if (year) parts.push(`(${year})`)
+
+    // If no standard parts, check for custom make
+    if (parts.length === 0 && draft.formData?.make === "Other") {
+      parts.push("Custom Car")
+    }
+
+    // Return composed title or default
+    return parts.length > 0 ? parts.join(" ") : "Car Draft"
   }
 
   if (loading) {
@@ -128,7 +166,7 @@ const SavedDraftsScreen = () => {
                 {getCarImage(draft) && <Image source={getCarImage(draft)} style={styles.carImage} />}
                 <View style={styles.draftInfo}>
                   <Text style={styles.carTitle}>
-                    {draft.formData?.make || "Unknown"} {draft.formData?.model || ""}
+                    {getDraftTitle(draft)}
                   </Text>
                   <Text style={styles.carDetails}>
                     {draft.formData?.year && `${draft.formData.year} • `}

@@ -98,7 +98,7 @@ const AddCarScreen = () => {
   // ✅ FIXED: Get user from auth state and user state
   const authUser = useSelector((state) => state.auth?.user)
   const { currentUser, searchResults, isSearching } = useSelector((state) => state.user || {})
-  const user = currentUser || authUser // Use currentUser if available, fallback to authUser
+  const user = currentUser || authUser
 
   // Redux state
   const {
@@ -144,6 +144,10 @@ const AddCarScreen = () => {
   const [ownerSearchQuery, setOwnerSearchQuery] = useState("")
   const [isManualEntry, setIsManualEntry] = useState(false)
 
+  // ✅ NEW: Plate number validation states
+  const [plateValidationError, setPlateValidationError] = useState("")
+  const [plateIsValid, setPlateIsValid] = useState(false)
+
   // Custom make state
   const [customMake, setCustomMake] = useState("")
 
@@ -158,6 +162,9 @@ const AddCarScreen = () => {
   const [showExitModal, setShowExitModal] = useState(false)
   const [draftData, setDraftData] = useState(null)
   const [draftId, setDraftId] = useState(route.params?.draftData?.id || generateDraftId())
+
+  // Track if we've already shown the draft prompt on this screen visit
+  const [draftPromptShown, setDraftPromptShown] = useState(false)
 
   // Local draft saving function (fallback when API/redux fails)
   const saveDraftLocally = async (draftData, { showAlert = true } = {}) => {
@@ -185,36 +192,54 @@ const AddCarScreen = () => {
 
   // Handle save as draft (called when user intentionally saves or exits)
   const handleSaveAsDraft = async ({ showAlert = true } = {}) => {
-    const finalDraftId = draftData?.id || draftId || generateDraftId()
-    setDraftId(finalDraftId)
-
-    const draftDataToSave = {
-      id: finalDraftId,
-      formData,
-      currentStep,
-      isEditing,
-      isDraft,
-      editingCarId,
-      createdAt: draftData?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-
     try {
+      const finalDraftId = draftData?.id || draftId || generateDraftId()
+      setDraftId(finalDraftId)
+
+      const draftDataToSave = {
+        id: finalDraftId,
+        formData,
+        currentStep,
+        isEditing,
+        isDraft,
+        editingCarId,
+        createdAt: draftData?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
       // Save via Redux/actions (handles API + local storage fallback)
       await dispatch(saveDraft(draftDataToSave)).unwrap()
       // Refresh local drafts list so SavedDraftsScreen shows the latest
       dispatch(loadDrafts())
+
+      setDraftData(draftDataToSave)
+      setIsDraft(true)
+
       if (showAlert) {
-        Alert.alert(t("Success"), t("Draft saved successfully!"))
+        Alert.alert(
+          t("Success"),
+          t("Draft saved at Step {{step}} - your progress is saved!", { step: currentStep })
+        )
       }
+      return true
     } catch (error) {
       // Fallback: save locally if server/redux fails
+      const finalDraftId = draftData?.id || draftId || generateDraftId()
+      const draftDataToSave = {
+        id: finalDraftId,
+        formData,
+        currentStep,
+        isEditing,
+        isDraft,
+        editingCarId,
+        createdAt: draftData?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
       await saveDraftLocally(draftDataToSave, { showAlert })
+      return true
     }
-
-    setDraftData(draftDataToSave)
-    setIsDraft(true)
   }
+
   const [paymentCompleted, setPaymentCompleted] = useState(false)
   const [selectedImages, setSelectedImages] = useState([])
 
@@ -263,6 +288,8 @@ const AddCarScreen = () => {
       })
       setPaymentCompleted(false)
       setIsManualEntry(false)
+      setPlateValidationError("")
+      setPlateIsValid(false)
     }
   }, [isEditing, isDraft])
 
@@ -286,83 +313,68 @@ const AddCarScreen = () => {
         })
         setPaymentCompleted(false)
         setIsManualEntry(false)
+        setPlateValidationError("")
+        setPlateIsValid(false)
+        setDraftPromptShown(false)
       }
     }, [isEditing, isDraft, route.params?.draftData])
   )
 
-  // Handle back navigation prompt when editing
-  useFocusEffect(
-    React.useCallback(() => {
-      const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-        if (!hasChanges) {
-          return
-        }
-
-        e.preventDefault()
-
-        Alert.alert(
-          t('Unsaved Changes'),
-          t('You have unsaved changes. Would you like to save as draft or continue editing?'),
-          [
-            {
-              text: t('Save as Draft'),
-              onPress: async () => {
-                await handleSaveAsDraft({ showAlert: false })
-                navigation.dispatch(e.data.action)
-              },
-            },
-            {
-              text: t('Continue Editing'),
-              style: 'cancel',
-            },
-            {
-              text: t('Discard Changes'),
-              style: 'destructive',
-              onPress: () => navigation.dispatch(e.data.action),
-            },
-          ]
-        )
-      })
-
-      return unsubscribe
-    }, [navigation, isEditing, hasChanges, t])
-  )
-
-  // Prompt when leaving via tab navigation/blur (e.g. home, my cars, settings)
+  // Handle back navigation and navigation away with unsaved changes
   useEffect(() => {
-    const blurSubscription = navigation.addListener('blur', () => {
-      if (!hasChanges) return
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // Only show alert if there are actual changes
+      if (!hasChanges) {
+        return
+      }
+
+      e.preventDefault()
 
       Alert.alert(
         t('Unsaved Changes'),
-        t('You have unsaved changes. Save as draft before leaving?'),
+        t('You have unsaved changes. What would you like to do?'),
         [
           {
             text: t('Save as Draft'),
             onPress: async () => {
               await handleSaveAsDraft({ showAlert: false })
+              // Wait a moment then navigate
+              setTimeout(() => {
+                navigation.dispatch(e.data.action)
+              }, 300)
             },
           },
           {
             text: t('Continue Editing'),
             style: 'cancel',
-            onPress: () => {
-              navigation.navigate('AddCar')
-            },
           },
           {
             text: t('Discard Changes'),
             style: 'destructive',
+            onPress: () => {
+              // Clear draft data when discarding
+              const userId = user?.id || user?._id || user?.userId || "user123"
+              AsyncStorage.removeItem(`drafts_${userId}`)
+              setFormData(initialFormData)
+              setCurrentStep(1)
+              setHasChanges(false)
+              setDraftData(null)
+              setDraftId(generateDraftId())
+              navigation.dispatch(e.data.action)
+            },
           },
         ]
       )
     })
 
-    return blurSubscription
-  }, [navigation, hasChanges, t])
+    return unsubscribe
+  }, [navigation, hasChanges, t, user])
 
-  // Check for drafts when adding/editing a car
+  // Check for drafts when adding/editing a car - only show once per screen visit
   useEffect(() => {
+    // Don't show draft prompt if already shown or if we're already loading/editing a draft
+    if (draftPromptShown || isDraft || isEditing) return
+
     const userId = user?.id || user?._id || user?.userId || "user123"
     const storageKey = `drafts_${userId}`
 
@@ -383,7 +395,7 @@ const AddCarScreen = () => {
           let draftToShow = null
 
           // If editing, prefer a draft matching the car being edited
-          if (isEditing && editingCarId) {
+          if (editingCarId) {
             draftToShow = validDrafts.find((d) => d.id === editingCarId)
           }
 
@@ -397,11 +409,12 @@ const AddCarScreen = () => {
             setDraftData(draftToShow)
             setDraftId(draftToShow.id)
             setShowDraftPrompt(true)
+            setDraftPromptShown(true)
           }
         }
       })
       .catch((err) => console.error('❌ Error loading drafts:', err))
-  }, [isEditing, editingCarId, user])
+  }, [draftPromptShown, isDraft, isEditing, editingCarId, user])
 
   // Auto-save draft on form changes (silent, local only)
   useEffect(() => {
@@ -423,6 +436,56 @@ const AddCarScreen = () => {
       return () => clearTimeout(timeoutId)
     }
   }, [formData, currentStep, draftData, isEditing, editingCarId, draftId])
+
+  // ✅ NEW: Enhanced plate number formatter
+  const formatPlateNumber = (text) => {
+    // Remove all non-alphanumeric characters
+    const cleaned = text.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    
+    // Limit to 7 characters (3 letters + 3 numbers + 1 letter)
+    const limited = cleaned.slice(0, 7)
+    
+    // Auto-format as ABC123D pattern
+    let formatted = ""
+    for (let i = 0; i < limited.length; i++) {
+      formatted += limited[i]
+      // Add space after first 3 characters for visual separation
+      if (i === 2 && limited.length > 3) {
+        formatted += " "
+      }
+    }
+    
+    return formatted
+  }
+
+  // ✅ NEW: Validate plate number format
+  const validatePlateFormat = (plate) => {
+    const cleaned = plate.replace(/\s/g, '')
+    const isValid = /^[A-Z]{3}[0-9]{3}[A-Z]$/.test(cleaned)
+    const remainingChars = 7 - cleaned.length
+    
+    setPlateIsValid(isValid)
+    
+    if (cleaned.length === 0) {
+      setPlateValidationError("")
+    } else if (cleaned.length < 7) {
+      setPlateValidationError(
+        `${remainingChars} character${remainingChars !== 1 ? 's' : ''} remaining`
+      )
+    } else if (!isValid) {
+      setPlateValidationError(t("invalidPlateFormat", "Invalid format: ABC123D"))
+    } else {
+      setPlateValidationError("")
+    }
+  }
+
+  // ✅ NEW: Handle plate number input
+  const handlePlateNumberChange = (text) => {
+    const formatted = formatPlateNumber(text)
+    setFormData({ ...formData, plateNumber: formatted })
+    validatePlateFormat(formatted)
+    setValidationErrors((prev) => ({ ...prev, plateNumber: false }))
+  }
 
   // ✅ NEW: Handle owner name search for autocomplete
   const handleOwnerNameSearch = (text) => {
@@ -539,6 +602,7 @@ const AddCarScreen = () => {
         images: images,
         thumbnail: existingData.thumbnail || null,
         category: existingData.category || "",
+        plateNumber: existingData.plateNumber || existingData.plate_number || "",
       })
       
       if (!isStandardMake && brand) {
@@ -569,16 +633,20 @@ const AddCarScreen = () => {
     }
   }, [isEditing, route.params])
 
-  // Set original data after form data is loaded
+  // Set original data after form data is loaded (for editing/draft)
   useEffect(() => {
-    if (isEditing && formData && Object.keys(formData).some(key => formData[key] !== initialFormData[key])) {
+    if ((isEditing || isDraft) && formData && Object.keys(formData).some(key => formData[key] !== initialFormData[key])) {
       setOriginalData(formData)
+      // When loading existing data, don't show as "changed"
+      setHasChanges(false)
     }
-  }, [formData, isEditing])
+  }, [formData, isEditing, isDraft])
 
-  // Check for changes in form data
+  // Check for changes in form data (only if there's actual data)
   useEffect(() => {
-    const changed = JSON.stringify(formData) !== JSON.stringify(originalData)
+    // Only detect changes if we have meaningful data
+    const hasData = JSON.stringify(formData) !== JSON.stringify(initialFormData)
+    const changed = hasData && JSON.stringify(formData) !== JSON.stringify(originalData)
     setHasChanges(changed)
   }, [formData, originalData])
 
@@ -643,9 +711,6 @@ const AddCarScreen = () => {
       dispatch(clearUpdateState())
     }
   }, [isUpdateFailed, updateError, dispatch, t])
-
-  // Auto-save draft is handled by the debounced effect above.
-  // This effect was removed to avoid showing the "Draft saved successfully" alert on each step change.
 
   // Country codes with flags
   const countryCodes = [
@@ -879,9 +944,10 @@ const AddCarScreen = () => {
     return /^\d{9}$/.test(phone)
   }
 
-  // Plate number validation (alphanumeric, no spaces, 3-10 characters)
+  // Plate number validation (alphanumeric, 7 characters, format: ABC123D)
   const isValidPlateNumber = (plate) => {
-    return /^[A-Z0-9]{3,7}$/.test(plate)
+    const cleaned = plate.replace(/\s/g, '')
+    return /^[A-Z]{3}[0-9]{3}[A-Z]$/.test(cleaned)
   }
 
   const validateCurrentStep = () => {
@@ -930,10 +996,43 @@ const AddCarScreen = () => {
   }
 
   const handleBackPress = () => {
-    if (currentStep < 6) {
-      setShowExitModal(true);
+    // Check if we have unsaved changes
+    if (hasChanges) {
+      Alert.alert(
+        t('Unsaved Changes'),
+        t('You have unsaved changes. What would you like to do?'),
+        [
+          {
+            text: t('Save as Draft'),
+            onPress: async () => {
+              await handleSaveAsDraft({ showAlert: false })
+              setTimeout(() => navigation.goBack(), 300)
+            },
+          },
+          {
+            text: t('Continue Editing'),
+            style: 'cancel',
+          },
+          {
+            text: t('Discard Changes'),
+            style: 'destructive',
+            onPress: () => {
+              // Clear draft data when discarding
+              const userId = user?.id || user?._id || user?.userId || "user123"
+              AsyncStorage.removeItem(`drafts_${userId}`)
+              setFormData(initialFormData)
+              setCurrentStep(1)
+              setHasChanges(false)
+              setDraftData(null)
+              setDraftId(generateDraftId())
+              navigation.goBack()
+            },
+          },
+        ]
+      )
     } else {
-      navigation.goBack();
+      // No changes, just go back
+      navigation.goBack()
     }
   }
 
@@ -988,6 +1087,7 @@ const AddCarScreen = () => {
         category: formData.category,
         images: existingImages,
         thumbnail: formData.thumbnail,
+        plate_number: formData.plateNumber?.toUpperCase().replace(/\s/g, ''),
         // ✅ FIXED: Better owner data handling
         ownerName: formData.ownerName,
         ownerPhone: formData.countryCode + formData.ownerPhone,
@@ -1039,21 +1139,23 @@ const AddCarScreen = () => {
     if (!validateCurrentStep()) {
       return
     }
-if (isEditing && formData.plateNumber === originalData.plate_number) {
-  // Plate number unchanged; skip uniqueness check
-} else {
-  try {
-    const plateCheckResult = await dispatch(checkPlateUniquenessAction(formData.plateNumber)).unwrap()
-    if (!plateCheckResult.isUnique) {
-      Alert.alert(t("Error"), t("plateNumberAlreadyExists"))
-      return
+
+    // ✅ FIXED: Plate number check logic
+    if (isEditing && formData.plateNumber === originalData.plateNumber) {
+      // Plate number unchanged; skip uniqueness check
+    } else {
+      try {
+        const plateCheckResult = await dispatch(checkPlateUniquenessAction(formData.plateNumber)).unwrap()
+        if (!plateCheckResult.isUnique) {
+          Alert.alert(t("Error"), t("plateNumberAlreadyExists"))
+          return
+        }
+      } catch (error) {
+        console.error("❌ Plate check failed:", error)
+        Alert.alert(t("Error"), error || t("plateCheckFailed"))
+        return
+      }
     }
-  } catch (error) {
-    console.error("❌ Plate check failed:", error)
-    Alert.alert(t("Error"), error || t("plateCheckFailed"))
-    return
-  }
-}
 
     try {
 
@@ -1077,17 +1179,17 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
           })
           const cloudData = await cloudRes.json()
 
-        if (cloudData.secure_url) {
-  const originalUrl = cloudData.secure_url
+          if (cloudData.secure_url) {
+            const originalUrl = cloudData.secure_url
 
-  // Blur detected license plate automatically
-  const blurredUrl = originalUrl.replace(
-    "/upload/",
-    "/upload/e_blur_region:2000,g_auto:license_plate/"
-  )
+            // Blur detected license plate automatically
+            const blurredUrl = originalUrl.replace(
+              "/upload/",
+              "/upload/e_blur_region:2000,g_auto:license_plate/"
+            )
 
-  uploadedImages.push(blurredUrl)
-} else {
+            uploadedImages.push(blurredUrl)
+          } else {
             throw new Error(`Failed to upload ${key} image`)
           }
         }
@@ -1110,16 +1212,16 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
         })
         const cloudData = await cloudRes.json()
 
-       if (cloudData.secure_url) {
-  const originalUrl = cloudData.secure_url
+        if (cloudData.secure_url) {
+          const originalUrl = cloudData.secure_url
 
-  const blurredUrl = originalUrl.replace(
-    "/upload/",
-    "/upload/e_blur_region:2000,g_auto:license_plate/"
-  )
+          const blurredUrl = originalUrl.replace(
+            "/upload/",
+            "/upload/e_blur_region:2000,g_auto:license_plate/"
+          )
 
-  uploadedThumbnail = blurredUrl
-} else {
+          uploadedThumbnail = blurredUrl
+        } else {
           throw new Error(`Failed to upload thumbnail`)
         }
       }
@@ -1142,7 +1244,7 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
         category: formData.category,
         images: uploadedImages,
         thumbnail: uploadedThumbnail,
-       plate_number: formData.plateNumber?.toUpperCase().trim(),
+        plate_number: formData.plateNumber?.toUpperCase().replace(/\s/g, ''),
 
         // ✅ FIXED: Better owner data handling
         ownerName: formData.ownerName,
@@ -1316,7 +1418,7 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
               <ScrollView>
                 {options.map((option, index) => (
                   <TouchableOpacity
-                    key={index}
+                    key={`dropdown-${errorKey}-${index}-${option}`}
                     style={styles.dropdownOption}
                     onPress={() => {
                       onSelect(option)
@@ -1338,7 +1440,7 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
   const renderStepIndicator = () => (
     <View style={styles.stepIndicatorContainer}>
       {[1, 2, 3, 4, 5].map((step) => (
-        <View key={step} style={styles.stepIndicatorItem}>
+        <View key={`step-${step}`} style={styles.stepIndicatorItem}>
           <View style={[styles.stepCircle, currentStep >= step ? styles.stepCircleActive : styles.stepCircleInactive]}>
             <Text
               style={[styles.stepNumber, currentStep >= step ? styles.stepNumberActive : styles.stepNumberInactive]}
@@ -1483,31 +1585,45 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
               />
             </View>
 
+            {/* ✅ ENHANCED: Plate number with real-time validation */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>{t("plateNumber")} <Text style={styles.optionalText}>({t("required")})</Text></Text>
+              <View style={styles.plateNumberHeader}>
+                <Text style={styles.label}>{t("plateNumber")} <Text style={styles.requiredText}>*</Text></Text>
+                {plateIsValid && formData.plateNumber && (
+                  <View style={styles.validIndicator}>
+                    <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                    <Text style={styles.validIndicatorText}>{t("valid", "Valid")}</Text>
+                  </View>
+                )}
+              </View>
               <TextInput
-                style={[styles.input, validationErrors.plateNumber && styles.errorBorder]}
+                style={[
+                  styles.input,
+                  validationErrors.plateNumber && !plateIsValid && styles.errorBorder,
+                  plateIsValid && styles.successBorder,
+                ]}
                 value={formData.plateNumber}
-                onChangeText={(text) => {
-                  const upperText = text.toUpperCase().slice(0,7).replace(/[^A-Z0-9]/g, '')
-                  setFormData({ ...formData, plateNumber: upperText })
-                  setValidationErrors((prev) => ({ ...prev, plateNumber: false }))
-                }}
-                placeholder={t("Enter plate number")}
+                onChangeText={handlePlateNumberChange}
+                placeholder="ABC 123D"
                 autoCapitalize="characters"
-                maxLength={10}
+                maxLength={8}
               />
-              {validationErrors.plateNumber && (
-                <Text style={styles.errorText}>{t("invalidPlateFormat")}</Text>
+              {plateValidationError && (
+                <Text style={[styles.helperText, !plateIsValid && formData.plateNumber ? styles.errorHelperText : styles.infoHelperText]}>
+                  {plateValidationError}
+                </Text>
+              )}
+              {validationErrors.plateNumber && !plateIsValid && (
+                <Text style={styles.errorText}>{t("invalidPlateFormat", "Invalid format: ABC123D")}</Text>
               )}
             </View>
 
             <View style={styles.featuresContainer}>
               <Text style={styles.label}>{t("features")}</Text>
               <View style={styles.featuresGrid}>
-                {features.map((feature) => (
+                {features.map((feature, index) => (
                   <TouchableOpacity
-                    key={feature}
+                    key={`feature-${index}-${feature}`}
                     style={[styles.featureButton, formData.features.includes(feature) && styles.featureButtonSelected]}
                     onPress={() => toggleFeature(feature)}
                   >
@@ -1594,12 +1710,12 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
                 )}
               </View>
 
-              {/* ✅ NEW: Owner suggestions dropdown */}
+              {/* ✅ FIXED: Owner suggestions with proper key */}
               {showOwnerSuggestions && searchResults.length > 0 && (
                 <View style={styles.suggestionsContainer}>
                   <FlatList
                     data={searchResults}
-                    keyExtractor={(item) => item._id}
+                    keyExtractor={(item, index) => `owner-${item._id}-${index}`}
                     renderItem={({ item }) => (
                       <TouchableOpacity style={styles.suggestionItem} onPress={() => selectOwnerFromSuggestions(item)}>
                         <Ionicons name="person-outline" size={16} color="#64748B" />
@@ -1647,7 +1763,7 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
                   placeholder="788123456"
                   keyboardType="numeric"
                   maxLength={9}
-                  editable={isManualEntry || !user?.phone} // Allow editing if manual or no user phone
+                  editable={isManualEntry || !user?.phone}
                 />
               </View>
               {validationErrors.ownerPhone && <Text style={styles.errorText}>{t("Invalid Phone")}</Text>}
@@ -1704,7 +1820,7 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
                   <ScrollView style={styles.suggestionsList} nestedScrollEnabled>
                     {addressSuggestions.map((suggestion, index) => (
                       <TouchableOpacity
-                        key={index}
+                        key={`addr-${index}-${suggestion.description}`}
                         style={styles.suggestionItem}
                         onPress={() => selectAddressSuggestion(suggestion)}
                       >
@@ -1828,9 +1944,9 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
                   { key: "exterior_front", label: t("frontExterior") },
                   { key: "exterior_side", label: t("sideExterior") },
                   { key: "exterior_rear", label: t("rearExterior") },
-                ].map((photo) => (
+                ].map((photo, index) => (
                   <View
-                    key={photo.key}
+                    key={`photo-${photo.key}-${index}`}
                     style={[
                       styles.photoUploadContainer,
                       validationErrors.images && !formData.images[photo.key] && styles.errorBorder,
@@ -1971,6 +2087,7 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
                     setEditingCarId(draftData.editingCarId || draftData.id || null)
                     setOriginalData(draftData.formData || {})
                     setDraftId(draftData.id || generateDraftId())
+                    setHasChanges(false)
                   }
                   setShowDraftPrompt(false)
                 }}
@@ -1991,6 +2108,9 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
                   setIsDraft(false)
                   setEditingCarId(null)
                   setDraftId(generateDraftId())
+                  setPlateValidationError("")
+                  setPlateIsValid(false)
+                  setDraftPromptShown(false)
                 }}
               >
                 <Text style={styles.newCarText}>{t("startNew", "Start New")}</Text>
@@ -2091,7 +2211,7 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
               <ScrollView>
                 {countryCodes.map((country, index) => (
                   <TouchableOpacity
-                    key={index}
+                    key={`country-${index}-${country.code}`}
                     style={styles.dropdownOption}
                     onPress={() => {
                       setFormData({ ...formData, countryCode: country.code })
@@ -2112,7 +2232,49 @@ if (isEditing && formData.plateNumber === originalData.plate_number) {
   )
 }
 
+// ✅ ENHANCED: Add these new styles to the StyleSheet.create
 const styles = StyleSheet.create({
+  // ...existing styles...
+  plateNumberHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  requiredText: {
+    color: "#EF4444",
+    fontSize: 14,
+  },
+  validIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: "#ECFDF5",
+    borderRadius: 4,
+  },
+  validIndicatorText: {
+    fontSize: 12,
+    color: "#10B981",
+    fontWeight: "600",
+  },
+  successBorder: {
+    borderColor: "#10B981",
+    borderWidth: 2,
+  },
+  helperText: {
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  errorHelperText: {
+    color: "#EF4444",
+  },
+  infoHelperText: {
+    color: "#64748B",
+  },
+
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
@@ -2346,7 +2508,6 @@ const styles = StyleSheet.create({
     color: "#374151",
     fontWeight: "500",
   },
-  // ✅ NEW: Auto-complete styles
   autoCompleteToggle: {
     alignItems: "center",
     marginBottom: 16,
@@ -2789,12 +2950,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#FFFFFF",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
   },
   draftModal: {
     backgroundColor: "#FFFFFF",
