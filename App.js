@@ -4,9 +4,11 @@ import { NavigationContainer } from '@react-navigation/native';
 import { View, Text, StyleSheet, Platform } from 'react-native'; // Import React Native components
 import AppNavigator from './navigation/AppNavigator';
 import { AppRegistry } from 'react-native';
-import { Provider } from 'react-redux';
+import { Provider, useDispatch } from 'react-redux';
 import { store } from './redux/store';
 import './utils/i18n'; // Import i18n to initialize it
+import { useEffect } from 'react'
+import { loadAuthFromStorage } from './redux/action/LoginActions'
 
 // Ensure all dependencies are installed and linked
 console.log('🔍 Verifying React Native runtime dependencies...');
@@ -39,12 +41,25 @@ class ErrorBoundary extends React.Component {
 
 const App = () => {
   console.log('🚀 App component rendered');
+
+  const StartApp = () => {
+    const dispatch = useDispatch()
+
+    useEffect(() => {
+      dispatch(loadAuthFromStorage())
+    }, [dispatch])
+
+    return (
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
+    )
+  }
+
   return (
     <ErrorBoundary>
       <Provider store={store}>
-        <NavigationContainer>
-          <AppNavigator />
-        </NavigationContainer>
+        <StartApp />
       </Provider>
     </ErrorBoundary>
   );

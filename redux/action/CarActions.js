@@ -29,6 +29,30 @@ export const getCarsAction = createAsyncThunk("cars/getAll", async (_, { rejectW
   }
 })
 
+// Get public cars (guest browsing, no mandatory user token) 
+export const getPublicCarsAction = createAsyncThunk("cars/getPublic", async (_, { rejectWithValue }) => {
+  try {
+    console.log("🚗 Fetching public cars (guest)")
+    let response
+    try {
+      response = await axiosInstance.get("/listings/renter/approved")
+      console.log("✅ Approved public cars fetched:", response.data?.length || 0)
+      return response.data || []
+    } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        console.warn("🔒 Approved public endpoint requires auth, falling back to open listings")
+        response = await axiosInstance.get(API_URL)
+        console.log("✅ Fallback public cars fetched:", response.data?.length || 0)
+        return response.data || []
+      }
+      throw err
+    }
+  } catch (err) {
+    console.error("❌ Get public cars error:", err)
+    return rejectWithValue(err.response?.data?.message || "Failed to fetch public cars")
+  }
+})
+
 // ✅ Get Approved Cars - Enhanced with better error handling
 export const getApprovedCarsAction = createAsyncThunk("cars/getApproved", async (_, { rejectWithValue }) => {
   try {

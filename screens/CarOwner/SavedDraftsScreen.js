@@ -13,7 +13,7 @@ import {
   Image,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
-import { useNavigation, useFocusEffect } from "@react-navigation/native"
+import { useNavigation, useFocusEffect, CommonActions } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
 import { useDispatch, useSelector } from "react-redux"
 import { loadDrafts, deleteDraft } from "../../redux/action/draftsActions"
@@ -26,13 +26,19 @@ const SavedDraftsScreen = () => {
   // Redux state
   const { drafts, loading, error } = useSelector((state) => state.drafts || { drafts: [], loading: false, error: null })
   const [page, setPage] = useState(1)
-  const DRAFTS_PER_PAGE = 10
+  const DRAFTS_PER_PAGE = 5
 
-  const displayedDrafts = drafts.slice(0, page * DRAFTS_PER_PAGE)
+  const totalPages = Math.ceil(drafts.length / DRAFTS_PER_PAGE)
+  const displayedDrafts = drafts.slice((page - 1) * DRAFTS_PER_PAGE, page * DRAFTS_PER_PAGE)
+  const hasMore = page < totalPages
 
   useEffect(() => {
-    setPage(1)
-  }, [drafts])
+    // If the current page no longer has items (e.g. after deleting the last item on a page),
+    // go back to the previous page
+    if (page > 1 && (page - 1) * DRAFTS_PER_PAGE >= drafts.length) {
+      setPage((prev) => Math.max(1, prev - 1))
+    }
+  }, [drafts.length])
 
   useEffect(() => {
     dispatch(loadDrafts())
@@ -45,9 +51,21 @@ const SavedDraftsScreen = () => {
     }, [dispatch])
   )
 
+  const navigateToAddCar = (options = {}) => {
+    navigation.navigate("CarOwnerDashboard", {
+      screen: "AddCar",
+      params: options,
+    })
+  }
+
   const handleEditDraft = (draft) => {
-    navigation.navigate("AddCar", {
-      draftData: draft,
+    const draftWithStep = {
+      ...draft,
+      currentStep: draft.currentStep || 1,
+    }
+
+    navigateToAddCar({
+      draftData: draftWithStep,
       isDraft: true,
     })
   }
@@ -104,20 +122,21 @@ const SavedDraftsScreen = () => {
     const make = draft.formData?.make || ""
     const model = draft.formData?.model || ""
     const year = draft.formData?.year || ""
+    const customMake = draft.formData?.customMake || ""
 
-    // Build title with available data
     const parts = []
     if (make && make !== "Other") parts.push(make)
+    else if (make === "Other" && customMake) parts.push(customMake)
     if (model) parts.push(model)
     if (year) parts.push(`(${year})`)
 
-    // If no standard parts, check for custom make
-    if (parts.length === 0 && draft.formData?.make === "Other") {
-      parts.push("Custom Car")
+    if (parts.length === 0) {
+      // Fallback: use owner name if available
+      if (draft.formData?.ownerName) return `Draft – ${draft.formData.ownerName}`
+      return t("carDraft", "Car Draft")
     }
 
-    // Return composed title or default
-    return parts.length > 0 ? parts.join(" ") : "Car Draft"
+    return parts.join(" ")
   }
 
   if (loading) {
@@ -154,7 +173,7 @@ const SavedDraftsScreen = () => {
           <Ionicons name="document-outline" size={64} color="#9CA3AF" />
           <Text style={styles.emptyTitle}>{t("noDrafts", "No Saved Drafts")}</Text>
           <Text style={styles.emptyDescription}>{t("noDraftsDesc", "Your saved car listings will appear here")}</Text>
-          <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate("AddCar")}>
+          <TouchableOpacity style={styles.addButton} onPress={() => navigateToAddCar({ forceNew: true })}> 
             <Text style={styles.addButtonText}>{t("addCar", "Add New Car")}</Text>
           </TouchableOpacity>
         </View>
@@ -180,10 +199,18 @@ const SavedDraftsScreen = () => {
 
               <View style={styles.progressContainer}>
                 <Text style={styles.progressText}>
-                  {t("step", "Step")} {draft.currentStep || 1} {t("of", "of")} 6
+                  {t("step", "Step")} {draft.currentStep || 1} {t("of", "of")} 5
+                  {" – "}
+                  {[
+                    t("vehicleInfo", "Vehicle Info"),
+                    t("ownerInfo", "Owner Info"),
+                    t("location", "Location"),
+                    t("pricing", "Pricing"),
+                    t("media", "Media"),
+                  ][(draft.currentStep || 1) - 1]}
                 </Text>
                 <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${((draft.currentStep || 1) / 6) * 100}%` }]} />
+                  <View style={[styles.progressFill, { width: `${((draft.currentStep || 1) / 5) * 100}%` }]} />
                 </View>
               </View>
 
@@ -199,10 +226,39 @@ const SavedDraftsScreen = () => {
             </View>
           ))}
 
-          {drafts.length > displayedDrafts.length && (
-            <TouchableOpacity style={styles.loadMoreButton} onPress={() => setPage((prev) => prev + 1)}>
-              <Text style={styles.loadMoreText}>{t("loadMore", "Load more")}</Text>
-            </TouchableOpacity>
+          {drafts.length > DRAFTS_PER_PAGE && (
+            <View style={styles.paginationContainer}>
+              <Text style={styles.paginationInfo}>
+                {t("showing", "Showing")} {displayedDrafts.length} {t("of", "of")} {drafts.length} {t("drafts", "drafts")}
+              </Text>
+              <View style={styles.paginationButtons}>
+                <TouchableOpacity
+                  style={[styles.pageButton, page === 1 && styles.pageButtonDisabled]}
+                  onPress={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  <Ionicons name="chevron-back-outline" size={18} color={page === 1 ? "#CBD5E1" : "#007EFD"} />
+                </TouchableOpacity>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <TouchableOpacity
+                    key={`page-${p}`}
+                    style={[styles.pageButton, page === p && styles.pageButtonActive]}
+                    onPress={() => setPage(p)}
+                  >
+                    <Text style={[styles.pageButtonText, page === p && styles.pageButtonTextActive]}>{p}</Text>
+                  </TouchableOpacity>
+                ))}
+
+                <TouchableOpacity
+                  style={[styles.pageButton, !hasMore && styles.pageButtonDisabled]}
+                  onPress={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={!hasMore}
+                >
+                  <Ionicons name="chevron-forward-outline" size={18} color={!hasMore ? "#CBD5E1" : "#007EFD"} />
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
         </ScrollView>
       )}
@@ -380,6 +436,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#1E293B",
     fontWeight: "600",
+  },
+  paginationContainer: {
+    alignItems: "center",
+    paddingVertical: 16,
+    marginBottom: 20,
+    gap: 10,
+  },
+  paginationInfo: {
+    fontSize: 13,
+    color: "#64748B",
+  },
+  paginationButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  pageButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  pageButtonActive: {
+    backgroundColor: "#007EFD",
+    borderColor: "#007EFD",
+  },
+  pageButtonDisabled: {
+    backgroundColor: "#F8FAFC",
+    borderColor: "#E2E8F0",
+    opacity: 0.5,
+  },
+  pageButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  pageButtonTextActive: {
+    color: "#FFFFFF",
   },
 })
 

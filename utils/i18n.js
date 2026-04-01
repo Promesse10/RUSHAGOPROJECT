@@ -131,7 +131,7 @@ confirmNewPassword:"Confirm NewPassword",
       edit: "Edit",
       type: "Type",
       transmission: "Transmission",
-      fuelType: "Fuel Type",
+     
       seats: "Seats",
       location: "Location",
       phoneNumber: "Phone Number",
@@ -206,14 +206,14 @@ confirmNewPassword:"Confirm NewPassword",
  province: "Province",
  address: "Address",
  country: "Country",
- selectOnMap: "Select on Map",
+ selectonMap: "Select on Map",
  currentLocation: "Current Location",
  locationSelected: "Location Selected",
  Perday:"Per Day",
  // Pricing
- pricingAndCategory: "Pricing and Category",
+pricingandCategory: "Pricing and Category",
  category: "Category",
- basePrice: "Base Price",
+ basePrice: "Base Price (FRW per day)",
  weeklyDiscount: "Weekly Discount",
  monthlyDiscount: "Monthly Discount",
 
@@ -319,6 +319,7 @@ confirmNewPassword:"Confirm NewPassword",
       saving: "Saving",
       logout: "Logout",
       cancel: "Cancel",
+      PinLocationonMap: "Pin Location on Map",
       // Auth
       hello: "HELLO",
       welcomeToMuvcar: "Welcome to MUVCAR",
@@ -359,6 +360,7 @@ confirmNewPassword:"Confirm NewPassword",
       exitMessage: "You haven't completed adding the car. Save as draft to continue later?",
       signUpHeading: "Create Your Account",
       renter: "Renter",
+      PlateNumber: "Plate Number",
       owner: "Owner",
       verifyYourEmail: "Verify your email",
       checkYourEmail: "Check your email",
@@ -392,63 +394,96 @@ confirmNewPassword:"Confirm NewPassword",
       chooseToSignInUs: "Choose to Sign In with Us",
       forgotEmailOrPassword: "Forgot Email or Password?",
       rememberMe: "Remember Me",
-      // Privacy Policy Items
-      privacyItem1Title: "1. What information do we collect?",
-      privacyItem1Content: "We obtain information about you through the means discussed below when we provide the Services. Please note that we need certain types of information to provide the Services to you. If you do not provide us with such information, or if you ask us to delete that information, you may no longer be able to access or use certain Services.\n\nWhen you register for MUVCAR, we collect your name, email, phone number, and location. For car owners, we collect vehicle information including make, model, year, license plate, and photos. For renters, we collect driver's license information and payment details. We also collect usage data such as rental history, reviews, and communication between users.",
-      privacyItem2Title: "2. We Use Your Information For?",
-      privacyItem2Content: "We use your information to facilitate car rentals between owners and renters, process payments, verify identities, provide customer support, improve our services, send notifications about bookings and updates, and ensure compliance with our terms of service. We may also use your information for marketing purposes, but you can opt out at any time. Location data helps us show nearby available vehicles and optimize the rental experience.",
-      privacyItem3Title: "3. How Do We Protect?",
-      privacyItem3Content: "MUVCAR employs industry-standard security measures to protect your personal information. We use encryption for all data transmissions, secure payment processing, and regular security audits. Access to user data is restricted to authorized personnel only. We implement multi-factor authentication for account access and continuously monitor our systems for potential vulnerabilities. However, no method of transmission over the Internet or electronic storage is 100% secure, so we cannot guarantee absolute security.",
-      privacyItem4Title: "4. Online Analytics",
-      privacyItem4Content: "We use analytics tools to understand how users interact with our app. This helps us improve the user experience and develop new features. These tools collect information such as how often you use the app, which features you use, and performance data. We may share anonymous, aggregated data with third-party analytics providers. You can opt out of certain analytics tracking through your device settings.",
-      privacyItem5Title: "5. Children's Privacy",
-      privacyItem5Content: "MUVCAR services are not intended for use by children under the age of 18. We do not knowingly collect personal information from children under 18. If we become aware that we have collected personal information from a child under 18 without verification of parental consent, we will take steps to remove that information from our servers. If you believe we might have any information from or about a child under 18, please contact us immediately.",
-      privacyItem6Title: "6. Sharing Your Information",
-      privacyItem6Content: "We share your information with other users as necessary to facilitate rentals (e.g., car owners receive renter information and vice versa). We may share data with service providers who help us operate our platform, including payment processors, identity verification services, and cloud hosting providers. We may also disclose information when required by law or to protect our rights or the safety of users. We do not sell your personal information to third parties.",
-      privacyItem7Title: "7. Your Rights and Choices",
-      privacyItem7Content: "You have the right to access, correct, or delete your personal information. You can update most information directly through your account settings. You can also request a copy of your data or ask us to delete your account by contacting our support team. Depending on your location, you may have additional rights under applicable privacy laws, such as the right to data portability or the right to restrict processing.",
-      // FAQ Items
-      faqItem1Question: "What is MUVCAR?",
-      faqItem1Answer: "MUVCAR is a platform that connects car owners with people who want to rent cars. We provide an app where car owners can list their vehicles and renters can browse and contact owners directly to arrange car rentals. Our platform enables seamless and secure car rentals between individuals.",
-      faqItem2Question: "How do I get in contact with MUVCAR support?",
-      faqItem2Answer: "You can contact MUVCAR support through our email at support@MUVCAR.com or by phone at +250780114522.",
-      faqItem3Question: "Do you offer discounts?",
-      faqItem3Answer: "MUVCAR itself doesn't offer discounts, but car owners can set their own prices and may offer discounts directly to renters during their negotiations through the app's contact feature.",
-      faqItem4Question: "Is MUVCAR hiring?",
-      faqItem4Answer: "MUVCAR is always looking for talented individuals to join our team. Check our careers page at MUVCAR.com/careers for current openings.",
-      faqItem5Question: "How do I list my car on MUVCAR?",
-      faqItem5Answer: "To list your car, create an account as a car owner, verify your identity, add your car details including photos, set your pricing and availability, and publish your listing. Renters can then contact you through the app to arrange a rental.",
-      faqItem6Question: "How do I rent a car on MUVCAR?",
-      faqItem6Answer: "To rent a car, create an account as a renter, verify your identity, browse available cars in your area, select a car you like, and click the contact button to reach the car owner via call through the app to negotiate and finalize the rental deal.",
-      faqItem7Question: "How do car owners and renters connect?",
-      faqItem7Answer: "Through the MUVCAR app, renters can choose a car they wish to rent and click the contact button, which initiates a call to the car owner. Both parties can then discuss and agree on the rental terms directly.",
-      // Terms Content
-      termsTitle: "MUVCAR Terms of Use",
-      termsText1: "MUVCAR is a digital car rental platform designed to connect vehicle owners with renters in a secure and transparent environment.",
-      termsText2: "MUVCAR is a product of CarConnect Ltd. By accessing or using the MUVCAR mobile application, you agree to comply with these Terms of Use.",
-      termsSubtitle1: "1. User Responsibilities",
-      termsText3: "Users must provide accurate information and maintain the security of their accounts. Any misuse of the platform may result in suspension.",
-      termsSubtitle2: "2. Rentals & Payments",
-      termsText4: "MUVCAR facilitates car rental agreements but does not own vehicles listed on the platform.",
-      termsSubtitle3: "3. Liability",
-      termsText5: "CarConnect Ltd shall not be liable for damages arising from misuse of the platform or third-party actions.",
+         // Terms Content
+termsTitle: "MUVCAR Terms of Use",
+
+termsText1: "MUVCAR is a digital car rental platform operated by CarConnect Ltd, designed to connect vehicle owners with renters in a secure and transparent environment.",
+
+termsText2: "By accessing or using the MUVCAR mobile application, you agree to comply with these Terms of Use. If you do not agree, you must not use the platform.",
+
+termsSubtitle1: "1. Eligibility",
+termsText3: "Users must be at least 18 years old. Renters must have a valid driver’s license. MUVCAR reserves the right to verify identity and approve or reject users at its discretion.",
+
+termsSubtitle2: "2. User Accounts",
+termsText4: "Users must provide accurate and complete information and are responsible for maintaining the security of their accounts. Any activity under your account is your responsibility. Misuse may result in suspension or termination.",
+
+termsSubtitle3: "3. Platform Role",
+termsText5: "MUVCAR acts only as an intermediary between Car Owners and Renters. MUVCAR does not own or control any vehicles listed on the platform. All rental agreements are between users.",
+
+termsSubtitle4: "4. Car Owner Responsibilities",
+termsText6: "Car Owners must provide accurate vehicle details and ensure their vehicles are roadworthy, registered, and insured. MUVCAR securely stores vehicle information, including license plate numbers, for safety and verification. Listing illegal or unsafe vehicles is prohibited.",
+
+termsSubtitle5: "5. Renter Responsibilities",
+termsText7: "Renters must use vehicles responsibly and follow all traffic laws. Vehicles must not be used for illegal activities, racing, or subleasing. Renters are responsible for returning the vehicle in proper condition and covering any damages, fines, or late fees.",
+
+termsSubtitle6: "6. Rentals & Payments",
+termsText8: "MUVCAR facilitates payments between users. Service fees may apply. Users agree to pay all rental charges, penalties, and applicable fees through the platform.",
+
+termsSubtitle7: "7. Cancellations & Refunds",
+termsText9: "Cancellation and refund policies may vary depending on the booking. MUVCAR reserves the right to enforce cancellation rules and prevent abuse of the system.",
+
+termsSubtitle8: "8. Liability",
+termsText10: "CarConnect Ltd is not liable for accidents, damages, losses, or disputes arising from the use of the platform or interactions between users. All risks are borne by the Car Owner and the Renter.",
+
+termsSubtitle9: "9. Insurance & Damages",
+termsText11: "Car Owners are responsible for ensuring proper insurance coverage. Renters are responsible for any damages not covered by insurance. MUVCAR may assist in dispute resolution but is not responsible for enforcement.",
+
+termsSubtitle10: "10. Prohibited Activities",
+termsText12: "Users must not provide false information, engage in fraud, bypass platform payments, or use the service for illegal purposes. Violations may result in permanent suspension and legal action.",
+
+termsSubtitle11: "11. Data & Security",
+termsText13: "MUVCAR collects and stores user and vehicle data, including license plate information, for security, fraud prevention, and service improvement. By using the platform, you consent to this.",
+
+termsSubtitle12: "12. Termination",
+termsText14: "MUVCAR reserves the right to suspend or terminate accounts, remove listings, and take appropriate action against users who violate these terms.",
+
+termsSubtitle13: "13. Changes to Terms",
+termsText15: "MUVCAR may update these Terms of Use at any time. Continued use of the platform indicates acceptance of any updated terms.",
+
+termsSubtitle14: "14. Governing Law",
+termsText16: "These Terms shall be governed by the laws applicable in the jurisdiction where CarConnect Ltd operates.",
       termsFooter: "© 2024 CarConnect Ltd. All rights reserved.",
       // Privacy Content
-      privacyTitle: "MUVCAR Privacy Policy",
-      privacyText1: "This Privacy Policy explains how MUVCAR, a product of CarConnect Ltd, collects, uses, and protects your personal information.",
-      privacySubtitle1: "1. Information We Collect",
-      privacyText2: "We collect personal data such as name, contact details, and usage data to provide and improve our services.",
-      privacySubtitle2: "2. Data Security",
-      privacyText3: "We use industry-standard security measures to protect your information.",
-      privacySubtitle3: "3. Third-Party Services",
-      privacyText4: "MUVCAR may integrate with third-party services such as payment providers.",
+  privacyTitle: "MUVCAR Privacy Policy",
+
+privacyText1: "This Privacy Policy explains how MUVCAR, a product of CarConnect Ltd, collects, uses, stores, and protects your personal information when you use our platform.",
+
+privacySubtitle1: "1. Information We Collect",
+privacyText2: "We collect personal information including your name, phone number, email address, identification details, driver’s license information, and vehicle details (such as license plate numbers). We may also collect usage data, location data, and device information when you use the application.",
+
+privacySubtitle2: "2. How We Use Your Information",
+privacyText3: "We use your information to provide and improve our services, verify user identity, facilitate rentals, process payments, ensure safety, prevent fraud, and communicate with users.",
+
+privacySubtitle3: "3. Data Sharing",
+privacyText4: "We may share your information with other users (such as sharing necessary details between car owners and renters), payment service providers, and trusted third-party partners where required to operate the platform. We do not sell your personal data.",
+
+privacySubtitle4: "4. Data Security",
+privacyText5: "We implement appropriate technical and organizational measures to protect your personal data against unauthorized access, loss, misuse, or alteration. However, no system is completely secure.",
+
+privacySubtitle5: "5. Data Retention",
+privacyText6: "We retain your personal information only for as long as necessary to provide our services, comply with legal obligations, resolve disputes, and enforce our agreements.",
+
+privacySubtitle6: "6. Your Rights",
+privacyText7: "You have the right to access, correct, or request deletion of your personal data. You may also object to certain data processing or request limitation where applicable.",
+
+privacySubtitle7: "7. Location and Tracking",
+privacyText8: "MUVCAR may collect and use location data to improve services, enhance security, and verify rentals. By using the platform, you consent to such data collection.",
+
+privacySubtitle8: "8. Third-Party Services",
+privacyText9: "MUVCAR may integrate with third-party services such as payment providers. These services may collect and process your data according to their own privacy policies.",
+
+privacySubtitle9: "9. Changes to This Policy",
+privacyText10: "We may update this Privacy Policy from time to time. Continued use of the platform indicates your acceptance of any updates.",
+
+privacySubtitle10: "10. Contact",
+privacyText11: "If you have questions or requests regarding your personal data, you may contact MUVCAR through the official support channels.",
     },
   },
   rw: {
     translation: {
       featuredCar: "Imodoka Yihariye",
 rented: "Yatanzwe",
-
+electric:" Amashanyarazi",
 locationRequired: "Aho Uri Birakenewe",
 enableLocation: "Nyabuna emera aho uri kugirango tubone inzira",
 
@@ -458,16 +493,16 @@ enableLocation: "Nyabuna emera aho uri kugirango tubone inzira",
       year: "Umwaka",
       type: "Ubwoko",
       transmission: "Ubwoko bwa Vitensi",
-      fuelType: "Ubwoko bwa Lisansi",
+      fuelType: "Ubwoko bwicyo inkwa",
       seatingCapacity: "Imyanya",
       features: "Ibiranga",
       settings: "Amagenamiterere",
-        manageAccount: "Tegura konti yawe n'ibyo ukunda",
+        manageAccount: "Reba konti yawe n'ibyo ukunda",
         premium: "Premium",
         memberSince: "Umuryango kuva",
         premiumPlanActive: "Gahunda ya Premium ikora",
         expiresIn: "Irangira mu minsi 25",
-        managePlan: "Tegura Gahunda",
+        managePlan: "Reba Gahunda",
         personalInformation: "Amakuru bwite",
         fullName: "Amazina yuzuye",
         enterFullName: "Injiza amazina yawe yuzuye",
@@ -499,12 +534,12 @@ enableLocation: "Nyabuna emera aho uri kugirango tubone inzira",
         confirmNewPassword:"Emeza Ijambo Ry'Ibanga",
         // 🔹 MyCarsScreen
         myCars: "Imodoka Zanjye",
-        manageVehicles: "Tegura imodoka zawe",
+        manageVehicles: "Reba imodoka zawe",
         loadingCars: "Birimo gupakira imodoka zawe...",
         retry: "Ongera ugerageze",
         noCars: "Nta modoka",
-        addFirstCar: "Ongeraho imodoka ya mbere kugira utangire",
-        addCar: "Ongeraho Imodoka",
+        addFirstCar: "Shyiramo Imodoka yawe yambere  ya mbere kugira utangire",
+        addCar: "Shyiramo Imodoka yawe yambere ",
         currency: "FRW",
         perDay: "ku munsi",
         views: "uko barebye",
@@ -515,34 +550,34 @@ enableLocation: "Nyabuna emera aho uri kugirango tubone inzira",
         edit: "Hindura",
         type: "Ubwoko",
     
-        fuelType: "Ubwoko bwa Lisansi",
+    
         seats: "Imyanya",
         location: "Ahantu",
         phoneNumber: "Numero ya Telefone",
         features: "Ibiranga",
         description: "Ibisobanuro",
       // Owner Information
-      ownerInformation: "Amakuru y’Nyir'imodoka",
-      ownerType: "Ubwoko bw’Nyir’imodoka",
+      ownerInformation: "Amakuru ya Nyirimodoka",
+      ownerType: "Ubwoko bwa Nyirimodoka",
       individual: "Umuntu ku giti cye",
-      company: "Kompanyi",
-      manualEntry: "Kwandika n’intoki",
-      autoComplete: "Kwuzuza byikora",
+      company: "kampani",
+      manualEntry: "Imyirondoro ya Nyirimodoka",
+      autoComplete: "Byiyuzuze",
       fullName: "Amazina yuzuye",
-      companyName: "Izina rya Kompanyi",
+      companyName: "Izina rya kampani",
       phoneNumber: "Numero ya Telefone",
 
       // Location
-      locationDetails: "Amakuru y’Ahantu",
+      locationDetails: "Amakuru y’Ahantu Imodoka Iri",
       province: "Intara",
       address: "Aderesi",
       country: "Igihugu",
-      selectOnMap: "Hitamo ku Ikirangamashusho",
-      currentLocation: "Ahantu uri",
+      selectonMap: "Koresha Ikarita uhitemo Aho iri",
+      currentLocation: "Iri hano ndi",
       locationSelected: "Ahantu hatoranyijwe",
-      
+      PinLocationonMap: "Hitamo aho Imodoka iri kwi karita Yu Rwanda",
       // Pricing
-      pricingAndCategory: "Igiciro n’Icyiciro",
+     pricingandCategory: "Igiciro cyayo ikodeshwa n’Icyiiciro cyayo",
       category: "Icyiciro",
       basePrice: "Igiciro fatizo",
       weeklyDiscount: "Kugabanyirizwa kw’Icyumweru",
@@ -556,7 +591,7 @@ enableLocation: "Nyabuna emera aho uri kugirango tubone inzira",
       frontExterior: "Imbere y'Imodoka",
       sideExterior: "Ku ruhande",
       rearExterior: "Inyuma",
-      advertisementThumbnail: "Ifoto y’Igamije kwamamaza",
+      advertisementThumbnail: "Ifoto Igamije kwamamaza",
       optional: "Si ngombwa",
       payNow: "Ishyura Ubu",
       trackingDisabledTitle: "Reba Imodoka zose zihari",
@@ -650,12 +685,12 @@ noNearbyCarsMessage: "Nta modoka iboneka iri muri kilometero 10 uvuye aho uri",
       startListing: "Tangira gushyiraho imodoka zawe kugira ngo ubone ibikorwa hano",
       tip: "Inama",
       notifications: "Amakuru",
-     
+     invalidPlateFormat:"Andika Prake Neza : RAA 123 A",
       noCarsAvailable: "Nta modoka ihari ubu",
       carNotFound: "Nta modoka yabonetse",
       perDay: "umunsi",
       availableCars: "Amamodoka Ariho",
-
+      PlateNumber: "Prake y'imodoka",
       carDetails: "Amakuru y'Imodoka",
       specifications: "Ibiranga",
       features: "Ibiyigize",
@@ -844,25 +879,88 @@ noNearbyCarsMessage: "Nta modoka iboneka iri muri kilometero 10 uvuye aho uri",
       faqItem7Question: "Abafite imodoka n'abarahira bahurira gute?",
       faqItem7Answer: "Binyuze mu app ya MUVCAR, abarahira bashobora guhitamo imodoka bashaka kurahira hanyuma bakanda buto yo guhamagara, bigatuma bahamagara ufite imodoka. Ibyo bihurizo byombi bashobora kuganira kandi bagire amasezerano y'ubukode.",
       // Terms Content
-      termsTitle: "Amategeko yo gukoresha MUVCAR",
-      termsText1: "MUVCAR ni urubuga rwa digitale rwo kurahira imodoka rugamije guhuza abafite imodoka n'abarahira mu buryo bwizewe kandi bugororotse.",
-      termsText2: "MUVCAR ni igicuruzwa cya CarConnect Ltd. Mukoresha cyangwa mukandagira app ya MUVCAR, mwemeranya gukurikiza aya mategeko.",
-      termsSubtitle1: "1. Inshingano z'abakoresha",
-      termsText3: "Abakoresha bagomba gutanga amakuru y'ukuri kandi bagatunga umutekano wa konti zabo. Gukoresha nabi urubuga bishobora gutuma bahagarikwa.",
-      termsSubtitle2: "2. Ubukode n'Ubwishyu",
-      termsText4: "MUVCAR ihuza amasezerano y'ubukode ariko ntifite imodoka ziri ku rubuga.",
-      termsSubtitle3: "3. Ubuziranenge",
-      termsText5: "CarConnect Ltd ntizizira ibyangijwe bivuye mu gukoresha nabi urubuga cyangwa ibikorwa by'abandi.",
+      termsTitle: "Amategeko yo Gukoresha MUVCAR",
+
+termsText1: "MUVCAR ni urubuga rwa digital rucungwa na CarConnect Ltd, ruhuza abafite imodoka n’abifuza kuzikodesha mu buryo bwizewe kandi bugaragara.",
+
+termsText2: "Ukoresheje cyangwa winjira muri porogaramu ya MUVCAR, uba wemeye gukurikiza aya mategeko. Niba utabyemera, ntugomba gukoresha uru rubuga.",
+
+termsSubtitle1: "1. Uburyo bwo Kwemererwa",
+termsText3: "Ukoresha agomba kuba afite nibura imyaka 18. Ukodesha agomba kuba afite uruhushya rwo gutwara ibinyabiziga rwemewe. MUVCAR ifite uburenganzira bwo kugenzura imyirondoro no kwemeza cyangwa kwanga ukoresha.",
+
+termsSubtitle2: "2. Konti z’Abakoresha",
+termsText4: "Abakoresha bagomba gutanga amakuru y’ukuri kandi yuzuye. Bafite inshingano zo kurinda umutekano wa konti zabo. Ibikorwa byose bikozwe kuri konti ni inshingano zabo. Gukoresha nabi bishobora gutuma konti ihagarikwa cyangwa igafungwa burundu.",
+
+termsSubtitle3: "3. Uruhare rwa MUVCAR",
+termsText5: "MUVCAR ikora nk’umuhuza hagati y’abafite imodoka n’abazikodesha. MUVCAR ntabwo itunze cyangwa igenzura imodoka zishyirwa ku rubuga. Amasezerano yo gukodesha aba ari hagati y’abakodesha ubwabo.",
+
+termsSubtitle4: "4. Inshingano za Nyiri modoka",
+termsText6: "Nyiri modoka agomba gutanga amakuru y’ukuri ku modoka ye kandi akemeza ko imeze neza, yanditse mu buryo bwemewe kandi ifite ubwishingizi. MUVCAR ibika amakuru y’imodoka harimo nimero ya plaque ku mpamvu z’umutekano no kugenzura. Birabujijwe gushyira ku rubuga imodoka itemewe cyangwa itujuje ibisabwa.",
+
+termsSubtitle5: "5. Inshingano z’Uyikodesha",
+termsText7: "Ukodesha agomba gukoresha imodoka mu buryo bukurikije amategeko y’umuhanda. Ntabwo yemerewe kuyikoresha mu bikorwa bitemewe, mu marushanwa cyangwa kuyikodesha undi muntu. Agomba gusubiza imodoka imeze neza no kwishyura ibyangiritse, amande cyangwa ubukererwe.",
+
+termsSubtitle6: "6. Gukodesha & Kwishyura",
+termsText8: "MUVCAR yoroshya uburyo bwo kwishyurana hagati y’abakoresha. Hashobora kubaho amafaranga y’inyongera (service fees). Ukoresha yemera kwishyura amafaranga yose ajyanye no gukodesha, ibihano n’andi mafaranga yose akenewe.",
+
+termsSubtitle7: "7. Guhagarika & Gusubizwa Amafaranga",
+termsText9: "Amategeko yo guhagarika gukodesha no gusubizwa amafaranga ashobora gutandukana bitewe n’igihe n’imiterere y’ubukode. MUVCAR ifite uburenganzira bwo gushyira mu bikorwa ayo mategeko no gukumira abayahohotera.",
+
+termsSubtitle8: "8. Uburyozwe",
+termsText10: "CarConnect Ltd ntibazwa impanuka, ibyangiritse, igihombo cyangwa amakimbirane aturuka ku ikoreshwa ry’urubuga cyangwa ku mikoranire y’abakoresha. Ingaruka zose zibazwa abafite imodoka n’abazikodesha.",
+
+termsSubtitle9: "9. Ubwishingizi & Ibyangiritse",
+termsText11: "Ukodesheje imodoka agomba kuba afite ubwishingizi buhagije. Uwakodeshejwe ashinzwe kwishyura ibyangiritse byose bitishingiwe. MUVCAR ishobora gufasha mu gukemura amakimbirane ariko siyo ibazwa kuyakemura burundu.",
+
+termsSubtitle10: "10. Ibibujijwe",
+termsText12: "Birabujijwe gutanga amakuru atari yo, gukora uburiganya, kunyuranya nu buryo bwo kwishyura bwa MUVCAR, cyangwa gukoresha urubuga mu bikorwa bitemewe n’amategeko. Ibi bishobora gutuma konti ifungwa burundu ndetse hakabaho n’ibihano by’amategeko.",
+
+termsSubtitle11: "11. Amakuru & Umutekano",
+termsText13: "MUVCAR ikusanya ikanabika amakuru y’abakoresha n’ay’imodoka harimo nimero za plaque, mu rwego rw’umutekano, gukumira uburiganya no kunoza serivisi. Ukoresheje urubuga uba ubyemeye.",
+
+termsSubtitle12: "12. Guhagarika Konti",
+termsText14: "MUVCAR ifite uburenganzira bwo guhagarika cyangwa gufunga konti, gukuraho imodoka zashyizwe ku rubuga no gufata ingamba ku barenze kuri aya mategeko.",
+
+termsSubtitle13: "13. Guhindura Amategeko",
+termsText15: "MUVCAR ishobora guhindura aya mategeko igihe icyo ari cyo cyose. Gukomeza gukoresha urubuga bivuze ko wemeye ayo mahinduka.",
+
+termsSubtitle14: "14. Amategeko Agenga Aya Masezerano",
+termsText16: "Aya mategeko agengwa n’amategeko akurikizwa mu gihugu CarConnect Ltd ikoreramo.",
       termsFooter: "© 2024 CarConnect Ltd. Uburenganzira bwose burafungiwe.",
       // Privacy Content
-      privacyTitle: "Itegeko ry'Ibanga rya MUVCAR",
-      privacyText1: "Iri tegeko ry'ibanga risobanura uko MUVCAR, igicuruzwa cya CarConnect Ltd, idora, ikoresha, kandi irinda amakuru bwite yawe.",
-      privacySubtitle1: "1. Amakuru Tudora",
-      privacyText2: "Tudora amakuru bwite nk'izina, amakuru yo guhamagara, n'amakuru yo gukoresha kugirango duhe kandi duhindure serivisi zacu.",
-      privacySubtitle2: "2. Umutekano w'Amakuru",
-      privacyText3: "Dukoresha ingamba zo kurinda amakuru zikurikiza uburyo bw'isi.",
-      privacySubtitle3: "3. Serivisi z'Abandi",
-      privacyText4: "MUVCAR ishobora guhuza n'izindi serivisi nk'abakora ubwishyu.",
+      privacyTitle: "Amategeko y’Ubuzima bwite ya MUVCAR",
+
+privacyText1: "Aya mategeko y’Ubuzima bwite asobanura uburyo MUVCAR, igikorwa cya CarConnect Ltd, ikusanya, ikoresha, ibika kandi irinda amakuru bwite y’abakoresha bayo.",
+
+privacySubtitle1: "1. Amakuru Dukusanya",
+privacyText2: "Dukusanya amakuru bwite arimo amazina, nimero za telefoni, email, ibyangombwa by’irangamuntu, uruhushya rwo gutwara ibinyabiziga, ndetse n’amakuru y’imodoka harimo nimero za plaque. Dushobora kandi gukusanya amakuru y’imikoreshereze, aho uherereye (location), n’amakuru y’igikoresho ukoresha.",
+
+privacySubtitle2: "2. Uburyo Dukoresha Amakuru",
+privacyText3: "Amakuru dukusanya tuyakoresha mu gutanga serivisi, kunoza imikorere y’urubuga, kugenzura imyirondoro y’abakoresha, koroshya ubukode, kwishyurana, kurinda umutekano no gukumira uburiganya, no kuvugana n’abakoresha.",
+
+privacySubtitle3: "3. Gusangiza Amakuru",
+privacyText4: "Dushobora gusangiza amakuru yawe n’abandi bakoresha (nk’igihe umufite imodoka n’uyikodesha basabana amakuru akenewe), abafatanyabikorwa batanga serivisi zishyurwa, n’abandi bafatanyabikorwa bizewe mu gihe bikenewe. Ntabwo tugurisha amakuru bwite y’abakoresha.",
+
+privacySubtitle4: "4. Umutekano w’Amakuru",
+privacyText5: "Dushyiraho ingamba z’ikoranabuhanga n’iz’imiyoborere zigamije kurinda amakuru yawe kwinjirwa mu buryo butemewe, kubura, kwangirika cyangwa gukoreshwa nabi. Ariko nta buryo bw’umutekano bushobora kuba bwuzuye ku kigero cya 100%.",
+
+privacySubtitle5: "5. Igihe Amakuru Abikwa",
+privacyText6: "Amakuru yawe tuyabika igihe cyose bikenewe kugira ngo dutange serivisi, twuzuze ibisabwa n’amategeko, dukemure amakimbirane no gushyira mu bikorwa amasezerano.",
+
+privacySubtitle6: "6. Uburenganzira bwawe",
+privacyText7: "Ufite uburenganzira bwo kureba amakuru yawe, kuyahindura cyangwa gusaba ko asibwa. Ushobora kandi gusaba kugabanya cyangwa guhagarika ikoreshwa ryayo mu gihe runaka aho bishoboka.",
+
+privacySubtitle7: "7. Aho Uherereye (Location)",
+privacyText8: "MUVCAR ishobora gukusanya no gukoresha amakuru y’aho uherereye mu kunoza serivisi, kongera umutekano no kugenzura ibikorwa by’ubukode. Gukoresha urubuga bivuze ko ubyemeye.",
+
+privacySubtitle8: "8. Serivisi z’Abandi",
+privacyText9: "MUVCAR ishobora gukoresha serivisi z’abandi bafatanyabikorwa nko kwishyurana. Abo nabo bashobora gutunganya amakuru yawe hakurikijwe amategeko yabo bwite y’Ubuzima bwite.",
+
+privacySubtitle9: "9. Guhindura Amategeko",
+privacyText10: "Aya mategeko ashobora guhindurwa igihe icyo ari cyo cyose. Gukomeza gukoresha urubuga bivuze ko wemeye impinduka zakozwe.",
+
+privacySubtitle10: "10. Twavugana Gute",
+privacyText11: "Niba ufite ibibazo cyangwa ushaka gusaba ibijyanye n’amakuru yawe bwite, ushobora kuvugana na MUVCAR ukoresheje inzira zemewe z’itumanaho.",
     },
   },
   fr: {
@@ -910,7 +1008,7 @@ trackingActivatedTitle: "Suivi Activé",
 trackingActivatedMessage: "{{count}} voiture(s) trouvée(s) dans un rayon de 10 km. La plus proche : {{brand}} {{model}} (à {{distance}} km)",
 noNearbyCarsTitle: "Aucune Voiture à Proximité",
 noNearbyCarsMessage: "Aucune voiture disponible trouvée dans un rayon de 10 km autour de votre position",
-
+ PinLocationonMap: "Veuillez épingler l'emplacement de la voiture sur la carte du Rwanda",
       manual: "Manuelle",
       gasoline: "Essence",
       electric: "Électrique",
@@ -975,7 +1073,7 @@ noNearbyCarsMessage: "Aucune voiture disponible trouvée dans un rayon de 10 km 
       edit: "Modifier",
       type: "Type",
       transmission: "Transmission",
-      fuelType: "Type de carburant",
+     
       seats: "Sièges",
       location: "Emplacement",
       phoneNumber: "Numéro de téléphone",
@@ -1087,17 +1185,17 @@ noNearbyCarsMessage: "Aucune voiture disponible trouvée dans un rayon de 10 km 
  province: "Province",
  address: "Adresse",
  country: "Pays",
- selectOnMap: "Sélectionner sur la carte",
+ selectonMap: "Sélectionner sur la carte",
  currentLocation: "Emplacement actuel",
  locationSelected: "Emplacement sélectionné",
  Perday:"Par jour",
  // Pricing
- pricingAndCategory: "Tarification et catégorie",
+pricingandCategory: "Tarification et catégorie",
  category: "Catégorie",
  basePrice: "Prix de base",
  weeklyDiscount: "Réduction hebdomadaire",
  monthlyDiscount: "Réduction mensuelle",
-
+PlateNumber: "Numéro de plaque",
  // Upload
  uploadPhotos: "Télécharger des photos",
  carPhotos: "Photos de la voiture",
@@ -1271,25 +1369,88 @@ enableLocation: "Veuillez activer la localisation pour obtenir l’itinéraire",
       faqItem7Question: "Comment les propriétaires et locataires se connectent-ils ?",
       faqItem7Answer: "Via l'application MUVCAR, les locataires peuvent choisir une voiture qu'ils souhaitent louer et cliquer sur le bouton de contact, ce qui initie un appel au propriétaire de la voiture. Les deux parties peuvent alors discuter et convenir des termes de location directement.",
       // Terms Content
-      termsTitle: "Conditions d'utilisation de MUVCAR",
-      termsText1: "MUVCAR est une plateforme de location de voitures numérique conçue pour connecter les propriétaires de véhicules avec les locataires dans un environnement sécurisé et transparent.",
-      termsText2: "MUVCAR est un produit de CarConnect Ltd. En accédant ou utilisant l'application mobile MUVCAR, vous acceptez de vous conformer à ces Conditions d'utilisation.",
-      termsSubtitle1: "1. Responsabilités des utilisateurs",
-      termsText3: "Les utilisateurs doivent fournir des informations exactes et maintenir la sécurité de leurs comptes. Toute utilisation abusive de la plateforme peut entraîner une suspension.",
-      termsSubtitle2: "2. Locations et paiements",
-      termsText4: "MUVCAR facilite les accords de location de voitures mais ne possède pas les véhicules listés sur la plateforme.",
-      termsSubtitle3: "3. Responsabilité",
-      termsText5: "CarConnect Ltd ne sera pas responsable des dommages résultant d'une utilisation abusive de la plateforme ou d'actions de tiers.",
+      termsTitle: "Conditions d’Utilisation de MUVCAR",
+
+termsText1: "MUVCAR est une plateforme numérique exploitée par CarConnect Ltd, conçue pour mettre en relation des propriétaires de véhicules avec des personnes souhaitant les louer, dans un environnement sécurisé et transparent.",
+
+termsText2: "En accédant ou en utilisant l’application MUVCAR, vous acceptez de respecter les présentes Conditions d’Utilisation. Si vous n’êtes pas d’accord, vous ne devez pas utiliser la plateforme.",
+
+termsSubtitle1: "1. Conditions d’éligibilité",
+termsText3: "Les utilisateurs doivent être âgés d’au moins 18 ans. Les locataires doivent posséder un permis de conduire valide. MUVCAR se réserve le droit de vérifier les informations et d’accepter ou refuser un utilisateur.",
+
+termsSubtitle2: "2. Comptes utilisateurs",
+termsText4: "Les utilisateurs doivent fournir des informations exactes et complètes. Ils sont responsables de la sécurité de leur compte. Toute activité effectuée via un compte relève de la responsabilité de son titulaire. Tout abus peut entraîner une suspension ou une suppression du compte.",
+
+termsSubtitle3: "3. Rôle de la plateforme",
+termsText5: "MUVCAR agit uniquement comme intermédiaire entre les propriétaires de véhicules et les locataires. MUVCAR ne possède ni ne contrôle les véhicules proposés. Les contrats de location sont conclus directement entre les utilisateurs.",
+
+termsSubtitle4: "4. Responsabilités du propriétaire",
+termsText6: "Le propriétaire doit fournir des informations exactes sur le véhicule et garantir qu’il est en bon état, immatriculé et assuré. MUVCAR conserve les informations du véhicule, y compris le numéro de plaque, à des fins de sécurité et de vérification. Il est interdit de proposer des véhicules illégaux ou non conformes.",
+
+termsSubtitle5: "5. Responsabilités du locataire",
+termsText7: "Le locataire doit utiliser le véhicule conformément aux lois en vigueur. Il est interdit de l’utiliser à des fins illégales, pour des courses ou de le sous-louer. Le locataire est responsable de restituer le véhicule en bon état et de couvrir tout dommage, amende ou retard.",
+
+termsSubtitle6: "6. Locations et paiements",
+termsText8: "MUVCAR facilite les paiements entre utilisateurs. Des frais de service peuvent s’appliquer. L’utilisateur accepte de payer tous les frais liés à la location, y compris les pénalités et autres charges applicables.",
+
+termsSubtitle7: "7. Annulations et remboursements",
+termsText9: "Les conditions d’annulation et de remboursement peuvent varier selon la réservation. MUVCAR se réserve le droit d’appliquer ces règles et de prévenir tout abus.",
+
+termsSubtitle8: "8. Responsabilité",
+termsText10: "CarConnect Ltd ne peut être tenu responsable des accidents, dommages, pertes ou litiges résultant de l’utilisation de la plateforme ou des interactions entre utilisateurs. Les risques sont assumés par les parties concernées.",
+
+termsSubtitle9: "9. Assurance et dommages",
+termsText11: "Le propriétaire est responsable de disposer d’une assurance valide. Le locataire est responsable des dommages non couverts par l’assurance. MUVCAR peut assister en cas de litige sans obligation de résolution.",
+
+termsSubtitle10: "10. Activités interdites",
+termsText12: "Il est interdit de fournir de fausses informations, de commettre des fraudes, de contourner les paiements via MUVCAR ou d’utiliser la plateforme à des fins illégales. Toute violation peut entraîner une suspension définitive et des poursuites.",
+
+termsSubtitle11: "11. Données et sécurité",
+termsText13: "MUVCAR collecte et conserve les données des utilisateurs et des véhicules, y compris les numéros de plaque, à des fins de sécurité, de prévention de fraude et d’amélioration du service. L’utilisation de la plateforme vaut consentement.",
+
+termsSubtitle12: "12. Suspension et résiliation",
+termsText14: "MUVCAR se réserve le droit de suspendre ou supprimer des comptes, retirer des annonces et prendre toute mesure appropriée en cas de violation des présentes conditions.",
+
+termsSubtitle13: "13. Modification des conditions",
+termsText15: "MUVCAR peut modifier ces conditions à tout moment. L’utilisation continue de la plateforme implique l’acceptation des modifications.",
+
+termsSubtitle14: "14. Droit applicable",
+termsText15: "Les présentes conditions sont régies par les lois en vigueur dans le pays où CarConnect Ltd opère.",
       termsFooter: "© 2024 CarConnect Ltd. Tous droits réservés.",
       // Privacy Content
-      privacyTitle: "Politique de confidentialité de MUVCAR",
-      privacyText1: "Cette Politique de confidentialité explique comment MUVCAR, un produit de CarConnect Ltd, collecte, utilise et protège vos informations personnelles.",
-      privacySubtitle1: "1. Informations que nous collectons",
-      privacyText2: "Nous collectons des données personnelles telles que le nom, les coordonnées et les données d'utilisation pour fournir et améliorer nos services.",
-      privacySubtitle2: "2. Sécurité des données",
-      privacyText3: "Nous utilisons des mesures de sécurité standard de l'industrie pour protéger vos informations.",
-      privacySubtitle3: "3. Services tiers",
-      privacyText4: "MUVCAR peut s'intégrer avec des services tiers tels que les fournisseurs de paiement.",
+     privacyTitle: "Protection de la Vie Privée de MUVCAR",
+
+privacyText1: "Ce document explique comment MUVCAR, un produit de CarConnect Ltd, collecte, utilise, conserve et protège les informations personnelles de ses utilisateurs.",
+
+privacySubtitle1: "1. Informations que nous collectons",
+privacyText2: "Nous collectons des informations personnelles telles que le nom, le numéro de téléphone, l’adresse e-mail, les pièces d’identité, le permis de conduire, ainsi que les informations sur les véhicules, y compris les numéros de plaque. Nous pouvons également collecter des données d’utilisation, de localisation et des informations sur l’appareil utilisé.",
+
+privacySubtitle2: "2. Utilisation des informations",
+privacyText3: "Les informations collectées sont utilisées pour fournir nos services, améliorer la plateforme, vérifier l’identité des utilisateurs, faciliter les locations, gérer les paiements, assurer la sécurité, prévenir la fraude et communiquer avec les utilisateurs.",
+
+privacySubtitle3: "3. Partage des informations",
+privacyText4: "Nous pouvons partager certaines informations avec d’autres utilisateurs (par exemple entre le propriétaire et le locataire), avec des prestataires de services de paiement et des partenaires de confiance lorsque cela est nécessaire au fonctionnement de la plateforme. Nous ne vendons pas les données personnelles.",
+
+privacySubtitle4: "4. Sécurité des données",
+privacyText5: "Nous mettons en place des mesures techniques et organisationnelles appropriées pour protéger vos données contre tout accès non autorisé, perte, altération ou utilisation abusive. Toutefois, aucun système n’est totalement sécurisé.",
+
+privacySubtitle5: "5. Conservation des données",
+privacyText6: "Les données personnelles sont conservées uniquement pendant la durée nécessaire à la fourniture des services, au respect des obligations légales, à la résolution des litiges et à l’application des accords.",
+
+privacySubtitle6: "6. Vos droits",
+privacyText7: "Vous avez le droit d’accéder à vos données, de les corriger ou de demander leur suppression. Vous pouvez également demander la limitation ou vous opposer à certains traitements lorsque cela est applicable.",
+
+privacySubtitle7: "7. Données de localisation",
+privacyText8: "MUVCAR peut collecter et utiliser des données de localisation afin d’améliorer les services, renforcer la sécurité et vérifier les activités de location. En utilisant la plateforme, vous acceptez cette collecte.",
+
+privacySubtitle8: "8. Services tiers",
+privacyText9: "MUVCAR peut utiliser des services tiers, notamment pour les paiements. Ces services peuvent traiter vos données conformément à leurs propres politiques de protection de la vie privée.",
+
+privacySubtitle9: "9. Modification de la politique",
+privacyText10: "Cette politique peut être modifiée à tout moment. L’utilisation continue de la plateforme implique l’acceptation des modifications.",
+
+privacySubtitle10: "10. Contact",
+privacyText11: "Pour toute question ou demande concernant vos données personnelles, vous pouvez contacter MUVCAR via les canaux officiels.",
     },
   },
 }

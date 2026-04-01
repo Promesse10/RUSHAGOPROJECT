@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from "react-native"
 import AsyncStorage from "@react-native-async-storage/async-storage"
+import { useSelector } from "react-redux"
 import I18n from "../utils/i18n"
 
 const { width, height } = Dimensions.get("window")
@@ -24,6 +25,9 @@ const OnboardingScreen = ({ navigation }) => {
   const [isVisible, setIsVisible] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const [showLanguageModal, setShowLanguageModal] = useState(false)
+  const authState = useSelector((state) => state.auth || {})
+  const isAuthenticated = authState.isAuthenticated
+  const userType = authState.user?.role || authState.user?.type || "renter"
   const listRef = useRef(null)
 
   const fadeAnimation = useRef(new Animated.Value(0)).current
@@ -113,10 +117,11 @@ const OnboardingScreen = ({ navigation }) => {
       setTimeout(async () => {
         const hasSeen = await AsyncStorage.getItem(ONBOARDING_KEY)
         if (hasSeen === "true") {
-          navigation.replace("AuthScreen")
-        } else {
-          setIsLoading(false)
-          setShowLanguageModal(true)
+            if (isAuthenticated) {
+              navigation.replace(userType === "owner" ? "CarOwnerDashboard" : "CarRenterDashboard")
+            } else {
+              navigation.replace("AuthScreen")
+            }
         }
       }, 200)
     })

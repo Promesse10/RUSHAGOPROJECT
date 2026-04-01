@@ -21,6 +21,7 @@ import {
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import PhoneNumberInput from "../../components/PhoneNumberInput"
+import { openPrivacyTerms } from "../../utils/inAppBrowser"
 import { signupAction } from "../../redux/action/signupAction"
 import {
   sendVerificationCodeAction,
@@ -705,13 +706,9 @@ backgroundColor: passwordStrength==="strong"?"green":"#ddd"
   </TouchableOpacity>
 
   <Text style={styles.termsText}>
-    {I18n.t("iAgree")}{" "}
-    <Text style={styles.linkText} onPress={() => setShowTermsModal(true)}>
-      {I18n.t("terms")}
-    </Text>{" "}
-    {I18n.t("and")}{" "}
-    <Text style={styles.linkText} onPress={() => setShowPrivacyModal(true)}>
-      {I18n.t("privacyPolicy")}
+    {I18n.t("iAgree")} {" "}
+    <Text style={styles.linkText} onPress={openPrivacyTerms}>
+      {I18n.t("policyAndTerms", "Privacy&Terms")}
     </Text>
   </Text>
 </View>

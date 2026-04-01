@@ -216,16 +216,37 @@ const HomeScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [isNavigatingToCarListing, setIsNavigatingToCarListing] = useState(false)
   const { t, i18n } = useTranslation();
-const unreadCount = Array.isArray(notifications)
-  ? notifications.filter(n => !n.isRead).length
-  : 0
+  const [hasNewNotifications, setHasNewNotifications] = useState(false)
+  const [recentArrivalFlash, setRecentArrivalFlash] = useState(false)
+  const [showNotificationToast, setShowNotificationToast] = useState(false)
+  const prevUnreadCountRef = useRef(0)
 
+  const { notifications } = useSelector((state) => ({
+    notifications: state.notifications?.notifications ?? [],
+  }))
 
+  const unreadCount = Array.isArray(notifications)
+    ? notifications.filter(n => !n.isRead).length
+    : 0
 
-// Removed duplicate notification state - using NotificationBottomSheet component instead
-const { notifications } = useSelector((state) => ({
-  notifications: state.notifications?.notifications ?? [],
-}))
+  useEffect(() => {
+    if (unreadCount > prevUnreadCountRef.current) {
+      setRecentArrivalFlash(true)
+      setShowNotificationToast(true)
+
+      setTimeout(() => {
+        setRecentArrivalFlash(false)
+      }, 1000)
+
+      setTimeout(() => {
+        setShowNotificationToast(false)
+      }, 1800)
+    }
+
+    setHasNewNotifications(unreadCount > 0)
+    prevUnreadCountRef.current = unreadCount
+  }, [unreadCount])
+
 
 
 const selectedPinAnim = useRef(new Animated.Value(0)).current
@@ -1169,7 +1190,12 @@ Alert.alert(
     <TouchableWithoutFeedback onPress={dismissKeyboard}>
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#007EFD" />
- 
+        {showNotificationToast && (
+          <View style={styles.notificationToast}>
+            <Text style={styles.notificationToastText}>New notification received</Text>
+          </View>
+        )}
+
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
@@ -1189,7 +1215,11 @@ Alert.alert(
 >
   <Ionicons name="notifications-outline" size={24} color="#FFFFFF" />
 
-  {unreadCount > 0 && <View style={styles.notificationDot} />}
+  {(hasNewNotifications || unreadCount > 0) && (
+    <View style={[styles.notificationBadge, recentArrivalFlash && styles.notificationDotFlash]}>
+      <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
+    </View>
+  )}
 </TouchableOpacity>
         {/* Notification Bottom Sheet */}
 
@@ -1723,6 +1753,40 @@ notificationDot: {
   height: 8,
   borderRadius: 4,
   backgroundColor: "red",
+},
+notificationDotFlash: {
+  width: 12,
+  height: 12,
+  top: 3,
+  right: 3,
+  borderRadius: 6,
+  backgroundColor: "#FF6B6B",
+  borderWidth: 2,
+  borderColor: "#fff",
+  shadowColor: "#FF6B6B",
+  shadowOffset: { width: 0, height: 0 },
+  shadowOpacity: 0.7,
+  shadowRadius: 4,
+  elevation: 3,
+},
+notificationToast: {
+  position: "absolute",
+  top: 52,
+  left: "50%",
+  transform: [{ translateX: -120 }],
+  width: 240,
+  backgroundColor: "rgba(30, 64, 175, 0.95)",
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 20,
+  zIndex: 2000,
+  alignItems: "center",
+  justifyContent: "center",
+},
+notificationToastText: {
+  color: "#fff",
+  fontWeight: "600",
+  fontSize: 13,
 },
 pinWrapper: {
   alignItems: "center",

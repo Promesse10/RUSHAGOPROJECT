@@ -48,7 +48,7 @@ export const markNotificationAsRead = (notification) => async (dispatch) => {
     console.error("Mark as read failed:", err.message);
   }
 
-  dispatch(markRead(id));
+  dispatch(markRead({ id, readAt: new Date().toISOString() }));
 };
 
 

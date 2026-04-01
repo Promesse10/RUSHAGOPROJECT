@@ -16,6 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import I18n from "./utils/i18n";
+import { openPrivacyTerms } from "./utils/inAppBrowser";
 
 const AuthScreen = () => {
   const navigation = useNavigation();
@@ -234,8 +235,9 @@ const AuthScreen = () => {
         <View style={styles.termsContainer}>
           <Text style={styles.termsText}>
             By signing up, you agree to our{" "}
-            <Text style={styles.link}>Terms of Service</Text> and{" "}
-            <Text style={styles.link}>Privacy Policy</Text>
+            <Text style={styles.link} onPress={openPrivacyTerms}>
+              Privacy&Terms
+            </Text>
           </Text>
         </View>
       )}

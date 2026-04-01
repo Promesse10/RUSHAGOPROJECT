@@ -23,19 +23,16 @@ import { useTranslation } from "react-i18next"
 import { useDispatch, useSelector } from "react-redux"
 import * as ImagePicker from "expo-image-picker"
 import * as Location from "expo-location"
-import AsyncStorage from "@react-native-async-storage/async-storage"
 import axios from "../../utils/axios"
 import carIcon from "../../assets/car-marker.png"
 import { rwandaLocations, searchLocations, getProvinceCoordinates } from "../../utils/rwandaLocations"
 import { createCarAction, updateCarAction, checkPlateUniquenessAction } from "../../redux/action/CarActions"
 import { getCurrentUserAction, searchUsersAction } from "../../redux/action/UserActions"
-import { saveDraft, deleteDraft, loadDrafts } from "../../redux/action/draftsActions"
 import { clearSearchResults } from "../../redux/slices/userSlice"
 import { clearCreateState, clearUpdateState } from "../../redux/slices/carSlice"
 import { carMakes, carModels, carTypes, transmissionTypes, fuelTypes, seatOptions } from "../../utils/carData"
 import PaymentBottomSheet from "./PaymentBottomSheet"
 import "../../utils/i18n"
-import DraftBottomSheet from "../../components/DraftBottomSheet"
 
 let MapView;
 if (Platform.OS !== 'web') {
@@ -82,9 +79,7 @@ const initialFormData = {
   plateNumber: "",
 }
 
-const generateDraftId = () => {
-  return `draft_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`
-}
+
 
 const AddCarScreen = () => {
   const dispatch = useDispatch()
@@ -116,9 +111,8 @@ const AddCarScreen = () => {
   } = useSelector((state) => state.cars || {})
 
   const [isEditing, setIsEditing] = useState(route.params?.draftData?.isEditing || false)
-  const [isDraft, setIsDraft] = useState(route.params?.isDraft || false)
   const [editingCarId, setEditingCarId] = useState(route.params?.draftData?.id)
-
+  const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const [showMakeDropdown, setShowMakeDropdown] = useState(false)
   const [showModelDropdown, setShowModelDropdown] = useState(false)
@@ -154,92 +148,6 @@ const AddCarScreen = () => {
   // Payment states
   const [showPaymentModal, setShowPaymentModal] = useState(false)
 
-  // Draft bottom sheet states
-  const [showDraftBottomSheet, setShowDraftBottomSheet] = useState(false)
-
-  // Draft prompt states
-  const [showDraftPrompt, setShowDraftPrompt] = useState(false)
-  const [showExitModal, setShowExitModal] = useState(false)
-  const [draftData, setDraftData] = useState(null)
-  const [draftId, setDraftId] = useState(route.params?.draftData?.id || generateDraftId())
-
-  // Track if we've already shown the draft prompt on this screen visit
-  const [draftPromptShown, setDraftPromptShown] = useState(false)
-
-  // Local draft saving function (fallback when API/redux fails)
-  const saveDraftLocally = async (draftData, { showAlert = true } = {}) => {
-    try {
-      const userId = user?.id || user?._id || user?.userId || "user123"
-      const storageKey = `drafts_${userId}`
-      const existingDrafts = await AsyncStorage.getItem(storageKey)
-      const drafts = existingDrafts ? JSON.parse(existingDrafts) : []
-
-      // Remove existing draft for this id
-      const filteredDrafts = drafts.filter((d) => d.id !== draftData.id)
-      filteredDrafts.push(draftData)
-
-      await AsyncStorage.setItem(storageKey, JSON.stringify(filteredDrafts))
-      if (showAlert) {
-        Alert.alert(t("Success"), t("Draft saved successfully!"))
-      }
-    } catch (error) {
-      console.error('❌ Failed to save draft:', error)
-      if (showAlert) {
-        Alert.alert(t("Error"), t("Failed to save draft"))
-      }
-    }
-  }
-
-  // Handle save as draft (called when user intentionally saves or exits)
-  const handleSaveAsDraft = async ({ showAlert = true } = {}) => {
-    try {
-      const finalDraftId = draftData?.id || draftId || generateDraftId()
-      setDraftId(finalDraftId)
-
-      const draftDataToSave = {
-        id: finalDraftId,
-        formData,
-        currentStep,
-        isEditing,
-        isDraft,
-        editingCarId,
-        createdAt: draftData?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-
-      // Save via Redux/actions (handles API + local storage fallback)
-      await dispatch(saveDraft(draftDataToSave)).unwrap()
-      // Refresh local drafts list so SavedDraftsScreen shows the latest
-      dispatch(loadDrafts())
-
-      setDraftData(draftDataToSave)
-      setIsDraft(true)
-
-      if (showAlert) {
-        Alert.alert(
-          t("Success"),
-          t("Draft saved at Step {{step}} - your progress is saved!", { step: currentStep })
-        )
-      }
-      return true
-    } catch (error) {
-      // Fallback: save locally if server/redux fails
-      const finalDraftId = draftData?.id || draftId || generateDraftId()
-      const draftDataToSave = {
-        id: finalDraftId,
-        formData,
-        currentStep,
-        isEditing,
-        isDraft,
-        editingCarId,
-        createdAt: draftData?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      await saveDraftLocally(draftDataToSave, { showAlert })
-      return true
-    }
-  }
-
   const [paymentCompleted, setPaymentCompleted] = useState(false)
   const [selectedImages, setSelectedImages] = useState([])
 
@@ -253,6 +161,11 @@ const AddCarScreen = () => {
 
   const [formData, setFormData] = useState(initialFormData)
 
+  const updateFormData = (data) => {
+    setHasUserInteracted(true)
+    setFormData(data)
+  }
+
   // ✅ FIXED: Fetch current user on component mount
   useEffect(() => {
     if (!user && authUser) {
@@ -263,7 +176,7 @@ const AddCarScreen = () => {
   // ✅ FIXED: Auto-fill owner information when user is available
   useEffect(() => {
     if (user && !isEditing && !isManualEntry) {
-      setFormData((prev) => ({
+      updateFormData((prev) => ({
         ...prev,
         ownerName: user.name || "",
         ownerPhone: user.phone?.replace("+250", "") || "",
@@ -271,10 +184,10 @@ const AddCarScreen = () => {
     }
   }, [user, isEditing, isManualEntry])
 
-  // ✅ FIXED: Reset form when not editing and not loading a draft
+  // ✅ FIXED: Reset form when not editing 
   useEffect(() => {
-    if (!isEditing && !isDraft) {
-      setFormData(initialFormData)
+    if (!isEditing) {
+      updateFormData(initialFormData)
       setCurrentStep(1)
       setHasChanges(false)
       setOriginalData(initialFormData)
@@ -291,40 +204,36 @@ const AddCarScreen = () => {
       setPlateValidationError("")
       setPlateIsValid(false)
     }
-  }, [isEditing, isDraft])
+  }, [isEditing])
 
   // Ensure AddCar screen is reset when focused from other tabs/screens
   useFocusEffect(
-    React.useCallback(() => {
-      if (!isEditing && !isDraft && !route.params?.draftData) {
-        setDraftData(null)
-        setDraftId(generateDraftId())
-        setFormData(initialFormData)
-        setCurrentStep(1)
-        setHasChanges(false)
-        setOriginalData(initialFormData)
-        setCustomMake("")
-        setSelectedLocation(null)
-        setMapRegion({
-          latitude: -1.9441,
-          longitude: 30.0619,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        })
-        setPaymentCompleted(false)
-        setIsManualEntry(false)
-        setPlateValidationError("")
-        setPlateIsValid(false)
-        setDraftPromptShown(false)
-      }
-    }, [isEditing, isDraft, route.params?.draftData])
-  )
+  React.useCallback(() => {
+    updateFormData(initialFormData)
+    setCurrentStep(1)
+    setHasChanges(false)
+    setOriginalData(initialFormData)
+    setCustomMake("")
+    setSelectedLocation(null)
+    setMapRegion({
+      latitude: -1.9441,
+      longitude: 30.0619,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    })
+    setPaymentCompleted(false)
+    setIsManualEntry(false)
+    setPlateValidationError("")
+    setPlateIsValid(false)
+  }, [])
+)
 
   // Handle back navigation and navigation away with unsaved changes
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (e.data.action.type === 'RESET') return
       // Only show alert if there are actual changes
-      if (!hasChanges) {
+      if (!hasChanges || !hasUserInteracted) {
         return
       }
 
@@ -332,34 +241,20 @@ const AddCarScreen = () => {
 
       Alert.alert(
         t('Unsaved Changes'),
-        t('You have unsaved changes. What would you like to do?'),
+        t('You have unsaved changes. Discard them?'),
         [
-          {
-            text: t('Save as Draft'),
-            onPress: async () => {
-              await handleSaveAsDraft({ showAlert: false })
-              // Wait a moment then navigate
-              setTimeout(() => {
-                navigation.dispatch(e.data.action)
-              }, 300)
-            },
-          },
           {
             text: t('Continue Editing'),
             style: 'cancel',
+            onPress: () => {}
           },
           {
             text: t('Discard Changes'),
             style: 'destructive',
-            onPress: () => {
-              // Clear draft data when discarding
-              const userId = user?.id || user?._id || user?.userId || "user123"
-              AsyncStorage.removeItem(`drafts_${userId}`)
-              setFormData(initialFormData)
+            onPress: async () => {
+              updateFormData(initialFormData)
               setCurrentStep(1)
               setHasChanges(false)
-              setDraftData(null)
-              setDraftId(generateDraftId())
               navigation.dispatch(e.data.action)
             },
           },
@@ -368,74 +263,9 @@ const AddCarScreen = () => {
     })
 
     return unsubscribe
-  }, [navigation, hasChanges, t, user])
+  }, [navigation, hasChanges, hasUserInteracted, t])
 
-  // Check for drafts when adding/editing a car - only show once per screen visit
-  useEffect(() => {
-    // Don't show draft prompt if already shown or if we're already loading/editing a draft
-    if (draftPromptShown || isDraft || isEditing) return
 
-    const userId = user?.id || user?._id || user?.userId || "user123"
-    const storageKey = `drafts_${userId}`
-
-    AsyncStorage.getItem(storageKey)
-      .then((drafts) => {
-        if (!drafts) return
-
-        const parsed = JSON.parse(drafts) || []
-
-        // Only show popup if a REAL draft exists
-        const validDrafts = parsed.filter(
-          (d) =>
-            d?.formData &&
-            Object.keys(d.formData).length > 0
-        )
-
-        if (validDrafts.length > 0) {
-          let draftToShow = null
-
-          // If editing, prefer a draft matching the car being edited
-          if (editingCarId) {
-            draftToShow = validDrafts.find((d) => d.id === editingCarId)
-          }
-
-          // Otherwise fall back to latest draft
-          if (!draftToShow) {
-            validDrafts.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
-            draftToShow = validDrafts[0]
-          }
-
-          if (draftToShow) {
-            setDraftData(draftToShow)
-            setDraftId(draftToShow.id)
-            setShowDraftPrompt(true)
-            setDraftPromptShown(true)
-          }
-        }
-      })
-      .catch((err) => console.error('❌ Error loading drafts:', err))
-  }, [draftPromptShown, isDraft, isEditing, editingCarId, user])
-
-  // Auto-save draft on form changes (silent, local only)
-  useEffect(() => {
-    const hasData = JSON.stringify(formData) !== JSON.stringify(initialFormData)
-    if (hasData) {
-      const timeoutId = setTimeout(() => {
-        const currentDraftId = draftData?.id || draftId || (isEditing ? editingCarId : generateDraftId())
-        setDraftId(currentDraftId)
-
-        const draftDataToSave = {
-          formData,
-          currentStep,
-          id: currentDraftId,
-          createdAt: draftData?.createdAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-        saveDraftLocally(draftDataToSave, { showAlert: false })
-      }, 2000) // Save after 2 seconds of no changes
-      return () => clearTimeout(timeoutId)
-    }
-  }, [formData, currentStep, draftData, isEditing, editingCarId, draftId])
 
   // ✅ NEW: Enhanced plate number formatter
   const formatPlateNumber = (text) => {
@@ -473,7 +303,7 @@ const AddCarScreen = () => {
         `${remainingChars} character${remainingChars !== 1 ? 's' : ''} remaining`
       )
     } else if (!isValid) {
-      setPlateValidationError(t("invalidPlateFormat", "Invalid format: ABC123D"))
+      setPlateValidationError(t("invalidPlateFormat", "Invalid format: RAA 123 A"))
     } else {
       setPlateValidationError("")
     }
@@ -482,7 +312,7 @@ const AddCarScreen = () => {
   // ✅ NEW: Handle plate number input
   const handlePlateNumberChange = (text) => {
     const formatted = formatPlateNumber(text)
-    setFormData({ ...formData, plateNumber: formatted })
+    updateFormData({ ...formData, plateNumber: formatted })
     validatePlateFormat(formatted)
     setValidationErrors((prev) => ({ ...prev, plateNumber: false }))
   }
@@ -490,7 +320,7 @@ const AddCarScreen = () => {
   // ✅ NEW: Handle owner name search for autocomplete
   const handleOwnerNameSearch = (text) => {
     setOwnerSearchQuery(text)
-    setFormData({ ...formData, ownerName: text })
+    updateFormData({ ...formData, ownerName: text })
     setValidationErrors((prev) => ({ ...prev, ownerName: false }))
 
     if (text.length > 2 && !isManualEntry) {
@@ -504,7 +334,7 @@ const AddCarScreen = () => {
 
   // ✅ NEW: Select user from autocomplete
   const selectOwnerFromSuggestions = (selectedUser) => {
-    setFormData({
+    updateFormData({
       ...formData,
       ownerName: selectedUser.name,
       ownerPhone: selectedUser.phone?.replace("+250", "") || "",
@@ -523,7 +353,7 @@ const AddCarScreen = () => {
 
     if (!isManualEntry) {
       // Switching to manual entry - clear auto-filled data
-      setFormData((prev) => ({
+      updateFormData((prev) => ({
         ...prev,
         ownerName: "",
         ownerPhone: "",
@@ -531,7 +361,7 @@ const AddCarScreen = () => {
     } else {
       // Switching back to auto-complete - restore user data
       if (user) {
-        setFormData((prev) => ({
+        updateFormData((prev) => ({
           ...prev,
           ownerName: user.name || "",
           ownerPhone: user.phone?.replace("+250", "") || "",
@@ -540,9 +370,9 @@ const AddCarScreen = () => {
     }
   }
 
-  // Load existing data if editing or resuming a draft
+  // Load existing data if editing a car
   useEffect(() => {
-    if ((isEditing || isDraft) && route.params?.draftData?.formData) {
+    if (isEditing && route.params?.draftData?.formData) {
       const existingData = route.params.draftData.formData
 
       // Handle make/brand
@@ -577,7 +407,7 @@ const AddCarScreen = () => {
         }
       }
 
-      setFormData({
+      updateFormData({
         make: isStandardMake ? brand : "Other",
         model: existingData.model || "",
         year: existingData.year?.toString() || "",
@@ -628,19 +458,23 @@ const AddCarScreen = () => {
 
       setPaymentCompleted(!!existingData.thumbnail)
       setIsManualEntry(true) // Set to manual entry for editing
-      setCurrentStep(route.params?.draftData?.currentStep ?? 1) // Restore step if editing a draft
+      setCurrentStep(
+  route.params?.draftData?.currentStep
+    ? Number(route.params.draftData.currentStep)
+    : 1
+) // Restore step if editing a draft
       // setOriginalData will be set after formData is updated
     }
   }, [isEditing, route.params])
 
-  // Set original data after form data is loaded (for editing/draft)
+  // Set original data after form data is loaded (for editing)
   useEffect(() => {
-    if ((isEditing || isDraft) && formData && Object.keys(formData).some(key => formData[key] !== initialFormData[key])) {
+    if (isEditing && formData && Object.keys(formData).some(key => formData[key] !== initialFormData[key])) {
       setOriginalData(formData)
       // When loading existing data, don't show as "changed"
       setHasChanges(false)
     }
-  }, [formData, isEditing, isDraft])
+  }, [formData, isEditing])
 
   // Check for changes in form data (only if there's actual data)
   useEffect(() => {
@@ -658,19 +492,14 @@ const AddCarScreen = () => {
           text: t("OK"),
           onPress: () => {
             dispatch(clearCreateState())
-            // Remove associated draft once listing is published
-            if (draftId) {
-              dispatch(deleteDraft(draftId))
-              setDraftId(generateDraftId())
-            }
-            setFormData(initialFormData)
+            updateFormData(initialFormData)
             setCurrentStep(1)
             navigation.navigate("MyCars")
           },
         },
       ])
     }
-  }, [isCreateSuccess, dispatch, navigation, t, draftId])
+  }, [isCreateSuccess, dispatch, navigation, t])
 
   useEffect(() => {
     if (isUpdateSuccess) {
@@ -679,17 +508,12 @@ const AddCarScreen = () => {
           text: t("OK"),
           onPress: () => {
             dispatch(clearUpdateState())
-            // Remove associated draft once listing is updated
-            if (draftId) {
-              dispatch(deleteDraft(draftId))
-              setDraftId(generateDraftId())
-            }
             navigation.navigate("MyCars")
           },
         },
       ])
     }
-  }, [isUpdateSuccess, dispatch, navigation, t, draftId])
+  }, [isUpdateSuccess, dispatch, navigation, t])
 
   useEffect(() => {
     if (isCreateFailed && createError) {
@@ -804,13 +628,13 @@ const AddCarScreen = () => {
       setIsCustomModel(true)
     }
     if (formData.model && (!carModels[formData.make] || !carModels[formData.make].includes(formData.model))) {
-      setFormData((prev) => ({ ...prev, model: "" }))
+      updateFormData((prev) => ({ ...prev, model: "" }))
     }
   }, [formData.make])
 
   // Address search functionality
   const handleAddressSearch = (text) => {
-    setFormData({ ...formData, address: text })
+    updateFormData({ ...formData, address: text })
     setValidationErrors((prev) => ({ ...prev, address: false }))
 
     if (text.length > 1) {
@@ -835,7 +659,7 @@ const AddCarScreen = () => {
   }
 
   const selectAddressSuggestion = (suggestion) => {
-    setFormData({
+    updateFormData({
       ...formData,
       address: suggestion.description,
     })
@@ -875,7 +699,7 @@ const AddCarScreen = () => {
   const handleMapPress = (event) => {
     const { latitude, longitude } = event.nativeEvent.coordinate
     setSelectedLocation({ latitude, longitude })
-    setFormData({
+    updateFormData({
       ...formData,
       latitude: latitude.toString(),
       longitude: longitude.toString(),
@@ -884,12 +708,14 @@ const AddCarScreen = () => {
   }
 
   const confirmLocation = () => {
-    if (selectedLocation) {
-      setShowMapModal(false)
-      Alert.alert(t("Success"), t("Location selected successfully"))
-    } else {
-      Alert.alert(t("Error"), t("Please select a location on the map"))
-    }
+    updateFormData({
+      ...formData,
+      latitude: selectedLocation.latitude,
+      longitude: selectedLocation.longitude,
+      address: selectedLocation.address,
+    })
+    setShowMapModal(false)
+    setSelectedLocation(null)
   }
 
   const getCurrentLocation = async () => {
@@ -910,7 +736,7 @@ const AddCarScreen = () => {
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       })
-      setFormData({
+      updateFormData({
         ...formData,
         latitude: latitude.toString(),
         longitude: longitude.toString(),
@@ -996,44 +822,7 @@ const AddCarScreen = () => {
   }
 
   const handleBackPress = () => {
-    // Check if we have unsaved changes
-    if (hasChanges) {
-      Alert.alert(
-        t('Unsaved Changes'),
-        t('You have unsaved changes. What would you like to do?'),
-        [
-          {
-            text: t('Save as Draft'),
-            onPress: async () => {
-              await handleSaveAsDraft({ showAlert: false })
-              setTimeout(() => navigation.goBack(), 300)
-            },
-          },
-          {
-            text: t('Continue Editing'),
-            style: 'cancel',
-          },
-          {
-            text: t('Discard Changes'),
-            style: 'destructive',
-            onPress: () => {
-              // Clear draft data when discarding
-              const userId = user?.id || user?._id || user?.userId || "user123"
-              AsyncStorage.removeItem(`drafts_${userId}`)
-              setFormData(initialFormData)
-              setCurrentStep(1)
-              setHasChanges(false)
-              setDraftData(null)
-              setDraftId(generateDraftId())
-              navigation.goBack()
-            },
-          },
-        ]
-      )
-    } else {
-      // No changes, just go back
-      navigation.goBack()
-    }
+    navigation.goBack()
   }
 
   const handleNext = () => {
@@ -1470,7 +1259,7 @@ const AddCarScreen = () => {
                 {renderDropdown(
                   makeOptions,
                   formData.make,
-                  (value) => setFormData({ ...formData, make: value }),
+                  (value) => updateFormData({ ...formData, make: value }),
                   t("Select Make"),
                   showMakeDropdown,
                   setShowMakeDropdown,
@@ -1495,7 +1284,7 @@ const AddCarScreen = () => {
                   renderDropdown(
                     filteredModels,
                     formData.model,
-                    (value) => setFormData({ ...formData, model: value }),
+                    (value) => updateFormData({ ...formData, model: value }),
                     t("Select Model"),
                     showModelDropdown,
                     setShowModelDropdown,
@@ -1522,7 +1311,7 @@ const AddCarScreen = () => {
                   style={[styles.input, validationErrors.year && styles.errorBorder]}
                   value={formData.year}
                   onChangeText={(text) => {
-                    setFormData({ ...formData, year: text })
+                    updateFormData({ ...formData, year: text })
                     setValidationErrors((prev) => ({ ...prev, year: false }))
                   }}
                   placeholder="e.g. 2020"
@@ -1536,7 +1325,7 @@ const AddCarScreen = () => {
                 {renderDropdown(
                   typeOptions,
                   formData.type,
-                  (value) => setFormData({ ...formData, type: value }),
+                  (value) => updateFormData({ ...formData, type: value }),
                   t("Select Type"),
                   showTypeDropdown,
                   setShowTypeDropdown,
@@ -1551,7 +1340,7 @@ const AddCarScreen = () => {
                 {renderDropdown(
                   transmissionOptions,
                   formData.transmission,
-                  (value) => setFormData({ ...formData, transmission: value }),
+                  (value) => updateFormData({ ...formData, transmission: value }),
                   t("Select Transmission"),
                   showTransmissionDropdown,
                   setShowTransmissionDropdown,
@@ -1564,7 +1353,7 @@ const AddCarScreen = () => {
                 {renderDropdown(
                   fuelOptions,
                   formData.fuel_type,
-                  (value) => setFormData({ ...formData, fuel_type: value }),
+                  (value) => updateFormData({ ...formData, fuel_type: value }),
                   t("Select Fuel Type"),
                   showFuelDropdown,
                   setShowFuelDropdown,
@@ -1578,7 +1367,7 @@ const AddCarScreen = () => {
               <TextInput
                 style={[styles.input, validationErrors.seatings && styles.errorBorder]}
                 value={formData.seatings}
-                onChangeText={(text) => setFormData({ ...formData, seatings: text })}
+                onChangeText={(text) => updateFormData({ ...formData, seatings: text })}
                 placeholder={t("Enter seating capacity")}
                 keyboardType="numeric"
                 maxLength={2}
@@ -1588,7 +1377,7 @@ const AddCarScreen = () => {
             {/* ✅ ENHANCED: Plate number with real-time validation */}
             <View style={styles.inputContainer}>
               <View style={styles.plateNumberHeader}>
-                <Text style={styles.label}>{t("plateNumber")} <Text style={styles.requiredText}>*</Text></Text>
+                <Text style={styles.label}>{t("PlateNumber")} <Text style={styles.requiredText}>*</Text></Text>
                 {plateIsValid && formData.plateNumber && (
                   <View style={styles.validIndicator}>
                     <Ionicons name="checkmark-circle" size={16} color="#10B981" />
@@ -1604,7 +1393,7 @@ const AddCarScreen = () => {
                 ]}
                 value={formData.plateNumber}
                 onChangeText={handlePlateNumberChange}
-                placeholder="ABC 123D"
+                placeholder="RAA 123 A"
                 autoCapitalize="characters"
                 maxLength={8}
               />
@@ -1614,7 +1403,7 @@ const AddCarScreen = () => {
                 </Text>
               )}
               {validationErrors.plateNumber && !plateIsValid && (
-                <Text style={styles.errorText}>{t("invalidPlateFormat", "Invalid format: ABC123D")}</Text>
+                <Text style={styles.errorText}>{t("invalidPlateFormat", "Invalidformat: RAA 123 A")}</Text>
               )}
             </View>
 
@@ -1652,7 +1441,7 @@ const AddCarScreen = () => {
               <View style={styles.radioContainer}>
                 <TouchableOpacity
                   style={styles.radioOption}
-                  onPress={() => setFormData({ ...formData, ownerType: "individual" })}
+                  onPress={() => updateFormData({ ...formData, ownerType: "individual" })}
                 >
                   <View style={[styles.radioCircle, formData.ownerType === "individual" && styles.radioSelected]}>
                     {formData.ownerType === "individual" && <View style={styles.radioInner} />}
@@ -1663,7 +1452,7 @@ const AddCarScreen = () => {
 
                 <TouchableOpacity
                   style={styles.radioOption}
-                  onPress={() => setFormData({ ...formData, ownerType: "company" })}
+                  onPress={() => updateFormData({ ...formData, ownerType: "company" })}
                 >
                   <View style={[styles.radioCircle, formData.ownerType === "company" && styles.radioSelected]}>
                     {formData.ownerType === "company" && <View style={styles.radioInner} />}
@@ -1757,7 +1546,7 @@ const AddCarScreen = () => {
                   value={formData.ownerPhone}
                   onChangeText={(text) => {
                     const cleaned = text.replace(/\D/g, "").slice(0, 9)
-                    setFormData({ ...formData, ownerPhone: cleaned })
+                    updateFormData({ ...formData, ownerPhone: cleaned })
                     setValidationErrors((prev) => ({ ...prev, ownerPhone: false }))
                   }}
                   placeholder="788123456"
@@ -1782,7 +1571,7 @@ const AddCarScreen = () => {
                 provinces,
                 formData.province,
                 (value) => {
-                  setFormData({ ...formData, province: value })
+                  updateFormData({ ...formData, province: value })
                   const provinceCoords = getProvinceCoordinates(value)
                   if (provinceCoords) {
                     setMapRegion({
@@ -1841,7 +1630,7 @@ const AddCarScreen = () => {
             </View>
 
             <View style={styles.locationContainer}>
-              <Text style={styles.label}>{t("Pin Location on Map")}</Text>
+              <Text style={styles.label}>{t("PinLocationonMap")}</Text>
               {validationErrors.location && (
                 <Text style={styles.errorText}>{t("Please select a location on the map")}</Text>
               )}
@@ -1881,7 +1670,7 @@ const AddCarScreen = () => {
               {renderDropdown(
                 categoryOptions,
                 formData.category,
-                (value) => setFormData({ ...formData, category: value }),
+                (value) => updateFormData({ ...formData, category: value }),
                 t("selectCategory"),
                 showCategoryDropdown,
                 setShowCategoryDropdown,
@@ -1890,12 +1679,12 @@ const AddCarScreen = () => {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>{t("Base Price (FRW per day)")}</Text>
+              <Text style={styles.label}>{t("basePrice")}</Text>
               <TextInput
                 style={[styles.input, validationErrors.base_price && styles.errorBorder]}
                 value={formData.base_price}
                 onChangeText={(text) => {
-                  setFormData({ ...formData, base_price: text })
+                  updateFormData({ ...formData, base_price: text })
                   setValidationErrors((prev) => ({ ...prev, base_price: false }))
                 }}
                 placeholder="50000"
@@ -1905,22 +1694,22 @@ const AddCarScreen = () => {
 
             <View style={styles.inputRow}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t("Weekly Discount (%)")}</Text>
+                <Text style={styles.label}>{t("weeklyDiscount")}</Text>
                 <TextInput
                   style={styles.input}
                   value={formData.weekly_discount}
-                  onChangeText={(text) => setFormData({ ...formData, weekly_discount: text })}
+                  onChangeText={(text) => updateFormData({ ...formData, weekly_discount: text })}
                   placeholder="10"
                   keyboardType="numeric"
                 />
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>{t("Monthly Discount (%)")}</Text>
+                <Text style={styles.label}>{t("monthlyDiscount")}</Text>
                 <TextInput
                   style={styles.input}
                   value={formData.monthly_discount}
-                  onChangeText={(text) => setFormData({ ...formData, monthly_discount: text })}
+                  onChangeText={(text) => updateFormData({ ...formData, monthly_discount: text })}
                   placeholder="20"
                   keyboardType="numeric"
                 />
@@ -2048,124 +1837,30 @@ const AddCarScreen = () => {
         {currentStep === 5 ? (
           <TouchableOpacity
             style={[styles.navButton, styles.submitButton, (isCreating || isUpdating) && styles.disabledButton]}
-            onPress={(isEditing && hasChanges) ? handleSaveChanges : handleSubmit}
+            onPress={isEditing ? handleSaveChanges : handleSubmit}
             disabled={isCreating || isUpdating}
           >
             {isCreating || isUpdating ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
               <Text style={styles.submitButtonText}>
-                {(isEditing && hasChanges) ? t("saveChanges") : currentStep === 5 ? t("submit") : t("next")}
+                {isEditing ? t("saveChanges") : t("submit")}
               </Text>
             )}
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={[styles.navButton, styles.nextButton]} onPress={(isEditing && hasChanges) ? handleSaveChanges : handleNext}>
-            <Text style={styles.nextButtonText}>{ (isEditing && hasChanges) ? t("saveChanges") : t("next") }</Text>
+          <TouchableOpacity style={[styles.navButton, styles.nextButton]} onPress={handleNext}>
+            <Text style={styles.nextButtonText}>{t("next")}</Text>
             <Ionicons name="arrow-forward-outline" size={16} color="#FFFFFF" />
           </TouchableOpacity>
         )}
       </View>
-
-      {/* Draft Prompt Modal */}
-      <Modal visible={showDraftPrompt} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.draftModal}>
-            <Text style={styles.draftTitle}>{t("unsavedDraft", "Unsaved Draft Found")}</Text>
-            <Text style={styles.draftMessage}>
-              {t("draftMessage", "You have an unsaved car listing draft. Would you like to continue editing it or start a new listing?")}
-            </Text>
-            <View style={styles.draftButtons}>
-              <TouchableOpacity
-                style={styles.loadDraftButton}
-                onPress={() => {
-                  if (draftData) {
-                    setFormData(draftData.formData || {})
-                    setCurrentStep(draftData.currentStep || 1)
-                    setIsDraft(true)
-                    setIsEditing(draftData.isEditing || false)
-                    setEditingCarId(draftData.editingCarId || draftData.id || null)
-                    setOriginalData(draftData.formData || {})
-                    setDraftId(draftData.id || generateDraftId())
-                    setHasChanges(false)
-                  }
-                  setShowDraftPrompt(false)
-                }}
-              >
-                <Text style={styles.loadDraftText}>{t("continueEditing", "Continue Editing")}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.newCarButton}
-                onPress={() => {
-                  setShowDraftPrompt(false)
-                  const userId = user?.id || user?._id || user?.userId || "user123"
-                  AsyncStorage.removeItem(`drafts_${userId}`)
-                  setFormData(initialFormData)
-                  setCurrentStep(1)
-                  setHasChanges(false)
-                  setDraftData(null)
-                  setIsEditing(false)
-                  setIsDraft(false)
-                  setEditingCarId(null)
-                  setDraftId(generateDraftId())
-                  setPlateValidationError("")
-                  setPlateIsValid(false)
-                  setDraftPromptShown(false)
-                }}
-              >
-                <Text style={styles.newCarText}>{t("startNew", "Start New")}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Exit Modal */}
-      <Modal visible={showExitModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.draftModal}>
-            <Text style={styles.draftTitle}>{t("saveDraft", "Save Draft?")}</Text>
-            <Text style={styles.draftMessage}>
-              {t("exitMessage", "You haven't completed adding the car. Save as draft to continue later?")}
-            </Text>
-            <View style={styles.draftButtons}>
-              <TouchableOpacity
-                style={styles.loadDraftButton}
-                onPress={async () => {
-                  await handleSaveAsDraft();
-                  setShowExitModal(false);
-                  navigation.goBack();
-                }}
-              >
-                <Text style={styles.loadDraftText}>{t("saveDraft", "Save Draft")}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.newCarButton}
-                onPress={() => {
-                  setShowExitModal(false);
-                  navigation.goBack();
-                }}
-              >
-                <Text style={styles.newCarText}>{t("exit", "Exit")}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       <PaymentBottomSheet
         isVisible={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
         onPaymentSuccess={handlePaymentSuccess}
         amount={5000}
-      />
-
-      <DraftBottomSheet
-        visible={showDraftBottomSheet}
-        onClose={() => setShowDraftBottomSheet(false)}
-        onSaveDraft={handleSaveAsDraft}
-        onSubmit={handleSubmit}
-        isLoading={isCreating || isUpdating}
       />
 
       <Modal visible={showMapModal} animationType="slide" presentationStyle="fullScreen">
@@ -2214,7 +1909,7 @@ const AddCarScreen = () => {
                     key={`country-${index}-${country.code}`}
                     style={styles.dropdownOption}
                     onPress={() => {
-                      setFormData({ ...formData, countryCode: country.code })
+                      updateFormData({ ...formData, countryCode: country.code })
                       setShowCountryCodeDropdown(false)
                     }}
                   >

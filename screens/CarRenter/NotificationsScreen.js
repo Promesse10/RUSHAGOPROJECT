@@ -88,7 +88,7 @@ const NotificationChatBot = () => {
       setRefreshing(false)
     })
   }, [dispatch])
-// 🔁 Polling for new notifications every 5 seconds
+// 🔁 Polling for new notifications with ghost refresh every 20 seconds
 useEffect(() => {
   const fetchData = async () => {
     console.log("Polling: Fetching notifications...")
@@ -100,7 +100,7 @@ useEffect(() => {
 
   const interval = setInterval(() => {
     dispatch(fetchNotifications());
-  }, 5000);
+  }, 20000);
 
   return () => clearInterval(interval);
 }, [dispatch]);

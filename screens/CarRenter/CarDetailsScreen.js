@@ -73,7 +73,20 @@ const CarDetailsModal = ({ visible, onClose, car, userLocation, currentLanguage,
   const [internalRouteCoordinates, setInternalRouteCoordinates] = useState([])
   const [internalRouteInfo, setInternalRouteInfo] = useState(null)
   const [showInternalRoute, setShowInternalRoute] = useState(false)
-  const [showBlockedNotice, setShowBlockedNotice] = useState(false);
+  const [showBlockedNotice, setShowBlockedNotice] = useState(false)
+  const [pendingContactMethod, setPendingContactMethod] = useState(null)
+
+  const isAuthenticated = useSelector((state) => state.auth?.isAuthenticated)
+  const currentUser = useSelector((state) => state.auth?.user)
+  const isGuestUser = currentUser?.email?.toLowerCase() === "guestuser@muvcar.com"
+
+  useEffect(() => {
+    if (isAuthenticated && !isGuestUser && pendingContactMethod) {
+      const method = pendingContactMethod
+      setPendingContactMethod(null)
+      handleContactOwner(method)
+    }
+  }, [isAuthenticated, isGuestUser, pendingContactMethod])
 
   const carBrands = [
     // Japanese Brands
@@ -414,6 +427,26 @@ const submitRating = async (stars) => {
 }
 
   const handleContactOwner = (method) => {
+    if (!isAuthenticated || isGuestUser) {
+      setPendingContactMethod(method)
+      Alert.alert(
+        I18n.t("loginRequired", "Login Required"),
+        I18n.t("guestContactPrompt", "You must sign in or sign up as a renter to contact the owner."),
+        [
+          { text: I18n.t("cancel"), style: "cancel" },
+          {
+            text: I18n.t("signIn", "Sign In"),
+            onPress: () => navigation.navigate("LoginScreen", { redirect: "contact" }),
+          },
+          {
+            text: I18n.t("signUp", "Sign Up"),
+            onPress: () => navigation.navigate("CarRentalSignup", { redirect: "contact" }),
+          },
+        ]
+      )
+      return
+    }
+
     const { ownerPhone, countryCode } = normalizedCar
     const fullPhone = `${countryCode}${ownerPhone}`
 

@@ -17,7 +17,7 @@ import {
 import Icon from "react-native-vector-icons/Ionicons"
 import { useTranslation } from "react-i18next"
 import { useDispatch, useSelector } from "react-redux"
-import { getApprovedCarsAction, updateCarViewsAction } from "../../redux/action/CarActions"
+import { getPublicCarsAction, updateCarViewsAction } from "../../redux/action/CarActions"
 import CarDetailsModal from "./CarDetailsScreen"
 import * as Location from "expo-location";
 
@@ -190,7 +190,7 @@ const CarListing = ({ navigation, route }) => {
   // Fetch cars on component mount if Redux is empty
   useEffect(() => {
     if (!reduxCars || reduxCars.length === 0) {
-      dispatch(getApprovedCarsAction())
+      dispatch(getPublicCarsAction())
     }
   }, [dispatch, reduxCars])
 

@@ -52,15 +52,17 @@ const notificationSlice = createSlice({
       state.error = action.payload;
     },
    markRead: (state, action) => {
+  const { id, readAt } = action.payload || {}
   state.notifications = state.notifications.map((n) =>
-    (n._id || n.id) === action.payload ? { ...n, isRead: true } : n
+    (n._id || n.id) === id ? { ...n, isRead: true, readAt: readAt || new Date().toISOString() } : n
   );
 
   state.unreadCount = state.notifications.filter((n) => !n.isRead).length;
 },
 
     markAllRead: (state) => {
-      state.notifications = state.notifications.map((n) => ({ ...n, isRead: true }));
+      const now = new Date().toISOString();
+      state.notifications = state.notifications.map((n) => ({ ...n, isRead: true, readAt: n.readAt || now }));
       state.unreadCount = 0;
     },
    deleteOne: (state, action) => {

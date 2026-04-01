@@ -66,32 +66,10 @@ const DashboardScreen = () => {
 
   const unreadCount = Array.isArray(notifications) ? notifications.filter(n => n && !n.isRead).length : 0
 
-  // Fetch notifications on mount (when authenticated) and set up socket updates.
   useEffect(() => {
     if (!isAuthenticated || !userId) return
 
-    dispatch(fetchNotifications())
-
-    // Setup socket connection once
-    if (!socketRef.current) {
-      const socket = io(`${process.env.EXPO_PUBLIC_API_URL}`)
-      socketRef.current = socket
-
-      socket.on("notification", () => {
-        dispatch(fetchNotifications())
-      })
-
-      socket.on("carUpdated", () => {
-        dispatch(fetchDashboardStats())
-      })
-    }
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect()
-        socketRef.current = null
-      }
-    }
+    dispatch(fetchDashboardStats())
   }, [dispatch, isAuthenticated, userId])
 
   const carBrands = [
@@ -178,7 +156,36 @@ const DashboardScreen = () => {
   const [showNotificationBottomSheet, setShowNotificationBottomSheet] = useState(false)
   const [expandedNotifications, setExpandedNotifications] = useState({})
   const [currentLanguage, setCurrentLanguage] = useState("en")
-  const [hasNewNotifications, setHasNewNotifications] = useState(true)
+  const [hasNewNotifications, setHasNewNotifications] = useState(false)
+  const [recentArrivalFlash, setRecentArrivalFlash] = useState(false)
+  const [showNotificationToast, setShowNotificationToast] = useState(false)
+  const prevUnreadCountRef = useRef(0)
+
+  useEffect(() => {
+    if (unreadCount > prevUnreadCountRef.current) {
+      setRecentArrivalFlash(true)
+      setShowNotificationToast(true)
+
+      setTimeout(() => setRecentArrivalFlash(false), 1000)
+      setTimeout(() => setShowNotificationToast(false), 1800)
+    }
+
+    setHasNewNotifications(unreadCount > 0)
+    prevUnreadCountRef.current = unreadCount
+  }, [unreadCount])
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) return
+
+    // initial fetch on mount + when dependencies change
+    dispatch(fetchNotifications())
+
+    const interval = setInterval(() => {
+      dispatch(fetchNotifications())
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [dispatch, isAuthenticated, user])
 
   const languages = [
     {
@@ -579,6 +586,11 @@ const handleNotificationDelete = (notificationId) => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {showNotificationToast && (
+        <View style={styles.notificationToast}>
+          <Text style={styles.notificationToastText}>New notification received</Text>
+        </View>
+      )}
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -596,7 +608,11 @@ const handleNotificationDelete = (notificationId) => {
             onPress={() => setShowNotificationBottomSheet(true)}
           >
             <Ionicons name="notifications-outline" size={24} color="#1E293B" />
-            {unreadCount > 0 && <View style={styles.notificationDot} />}
+            {(hasNewNotifications || unreadCount > 0) && (
+              <View style={[styles.notificationBadge, recentArrivalFlash && styles.notificationDotFlash]}>
+                <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           <View style={{ position: "relative", marginLeft: 16 }}>
@@ -699,103 +715,10 @@ const handleNotificationDelete = (notificationId) => {
       </ScrollView>
 
       {/* Notifications Modal */}
-      <Modal
+      <NotificationBottomSheet
         visible={showNotificationBottomSheet}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={closeNotificationModal}
-      >
-        <TouchableWithoutFeedback onPress={closeNotificationModal}>
-          <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback onPress={() => {}}>
-              <View style={styles.notificationsModal}>
-                <View style={styles.notificationsHeader}>
-                  <Text style={styles.notificationsTitle}>{t("notifications", "Amakuru")}</Text>
-                  <TouchableOpacity onPress={closeNotificationModal} style={styles.closeButton}>
-                    <Ionicons name="close-outline" size={24} color="#64748B" />
-                  </TouchableOpacity>
-                </View>
-
-                <ScrollView style={styles.notificationsList} showsVerticalScrollIndicator={false}>
-                {notifications.map((notification) => (
-  <View key={notification._id || notification.id} style={styles.notificationItemContainer}>
-    <TouchableOpacity
-      style={styles.notificationItem}
-      onPress={() => handleNotificationPress(notification._id, notification.isRead
-)}
-      onLongPress={() => handleNotificationDelete(notification._id)}
-    >
-      <View style={styles.notificationMainContent}>
-        {/* ✅ Show custom icon if provided */}
-        {notification.icon ? (
-          <Image
-            source={{ uri: notification.icon }}
-            style={styles.rushGoIcon}
-            resizeMode="cover"
-          />
-        ) : (
-          <View
-            style={[
-              styles.notificationIconContainer,
-              { backgroundColor: `${getNotificationColor(notification.type)}15` },
-            ]}
-          >
-            <Ionicons
-              name={getNotificationIcon(notification.type)}
-              size={20}
-              color={getNotificationColor(notification.type)}
-            />
-          </View>
-        )}
-
-        <View style={styles.notificationContent}>
-          <Text
-            style={[
-              styles.notificationTitle,
-              { color: notification.isRead
- ? "#64748B" : "#1E293B" },
-              !notification.isRead
- && styles.unreadNotificationTitle,
-            ]}
-          >
-            {notification.title}
-          </Text>
-
-          <Text
-            style={styles.notificationMessage}
-            numberOfLines={expandedNotifications[notification._id] ? undefined : 2}
-          >
-            {notification.message}
-          </Text>
-
-          <Text style={styles.notificationTime}>
-            {new Date(notification.createdAt).toLocaleString()}
-          </Text>
-        </View>
-
-        <View style={styles.notificationActions}>
-          {!notification.isRead
- && <View style={styles.unreadIndicator} />}
-          <Ionicons
-            name={
-              expandedNotifications[notification._id]
-                ? "chevron-up-outline"
-                : "chevron-down-outline"
-            }
-            size={16}
-            color="#9CA3AF"
-          />
-        </View>
-      </View>
-    </TouchableOpacity>
-  </View>
-))}
-                </ScrollView>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
+        onClose={closeNotificationModal}
+      />
 
       {/* Language Options Overlay */}
       {showLanguageOptions && (
@@ -873,6 +796,23 @@ const styles = StyleSheet.create({
     padding: 8,
     position: "relative",
   },
+  notificationBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#EF4444",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
+  },
   notificationDot: {
     position: "absolute",
     top: 6,
@@ -881,6 +821,39 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: "#EF4444",
+  },
+  notificationDotFlash: {
+    width: 12,
+    height: 12,
+    top: 4,
+    right: 4,
+    borderRadius: 6,
+    backgroundColor: "#FF6B6B",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    shadowColor: "#FF6B6B",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  notificationToast: {
+    position: "absolute",
+    top: 56,
+    left: "50%",
+    transform: [{ translateX: -120 }],
+    width: 240,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: "rgba(30, 64, 175, 0.94)",
+    alignItems: "center",
+    zIndex: 2000,
+  },
+  notificationToastText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
   },
   languageButton: {
     flexDirection: "row",

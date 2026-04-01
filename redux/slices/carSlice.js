@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 import {
+  getPublicCarsAction,
   getApprovedCarsAction,
   getCarsAction,
   getMyCarsAction,
@@ -137,6 +138,29 @@ const carSlice = createSlice({
   const approvedIndex = state.approvedCars.findIndex((car) => car._id === carId)
   if (approvedIndex !== -1) state.approvedCars[approvedIndex].views = views
 })
+
+      // ✅ Get Public/Approved Cars for guest (or authorized)
+      .addCase(getPublicCarsAction.pending, (state) => {
+        state.approvedCarsLoading = true
+        state.approvedCarsError = null
+        state.isLoading = true
+      })
+      .addCase(getPublicCarsAction.fulfilled, (state, action) => {
+        state.approvedCarsLoading = false
+        state.isLoading = false
+        state.cars = action.payload || []
+        state.approvedCars = action.payload || []
+        state.totalCars = (action.payload || []).length
+        state.isGetSuccess = true
+        console.log("✅ Public cars loaded in Redux:", (action.payload || []).length)
+      })
+      .addCase(getPublicCarsAction.rejected, (state, action) => {
+        state.approvedCarsLoading = false
+        state.isLoading = false
+        state.approvedCarsError = action.payload || "Failed to fetch public cars"
+        state.isGetFailed = true
+        state.error = action.payload || "Failed to fetch public cars"
+      })
 
       // ✅ Get Approved Cars - Enhanced
       .addCase(getApprovedCarsAction.pending, (state) => {

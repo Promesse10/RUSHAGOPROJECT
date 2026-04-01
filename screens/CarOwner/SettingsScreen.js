@@ -26,6 +26,7 @@ import {
 import { Ionicons } from "@expo/vector-icons"
 import { useNavigation } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
+import { openPrivacyTerms } from "../../utils/inAppBrowser"
 import { useDispatch, useSelector } from "react-redux"
 import {
   logoutAction,
@@ -34,7 +35,6 @@ import {
 } from "../../redux/action/LoginActions"
 import { uploadProfileImageAction, deleteAccountAction } from "../../redux/action/UserActions"
 import { updateUserSettings, fetchUserProfile } from "../../redux/actions/settingAction"
-import { loadDrafts, deleteDraft } from "../../redux/action/draftsActions"
 import * as ImagePicker from "expo-image-picker"
 import { createSelector } from "reselect"
 import LoadingSkeleton from "../../components/Map/LoadingSkeleton"
@@ -52,8 +52,6 @@ const SettingsScreen = () => {
   const isSettingsLoading = settings.loading || false
   const settingsError = settings.error || null
 
-  const { drafts, loading: draftsLoading, error: draftsError } = useSelector((state) => state.drafts || { drafts: [], loading: false, error: null })
-
   const [showPersonalInfo, setShowPersonalInfo] = useState(false)
   const [showLegalModal, setShowLegalModal] = useState(false)
   const [legalType, setLegalType] = useState("terms")
@@ -68,8 +66,6 @@ const SettingsScreen = () => {
   })
 
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true)
-
-  const [showSavedDraftsModal, setShowSavedDraftsModal] = useState(false)
 
   // Load user data when component mounts
   useEffect(() => {
@@ -90,10 +86,7 @@ const SettingsScreen = () => {
     }
   }, [notifications])
 
-  // Load drafts
-  useEffect(() => {
-    dispatch(loadDrafts())
-  }, [dispatch])
+  // Removed: Load drafts useEffect
 
   // Load auth from storage if not loaded
   useEffect(() => {
@@ -424,15 +417,6 @@ const profileImageUrl =
           <Ionicons name="chevron-forward" size={20} color="#ccc" />
         </TouchableOpacity>
 
-        {/* Saved Drafts - Only for owners */}
-        <TouchableOpacity style={styles.settingItem} onPress={() => setShowSavedDraftsModal(true)}>
-          <View style={styles.settingLeft}>
-            <Ionicons name="document-outline" size={24} color="#333" />
-            <Text style={styles.settingText}>{t("savedDrafts", "Saved Drafts")}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
         {/* Help */}
         <TouchableOpacity style={styles.settingItem} onPress={() => setShowHelpModal(true)}>
           <View style={styles.settingLeft}>
@@ -442,32 +426,14 @@ const profileImageUrl =
           <Ionicons name="chevron-forward" size={20} color="#ccc" />
         </TouchableOpacity>
 
-        {/* Terms of Use */}
+        {/* Privacy&Terms */}
         <TouchableOpacity
           style={styles.settingItem}
-          onPress={() => {
-            setLegalType("terms")
-            setShowLegalModal(true)
-          }}
+          onPress={openPrivacyTerms}
         >
           <View style={styles.settingLeft}>
             <Ionicons name="document-text-outline" size={24} color="#333" />
-            <Text style={styles.settingText}>{t("termsOfUse", "Terms of Use")}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
-        {/* Privacy Policy */}
-        <TouchableOpacity
-          style={styles.settingItem}
-          onPress={() => {
-            setLegalType("privacy")
-            setShowLegalModal(true)
-          }}
-        >
-          <View style={styles.settingLeft}>
-            <Ionicons name="shield-checkmark-outline" size={24} color="#333" />
-            <Text style={styles.settingText}>{t("privacyPolicy", "Privacy Policy")}</Text>
+            <Text style={styles.settingText}>{t("policyAndTerms", "Privacy&Terms")}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#ccc" />
         </TouchableOpacity>
@@ -663,49 +629,7 @@ const profileImageUrl =
         </View>
       </Modal>
 
-      {/* Saved Drafts Modal */}
-      <Modal visible={showSavedDraftsModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <View style={styles.headerIndicator} />
-              <View style={styles.headerContent}>
-                <Text style={styles.modalTitle}>{t("savedDrafts", "Saved Drafts")}</Text>
-                <TouchableOpacity onPress={() => setShowSavedDraftsModal(false)} style={styles.closeButton}>
-                  <Ionicons name="close" size={24} color="#333" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <ScrollView style={styles.scrollContent}>
-              {draftsLoading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#007EFD" />
-                  <Text style={styles.loadingText}>{t("loading", "Loading...")}</Text>
-                </View>
-              ) : drafts.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                  <Ionicons name="document-outline" size={64} color="#ccc" />
-                  <Text style={styles.emptyText}>{t("noDrafts", "No saved drafts")}</Text>
-                </View>
-              ) : (
-                drafts.map((draft) => (
-                  <TouchableOpacity key={draft._id} style={styles.draftItem} onPress={() => { setShowSavedDraftsModal(false); navigation.navigate("AddCar", { draftData: draft, isDraft: true }) }}>
-                    <Image source={getCarImage(draft)} style={styles.draftImage} />
-                    <View style={styles.draftInfo}>
-                      <Text style={styles.draftTitle}>{draft.formData?.carDetails?.make || "Unknown"} {draft.formData?.carDetails?.model || ""}</Text>
-                      <Text style={styles.draftDate}>{formatDate(draft.createdAt)}</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => handleDeleteDraft(draft._id)} style={styles.deleteButton}>
-                      <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                ))
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      {/* Saved Drafts Modal - REMOVED */}
     </SafeAreaView>
   )
 }

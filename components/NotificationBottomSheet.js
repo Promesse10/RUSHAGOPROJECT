@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect, useRef } from "react"
 import {
   View,
   Text,
@@ -9,10 +9,12 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
+  Linking,
 } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useDispatch, useSelector } from "react-redux"
 import {
+  fetchNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
@@ -27,6 +29,33 @@ const NotificationBottomSheet = ({ visible, onClose }) => {
   const isLoading = useSelector((state) => state.notifications?.isLoading ?? false)
   const filteredNotifications = notifications.filter(n => n && typeof n === 'object' && n._id)
   const [expandedId, setExpandedId] = useState(null)
+  const [newNotificationArrival, setNewNotificationArrival] = useState(false)
+  const prevUnreadCountRef = useRef(0)
+
+  const unreadCount = filteredNotifications.filter((n) => !n.isRead).length
+  const isInitialLoad = isLoading && filteredNotifications.length === 0
+
+  useEffect(() => {
+    if (visible) {
+      dispatch(fetchNotifications())
+      const poll = setInterval(() => {
+        dispatch(fetchNotifications())
+      }, 20000) // ghost refresh every 20s
+
+      return () => clearInterval(poll)
+    }
+  }, [visible, dispatch])
+
+  useEffect(() => {
+    const prev = prevUnreadCountRef.current
+    if (unreadCount > prev) {
+      setNewNotificationArrival(true)
+      setTimeout(() => {
+        setNewNotificationArrival(false)
+      }, 2200)
+    }
+    prevUnreadCountRef.current = unreadCount
+  }, [unreadCount])
 
   const handleMarkAsRead = (id) => {
     dispatch(markNotificationAsRead(id))
@@ -74,6 +103,22 @@ const NotificationBottomSheet = ({ visible, onClose }) => {
         return "#8B5CF6"
       default:
         return "#007EFD"
+    }
+  }
+
+  const extractUrl = (text) => {
+    if (!text || typeof text !== "string") return null
+    const urlMatch = text.match(/(https?:\/\/[\w-.?\/#&=+%]+)/i)
+    return urlMatch ? urlMatch[0] : null
+  }
+
+  const openUrl = async (url) => {
+    if (!url) return
+    const supported = await Linking.canOpenURL(url)
+    if (supported) {
+      await Linking.openURL(url)
+    } else {
+      Alert.alert("Unable to open link", "The provided URL is invalid or unsupported.")
     }
   }
 
@@ -157,6 +202,27 @@ const NotificationBottomSheet = ({ visible, onClose }) => {
           {isExpanded && (
             <View style={styles.expandedContent}>
               <Text style={styles.expandedMessage}>{item.message}</Text>
+
+              {item.url && (
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.linkButton]}
+                  onPress={() => openUrl(item.url)}
+                >
+                  <Ionicons name="link" size={16} color="white" />
+                  <Text style={styles.actionButtonText}>Open Link</Text>
+                </TouchableOpacity>
+              )}
+
+              {!item.url && extractUrl(item.message) && (
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.linkButton]}
+                  onPress={() => openUrl(extractUrl(item.message))}
+                >
+                  <Ionicons name="link" size={16} color="white" />
+                  <Text style={styles.actionButtonText}>Open Link</Text>
+                </TouchableOpacity>
+              )}
+
               <View style={styles.expandedActions}>
                 {isUnread && (
                   <TouchableOpacity
@@ -182,8 +248,6 @@ const NotificationBottomSheet = ({ visible, onClose }) => {
     )
   }
 
-  const unreadCount = filteredNotifications.filter((n) => !n.isRead).length
-
   return (
     <Modal
       visible={visible}
@@ -202,6 +266,9 @@ const NotificationBottomSheet = ({ visible, onClose }) => {
                   <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
                 </View>
               )}
+              {newNotificationArrival && (
+                <Text style={styles.newArrivalText}>New notification received</Text>
+              )}
             </View>
             <View style={styles.headerActions}>
               {unreadCount > 0 && (
@@ -219,7 +286,7 @@ const NotificationBottomSheet = ({ visible, onClose }) => {
           </View>
 
           {/* Notifications List */}
-          {isLoading ? (
+          {isInitialLoad ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#007EFD" />
               <Text style={styles.loadingText}>Loading notifications...</Text>
@@ -287,6 +354,11 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 12,
     fontWeight: "600",
+  },
+  newArrivalText: {
+    fontSize: 12,
+    color: "#10B981",
+    marginLeft: 8,
   },
   headerActions: {
     flexDirection: "row",
@@ -386,6 +458,10 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: "#EF4444",
   },
+  linkButton: {
+    backgroundColor: "#3B82F6",
+    marginBottom: 8,
+  },
   actionButtonText: {
     color: "white",
     fontSize: 12,
@@ -401,6 +477,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748B",
   },
+
   emptyContainer: {
     flex: 1,
     justifyContent: "center",

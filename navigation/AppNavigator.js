@@ -87,42 +87,14 @@ const CarOwnerTabNavigator = () => {
 
 // Car Renter Bottom Tab Navigator
 const CarRenterTabNavigator = () => {
-  const { t } = useTranslation()
-
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === "HomeTab") {
-            iconName = focused ? "home" : "home-outline";
-          } else if (route.name === "CarsTab") {
-            iconName = focused ? "car" : "car-outline";
-          } else if (route.name === "SettingsTab") {
-            iconName = focused ? "settings" : "settings-outline";
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: "#007EFD",
-        tabBarInactiveTintColor: "#9CA3AF",
+      screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          elevation: 20,
-          height: Platform.OS === "ios" ? 90 : 70,
-          paddingTop: 10,
-          paddingBottom: Platform.OS === "ios" ? 25 : 10,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "500",
-        },
-      })}
+        tabBarStyle: { display: "none" },
+      }}
     >
-      <Tab.Screen name="HomeTab" component={Home} options={{ tabBarLabel: t("home") }} />
-      <Tab.Screen name="CarsTab" component={CarListing} options={{ tabBarLabel: "Cars" }} />
-      <Tab.Screen name="SettingsTab" component={SettingsScreen} options={{ tabBarLabel: t("settings") }} />
+      <Tab.Screen name="HomeTab" component={Home} />
     </Tab.Navigator>
   )
 }
@@ -149,6 +121,7 @@ const AppNavigator = () => {
             <Stack.Screen name="CarOwnerSignup" component={CarRentalSignupScreen} />
             <Stack.Screen name="CarOwnerLogin" component={CarRentalLoginScreen} />
             <Stack.Screen name="CarOwnerDashboard" component={CarOwnerTabNavigator} />
+            <Stack.Screen name="AddCar" component={AddCarScreen} />
             <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
             <Stack.Screen name="SavedDrafts" component={SavedDraftsScreen} />
             <Stack.Screen name="EditCar" component={EditCarScreen} />

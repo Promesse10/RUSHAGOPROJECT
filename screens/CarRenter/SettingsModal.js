@@ -23,6 +23,7 @@ import {
 import Icon from "react-native-vector-icons/Ionicons"
 import * as ImagePicker from "expo-image-picker"
 import I18n from "../../utils/i18n"
+import { openPrivacyTerms } from "../../utils/inAppBrowser"
 import { useDispatch, useSelector } from "react-redux"
 import { getCurrentUserAction, updateUserAction, uploadProfileImageAction } from "../../redux/action/UserActions"
 import { updateUserProfileAction, updateUserSettings, fetchUserProfile } from "../../redux/actions/settingAction"
@@ -411,34 +412,15 @@ const SettingsModal = ({ visible, onClose, navigation }) => {
               </View>
               <Icon name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
-            {/* Terms of Use */}
+            {/* Privacy&Terms */}
             <TouchableOpacity
               style={styles.settingItem}
-              onPress={() => {
-                setLegalType("terms")
-                setShowLegalModal(true)
-              }}
+              onPress={openPrivacyTerms}
             >
 
               <View style={styles.settingLeft}>
                 <Icon name="document-text" size={24} color="#007EFD" />
-                <Text style={styles.settingText}>{I18n.t("termsOfUse")}</Text>
-              </View>
-              <Icon name="chevron-forward" size={20} color="#666" />
-            </TouchableOpacity>
-
-            {/* Privacy Policy */}
-            <TouchableOpacity
-              style={styles.settingItem}
-              onPress={() => {
-                setLegalType("privacy")
-                setShowLegalModal(true)
-              }}
-            >
-
-              <View style={styles.settingLeft}>
-                <Icon name="shield-checkmark" size={24} color="#007EFD" />
-                <Text style={styles.settingText}>{I18n.t("privacyPolicy")}</Text>
+                <Text style={styles.settingText}>{I18n.t("policyAndTerms", "Privacy&Terms")}</Text>
               </View>
               <Icon name="chevron-forward" size={20} color="#666" />
             </TouchableOpacity>
