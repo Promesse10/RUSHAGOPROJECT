@@ -34,11 +34,12 @@ const LoginScreen = ({ navigation , route  }) => {
   const dispatch = useDispatch()
   const { isLoading, isLoginSuccess, isLoginFailed, error, user } = useSelector((state) => state.auth || {})
   const { response, promptAsync } = useGoogleAuth();
+const routeRole = route?.params?.role
 const [selectedRole, setSelectedRole] = useState(null);
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [userType, setUserType] = useState("renter")
+  const [userType, setUserType] = useState(routeRole || "renter")
   const [rememberMe, setRememberMe] = useState(false)
   const [secureTextEntry, setSecureTextEntry] = useState(true)
   const [emailError, setEmailError] = useState("")
@@ -122,6 +123,8 @@ useEffect(() => {
   }
 }, [response]);
 
+  const redirect = route?.params?.redirect
+
   useEffect(() => {
     if (isLoginSuccess && user) {
       if (rememberMe) {
@@ -136,7 +139,13 @@ useEffect(() => {
         AsyncStorage.removeItem("userType")
       }
 
-      navigation.navigate(userType === "renter" ? "Home" : "CarOwnerDashboard")
+      if (redirect === "earn") {
+        navigation.replace("CarOwnerDashboard")
+      } else if (redirect === "contact") {
+        navigation.replace("CarRenterDashboard")
+      } else {
+        navigation.replace(userType === "renter" ? "CarRenterDashboard" : "CarOwnerDashboard")
+      }
       dispatch(clearLoginState())
     }
 
@@ -211,7 +220,7 @@ const handleGoogleSignIn = async (idToken) => {
   }
 
   const handleSignUp = () => {
-    navigation.navigate(userType === "renter" ? "CarRentalSignup" : "CarOwnerSignup")
+    navigation.navigate("CarRentalSignup", { role: userType })
   }
 
   const handleForgotPassword = () => {
@@ -239,24 +248,32 @@ const handleGoogleSignIn = async (idToken) => {
           <View style={styles.bottomSection}>
             <Text style={styles.signInHeading}>{I18n.t("chooseToSignInUs")}</Text>
 
-            <View style={styles.userTypeContainer}>
-              <TouchableOpacity
-                style={[styles.userTypeButton, userType === "renter" && styles.activeUserTypeButton]}
-                onPress={() => setUserType("renter")}
-              >
-                <Text style={[styles.userTypeText, userType === "renter" && styles.activeUserTypeText]}>
-                  {I18n.t("carRenter")}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.userTypeButton, userType === "owner" && styles.activeUserTypeButton]}
-                onPress={() => setUserType("owner")}
-              >
-                <Text style={[styles.userTypeText, userType === "owner" && styles.activeUserTypeText]}>
-                  {I18n.t("carOwner")}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {routeRole !== "owner" ? (
+              <View style={styles.userTypeContainer}>
+                <TouchableOpacity
+                  style={[styles.userTypeButton, userType === "renter" && styles.activeUserTypeButton]}
+                  onPress={() => setUserType("renter")}
+                >
+                  <Text style={[styles.userTypeText, userType === "renter" && styles.activeUserTypeText]}>
+                    {I18n.t("carRenter")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.userTypeButton, userType === "owner" && styles.activeUserTypeButton]}
+                  onPress={() => setUserType("owner")}
+                >
+                  <Text style={[styles.userTypeText, userType === "owner" && styles.activeUserTypeText]}>
+                    {I18n.t("carOwner")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.userTypeContainer}>
+                <View style={[styles.userTypeButton, styles.activeUserTypeButton, { flex: 1 }]}> 
+                  <Text style={[styles.userTypeText, styles.activeUserTypeText]}>{I18n.t("carOwner")}</Text>
+                </View>
+              </View>
+            )}
 
             <View style={styles.form}>
               <View style={styles.inputContainer}>

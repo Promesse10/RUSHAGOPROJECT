@@ -1,7 +1,7 @@
 import * as WebBrowser from "expo-web-browser"
 import { Linking } from "react-native"
 
-const POLICY_URL = "https://v0-muvcar.vercel.app/"
+const POLICY_URL = "https://www.getcarconnect.com/LegalTerms"
 
 export async function openPrivacyTerms() {
   const url = POLICY_URL

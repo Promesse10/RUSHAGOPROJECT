@@ -1,24 +1,26 @@
 import 'react-native-gesture-handler';
 import React from 'react';
+import * as WebBrowser from 'expo-web-browser';
+
+// ✅ MUST be called at the app root so the auth redirect is handled
+// when Google sends the user back via the expo proxy deep-link.
+WebBrowser.maybeCompleteAuthSession();
+
 import { NavigationContainer } from '@react-navigation/native';
-import { View, Text, StyleSheet, Platform } from 'react-native'; // Import React Native components
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import AppNavigator from './navigation/AppNavigator';
-import { AppRegistry } from 'react-native';
 import { Provider, useDispatch } from 'react-redux';
 import { store } from './redux/store';
-import './utils/i18n'; // Import i18n to initialize it
-import { useEffect } from 'react'
-import { loadAuthFromStorage } from './redux/action/LoginActions'
+import './utils/i18n';
+import { useEffect } from 'react';
+import { loadAuthFromStorage } from './redux/action/LoginActions';
 
-// Ensure all dependencies are installed and linked
 console.log('🔍 Verifying React Native runtime dependencies...');
 
-// Polyfill for setImmediate
 if (typeof global.setImmediate === 'undefined') {
   global.setImmediate = (fn, ...args) => setTimeout(fn, 0, ...args);
 }
 
-// Simple error boundary component
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
 
@@ -43,18 +45,18 @@ const App = () => {
   console.log('🚀 App component rendered');
 
   const StartApp = () => {
-    const dispatch = useDispatch()
+    const dispatch = useDispatch();
 
     useEffect(() => {
-      dispatch(loadAuthFromStorage())
-    }, [dispatch])
+      dispatch(loadAuthFromStorage());
+    }, [dispatch]);
 
     return (
       <NavigationContainer>
         <AppNavigator />
       </NavigationContainer>
-    )
-  }
+    );
+  };
 
   return (
     <ErrorBoundary>
@@ -65,24 +67,23 @@ const App = () => {
   );
 };
 
-// Styles for the error boundary
 const styles = StyleSheet.create({
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f8d7da', // Light red background
+    backgroundColor: '#f8d7da',
   },
   errorTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#721c24', // Dark red text
+    color: '#721c24',
     marginBottom: 10,
   },
   errorMessage: {
     fontSize: 16,
-    color: '#721c24', // Dark red text
+    color: '#721c24',
   },
 });
 

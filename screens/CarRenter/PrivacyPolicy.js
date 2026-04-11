@@ -13,7 +13,7 @@ import { WebView } from 'react-native-webview';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-const PRIVACY_URL = 'https://v0-muvcar.vercel.app/';
+const PRIVACY_URL = 'https://www.getcarconnect.com/LegalTerms';
 
 const PrivacyPolicy = () => {
   const navigation = useNavigation();

@@ -214,7 +214,6 @@ const HomeScreen = ({ navigation }) => {
   const [showNoResultsModal, setShowNoResultsModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [isNavigatingToCarListing, setIsNavigatingToCarListing] = useState(false)
   const { t, i18n } = useTranslation();
   const [hasNewNotifications, setHasNewNotifications] = useState(false)
   const [recentArrivalFlash, setRecentArrivalFlash] = useState(false)
@@ -1159,11 +1158,6 @@ Alert.alert(
             <SkeletonLoader type="card" />
           </ScrollView>
         </View>
-        <View style={styles.bottomNav}>
-          <View style={[styles.skeletonCircle, { width: 24, height: 24 }]} />
-          <View style={[styles.skeletonCircle, { width: 60, height: 60 }]} />
-          <View style={[styles.skeletonCircle, { width: 24, height: 24 }]} />
-        </View>
       </View>
     )
   }
@@ -1521,44 +1515,33 @@ Alert.alert(
           )}
         </Animated.View>
 
-        {/* Bottom Nav */}
+        {/* Bottom Navigation */}
         <View style={styles.bottomNav}>
           <TouchableOpacity
             style={styles.navButton}
-            onPress={() => {
-              setIsNavigatingToCarListing(true);
-              navigation.navigate("CarListing", { cars: actualApprovedCars });
-              setTimeout(() => setIsNavigatingToCarListing(false), 1000); // Reset after navigation
-            }}
-            disabled={isNavigatingToCarListing}
+            onPress={() => navigation.navigate("CarListing", { cars: actualApprovedCars })}
           >
-            {isNavigatingToCarListing ? (
-              <ActivityIndicator size="small" color="#007EFD" />
-            ) : (
-              <Icon name="car" size={28} color="#007EFD" />
-            )}
+            <Icon name="car-outline" size={28} color="#007EFD" />
           </TouchableOpacity>
-<View style={styles.fabWrapper}>
-  <TouchableOpacity style={styles.fabButton} onPress={handleTrackNearestCar}>
-    <Image
-      source={{
-        uri: "https://i.pinimg.com/originals/1d/0f/be/1d0fbe16bf9237d6f082ad8cc9be1f74.gif",
-      }}
-      style={styles.trackGif}
-    />
-  </TouchableOpacity>
 
-  <Text style={styles.fabLabel}>
-    {t("trackNearestCar")}
-
-  </Text>
-</View>
+          <View style={styles.fabWrapper}>
+            <TouchableOpacity style={styles.fabButton} onPress={handleTrackNearestCar}>
+              <Image
+                source={{
+                  uri: "https://i.pinimg.com/originals/1d/0f/be/1d0fbe16bf9237d6f082ad8cc9be1f74.gif",
+                }}
+                style={styles.trackGif}
+              />
+            </TouchableOpacity>
+            <Text style={styles.fabLabel}>{t("trackNearestCar")}</Text>
+          </View>
 
           <TouchableOpacity style={styles.navButton} onPress={() => setShowSettingsModal(true)}>
-            <Icon name="settings" size={28} color="#007EFD" />
+            <Icon name="settings-outline" size={28} color="#007EFD" />
           </TouchableOpacity>
         </View>
-{/* Notification Bottom Sheet */}
+
+        {/* Notification Bottom Sheet */}
       <NotificationBottomSheet
         visible={showNotificationBottomSheet}
         onClose={closeNotificationBottomSheet}
@@ -2262,59 +2245,6 @@ brandLogo: {
     paddingVertical: 2,
     borderRadius: 4,
   },
-  bottomNav: {
-    backgroundColor: "white",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    paddingVertical: 1,
-    paddingBottom: 50,
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  navButton: {
-    padding: 12,
-  },
-  fabWrapper: {
-  alignItems: "center",
-  justifyContent: "center",
-  marginTop: -25, // lifts FAB above bottom bar nicely
-},
-
-fabLabel: {
-  marginTop: 4,
-  fontSize: 12,
-  fontWeight: "600",
-  color: "#333",
-  textAlign: "center",
-},
-
-  fabButton: {
-    backgroundColor: "#007EFD",
-    borderRadius: 40,
-    width: 70,
-    height: 70,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-    marginTop: -15,
-  },
-  trackGif: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
   languageModalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -2467,6 +2397,59 @@ fabLabel: {
     height: 8,
     borderRadius: 4,
     backgroundColor: "#007EFD",
+  },
+  bottomNav: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 16,
+    backgroundColor: "white",
+    borderRadius: 30,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 10,
+    zIndex: 99,
+  },
+  navButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 10,
+  },
+  fabWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fabButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#007EFD",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabLabel: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
+  },
+  trackGif: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
 })
 

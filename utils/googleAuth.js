@@ -1,68 +1,44 @@
 import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
-import { makeRedirectUri } from "expo-auth-session";
-import Constants from "expo-constants";
+import { useAuthRequest, ResponseType } from "expo-auth-session";
 
-console.log("ENV:", Constants.executionEnvironment);
-
+// ✅ Must be at module level — closes the browser after redirect
 WebBrowser.maybeCompleteAuthSession();
 
+// Google's OAuth discovery endpoints (hardcoded — no dynamic fetch needed)
+const GOOGLE_DISCOVERY = {
+  authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+  tokenEndpoint: "https://oauth2.googleapis.com/token",
+  revocationEndpoint: "https://oauth2.googleapis.com/revoke",
+};
+
+// Hardcoded — makeRedirectUri({ useProxy:true }) no longer returns this in SDK 49+
+const PROXY_REDIRECT_URI = "https://auth.expo.io/@carconnect02/muvcar";
+
+const WEB_CLIENT_ID =
+  "896374568035-p6g77erhvtgnf6e0erh2jf5jos0fbibm.apps.googleusercontent.com";
+
 export const useGoogleAuth = () => {
-  const {
-   
-    googleWebClientId,
-  } = Constants.expoConfig.extra;
+  console.log("[GoogleAuth] redirectUri:", PROXY_REDIRECT_URI);
+  console.log("[GoogleAuth] clientId:", WEB_CLIENT_ID);
 
-  const expectedGoogleWebClientId = "896374568035-p6g77erhvtgnf6e0erh2jf5jos0fbibm.apps.googleusercontent.com"
-  const usedGoogleWebClientId = googleWebClientId || expectedGoogleWebClientId
+  // ✅ Using base useAuthRequest — bypasses Google provider's iOS/Android
+  //    platform validation that requires iosClientId / androidClientId.
+  // ✅ ResponseType.Token + openid scope → Google returns id_token directly
+  //    in the redirect params, no token exchange needed.
+  const [request, response, promptAsync] = useAuthRequest(
+    {
+      clientId: WEB_CLIENT_ID,
+      redirectUri: PROXY_REDIRECT_URI,
+      responseType: ResponseType.Token,
+      scopes: ["openid", "profile", "email"],
+      usePKCE: false,
+    },
+    GOOGLE_DISCOVERY
+  );
 
-  if (googleWebClientId && googleWebClientId !== expectedGoogleWebClientId) {
-    console.warn(
-      "[GoogleAuth] Found old googleWebClientId in config; overriding with expected value",
-      googleWebClientId,
-      "=>",
-      expectedGoogleWebClientId,
-    )
-  }
-
-  console.log("[GoogleAuth] googleWebClientId runtime value:", usedGoogleWebClientId)
-  console.log("[GoogleAuth] expected googleWebClientId:", expectedGoogleWebClientId)
-
-  const computedRedirectUri = makeRedirectUri({
-    useProxy: true,
-    scheme: "muvar",
-    projectNameForProxy: "muvcar",
-  });
-
-  // enforce the exact value expected from Google console for Expo Go proxy flow
-  const redirectUri = computedRedirectUri.startsWith("https://auth.expo.io")
-    ? computedRedirectUri
-    : "https://auth.expo.io/@carconnect02/muvcar";
-
-  console.log("COMPUTED REDIRECT:", computedRedirectUri);
-  console.log("ENFORCED REDIRECT:", redirectUri);
-
-  const [request, response, promptAsync] =
-    Google.useAuthRequest({
-
-      clientId: googleWebClientId,
-      redirectUri,
-      scopes: ["profile", "email"],
-    });
-
-  const signIn = async () => {
-    console.log("[GoogleAuth] Starting sign-in (fresh session)");
-    console.log("[GoogleAuth] redirectUri:", redirectUri);
-    console.log("[GoogleAuth] clientId:", usedGoogleWebClientId);
-
-    // (Re)add this for every session attempt to avoid old auth states
-    WebBrowser.maybeCompleteAuthSession();
-
-    return promptAsync({
-      useProxy: true,
-      showInRecents: true,
-      prompt: "select_account",
-    });
+  const signIn = () => {
+    console.log("[GoogleAuth] Starting sign-in");
+    return promptAsync({ showInRecents: true });
   };
 
   return { request, response, promptAsync: signIn };
